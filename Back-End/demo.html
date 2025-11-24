@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MindStep — Course</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary-red: #ff2d55;
+      --primary-blue: #0066ff;
+      --cyan: #00e5ff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Inter, sans-serif;
+      background: linear-gradient(120deg, #040416 0%, #07102a 100%);
+      color: #eaf6ff;
+      min-height: 100vh;
+    }
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 28px;
+      background: rgba(255,255,255,0.02);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .logo { font-family: Orbitron; font-weight: 700; }
+    .container { padding: 30px; max-width: 1000px; margin: auto; }
+    .back-btn {
+      background: rgba(255,255,255,0.05);
+      border: none; color: white; padding: 10px 18px;
+      border-radius: 8px; cursor: pointer; font-weight: 700;
+    }
+
+    /* Intro circle */
+    .intro { display: flex; align-items: center; justify-content: center; gap: 40px; margin-top: 40px; }
+    .intro-svg { width: 200px; height: 200px; }
+    .ring-bg { fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 10; }
+    .ring-anim { fill: none; stroke: url(#g1); stroke-width: 10; stroke-linecap: round; stroke-dasharray: 603; stroke-dashoffset: 603; transition: stroke-dashoffset 1.5s ease; }
+    .center-circle { fill: rgba(255,255,255,0.05); }
+    .intro-text { fill: white; font-family: Orbitron; font-size: 20px; text-anchor: middle; }
+    .cta { padding: 10px 18px; border: none; border-radius: 8px; font-weight: 700; color: white; background: linear-gradient(90deg, var(--primary-red), var(--primary-blue)); cursor: pointer; }
+
+    /* Stepper */
+    .stepper { display: none; margin-top: 40px; background: rgba(255,255,255,0.03); padding: 20px; border-radius: 12px; }
+    .steps-track { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .step { text-align: center; flex: 1; }
+    .num { width: 50px; height: 50px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,0.06); margin: auto; font-weight: bold; }
+    .step-active .num { background: linear-gradient(90deg,var(--primary-red),var(--primary-blue)); color: white; }
+    .connector { flex: 1; height: 6px; background: rgba(255,255,255,0.1); margin: 0 6px; border-radius: 6px; position: relative; overflow: hidden; }
+    .connector-fill { height: 100%; width: 0%; position: absolute; background: linear-gradient(90deg,var(--primary-red),var(--primary-blue)); transition: width .5s; }
+
+    .panel { display: none; margin: 20px 0; }
+    .panel-active { display: block; animation: fadeIn .5s ease both; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+    .progress-display { display: flex; align-items: center; gap: 12px; justify-content: center; }
+    #progressCircle { width: 64px; height: 64px; }
+    #progressArc { fill: none; stroke: var(--cyan); stroke-width: 8; stroke-linecap: round; transform: rotate(-90deg); transform-origin: center; transition: stroke-dashoffset .45s ease; }
+    .ring-bg2 { fill: none; stroke: rgba(255,255,255,0.1); stroke-width: 8; }
+
+    .lesson { display: flex; justify-content: space-between; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; margin: 10px 0; }
+    .lesson button { background: linear-gradient(90deg,var(--primary-red),var(--primary-blue)); border: none; color: white; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="logo">MindStep</div>
+    <div>Course Player</div>
+  </nav>
+
+  <div class="container">
+    <button class="back-btn" onclick="window.location.href='MainPage.html'">← Back</button>
+    <h1 id="courseTitle">Full Stack Development</h1>
+    <p id="courseSubtitle">Interactive course with progress tracking.</p>
+
+    <div class="intro" id="introScreen">
+      <svg viewBox="0 0 220 220" class="intro-svg">
+        <defs>
+          <linearGradient id="g1" x1="0" x2="1">
+            <stop offset="0" stop-color="var(--primary-red)"/>
+            <stop offset="1" stop-color="var(--primary-blue)"/>
+          </linearGradient>
+        </defs>
+        <circle cx="110" cy="110" r="96" class="ring-bg"/>
+        <circle cx="110" cy="110" r="96" class="ring-anim"/>
+        <circle cx="110" cy="110" r="48" class="center-circle"/>
+        <text x="110" y="118" class="intro-text">PLAY</text>
+      </svg>
+
+      <div>
+        <h2>Start Course</h2>
+        <p>Click start to begin your interactive flow.</p>
+        <button class="cta" id="startGameBtn">Start</button>
+      </div>
+    </div>
+
+    <div class="stepper" id="stepper">
+      <div class="steps-track">
+        <div class="step step-active" data-step="1"><div class="num">1</div><div>Intro</div></div>
+        <div class="connector"><div class="connector-fill" id="fill1"></div></div>
+        <div class="step" data-step="2"><div class="num">2</div><div>Basic</div></div>
+        <div class="connector"><div class="connector-fill" id="fill2"></div></div>
+        <div class="step" data-step="3"><div class="num">3</div><div>Practice</div></div>
+        <div class="connector"><div class="connector-fill" id="fill3"></div></div>
+        <div class="step" data-step="4"><div class="num">4</div><div>Project</div></div>
+      </div>
+
+      <div class="panel panel-active"><h3>Intro Stage</h3><p>Welcome to the course!</p></div>
+      <div class="panel"><h3>Basics</h3><p>Learn the basics step by step.</p></div>
+      <div class="panel"><h3>Practice</h3><p>Try mini tasks and apply concepts.</p></div>
+      <div class="panel"><h3>Project</h3><p>Complete a hands-on project.</p></div>
+
+      <div class="progress-display">
+        <svg id="progressCircle" viewBox="0 0 64 64">
+          <circle cx="32" cy="32" r="28" class="ring-bg2"></circle>
+          <circle cx="32" cy="32" r="28" id="progressArc"></circle>
+        </svg>
+        <span id="progressPercent">0%</span>
+      </div>
+    </div>
+
+    <h2 style="margin-top:30px;">Lessons</h2>
+    <div class="lesson"><span>Lesson 1: Introduction</span><button onclick="markComplete(1)">Complete</button></div>
+    <div class="lesson"><span>Lesson 2: Basics</span><button onclick="markComplete(2)">Complete</button></div>
+    <div class="lesson"><span>Lesson 3: Practice</span><button onclick="markComplete(3)">Complete</button></div>
+    <div class="lesson"><span>Lesson 4: Project</span><button onclick="markComplete(4)">Complete</button></div>
+  </div>
+
+  <script>
+    const TOTAL_STEPS = 4;
+    const STORAGE_PROGRESS = "MindStepProgress";
+    const STORAGE_COMPLETED = "MindStepCompleted";
+    const R = 28, C = 2 * Math.PI * R;
+    const progressArc = document.getElementById("progressArc");
+    progressArc.style.strokeDasharray = C;
+    progressArc.style.strokeDashoffset = C;
+
+    const percentEl = document.getElementById("progressPercent");
+
+    function updateVisual(pct) {
+      progressArc.style.strokeDashoffset = C * (1 - pct / 100);
+      percentEl.textContent = pct + "%";
+      document.querySelectorAll(".connector-fill").forEach((f, i) => {
+        const step = pct / (100 / TOTAL_STEPS);
+        f.style.width = i < step ? "100%" : i === Math.floor(step) ? ((step % 1) * 100 + "%") : "0%";
+      });
+    }
+
+    function loadProgress() {
+      return Number(localStorage.getItem(STORAGE_PROGRESS) || 0);
+    }
+    function saveProgress(pct) {
+      localStorage.setItem(STORAGE_PROGRESS, pct);
+    }
+
+    function loadCompleted() {
+      try {
+        return new Set(JSON.parse(localStorage.getItem(STORAGE_COMPLETED)) || []);
+      } catch {
+        return new Set();
+      }
+    }
+    function saveCompleted(set) {
+      localStorage.setItem(STORAGE_COMPLETED, JSON.stringify([...set]));
+    }
+
+    function markComplete(num) {
+      const completed = loadCompleted();
+      completed.add(num);
+      saveCompleted(completed);
+      const pct = Math.round((completed.size / TOTAL_STEPS) * 100);
+      saveProgress(pct);
+      updateVisual(pct);
+      alert("✅ Lesson " + num + " marked complete!");
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const saved = loadProgress();
+      updateVisual(saved);
+      if (saved > 0) {
+        document.getElementById("introScreen").style.display = "none";
+        document.getElementById("stepper").style.display = "block";
+      }
+    });
+
+    document.getElementById("startGameBtn").addEventListener("click", () => {
+      const ring = document.querySelector(".ring-anim");
+      ring.style.strokeDashoffset = "0";
+      setTimeout(() => {
+        document.getElementById("introScreen").style.display = "none";
+        document.getElementById("stepper").style.display = "block";
+        ring.style.strokeDashoffset = "603";
+      }, 1500);
+    });
+  </script>
+</body>
+</html>
