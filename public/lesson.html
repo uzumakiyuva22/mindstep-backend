@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MindStep — Lesson</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root { --primary-red:#ff2d55; --primary-blue:#0066ff; --cyan:#00e5ff; }
+    body {
+      font-family: Inter, sans-serif;
+      background: linear-gradient(135deg,#030314,#06122a);
+      color: #eaf6ff;
+      min-height: 100vh;
+      display:flex; flex-direction:column; align-items:center;
+      padding:30px 20px;
+    }
+    h1 { font-family: Orbitron; text-shadow:0 0 12px var(--cyan); }
+
+    button {
+      padding:10px 24px; border:none; border-radius:10px;
+      font-weight:700;
+      background:linear-gradient(90deg,var(--primary-red),var(--primary-blue));
+      color:#fff; cursor:pointer; transition:.3s; margin-top:10px;
+    }
+    button:hover { transform:scale(1.05); box-shadow:0 0 20px var(--cyan); }
+
+    select,textarea {
+      width:100%; margin-top:10px; padding:10px; border-radius:8px;
+      border:none; background:#0e0f1a; color:#fff; font-family:monospace;
+    }
+
+    pre {
+      background:#0c0d12; color:#00ffb7;
+      padding:14px; border-radius:10px; white-space:pre-wrap;
+      margin-top:10px; font-family:Consolas,monospace;
+    }
+
+    iframe {
+      width:100%; height:300px; border:1px solid #333;
+      border-radius:10px; background:#fff; margin-top:10px;
+    }
+    .container { max-width:800px; width:100%; }
+
+    /* Popup box (Course Completed) */
+    .popup {
+      display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+      background:rgba(0,0,0,0.7);
+      justify-content:center; align-items:center;
+      z-index:1000;
+    }
+    .popup-content {
+      background:#11182a; color:#eaf6ff; padding:30px 40px;
+      border-radius:12px; text-align:center;
+      box-shadow:0 0 25px var(--cyan);
+    }
+    .popup-content h2 {
+      font-family: Orbitron; color:var(--cyan);
+      text-shadow:0 0 10px var(--primary-blue);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1 id="lessonTitle">Lesson</h1>
+    <p id="lessonDesc">Loading lesson...</p>
+
+    <!-- Language selection -->
+    <div id="langSelectArea">
+      <label for="lang">Select Language:</label>
+      <select id="lang">
+        <option value="java">Java</option>
+        <option value="python">Python</option>
+        <option value="javascript">JavaScript</option>
+        <option value="html">HTML</option>
+        <option value="css">CSS</option>
+      </select>
+    </div>
+
+    <!-- Code area -->
+    <textarea id="code" rows="12"></textarea>
+
+    <button id="runBtn">Run Code</button>
+    <pre id="output">Ready.</pre>
+    <iframe id="preview" style="display:none;"></iframe>
+
+    <!-- Mark Complete -->
+    <button id="completeBtn">✅ Mark Complete</button>
+  </div>
+
+  <!-- Final Popup -->
+  <div class="popup" id="popupBox">
+    <div class="popup-content">
+      <h2>🎉 Course Completed!</h2>
+      <p>You have finished all lessons in this course.</p>
+      <button id="closePopup">Close & Return to Main Page</button>
+    </div>
+  </div>
+
+  <script>
+    // Read course & lesson
+    const q = new URLSearchParams(window.location.search);
+    const course = q.get('course') || 'FullStack Development';
+    const lesson = Number(q.get('lesson')) || 1;
+
+    document.getElementById('lessonTitle').textContent = `${course} — Lesson ${lesson}`;
+    document.getElementById('lessonDesc').textContent = `Learn practical coding for ${course}!`;
+
+    const langSelect = document.getElementById('lang');
+    const langSelectArea = document.getElementById('langSelectArea');
+    const codeArea = document.getElementById('code');
+    const output = document.getElementById('output');
+    const preview = document.getElementById('preview');
+
+    // Default code templates
+    const templates = {
+      java: `public class HelloWorld {
+  public static void main(String[] args) {
+    System.out.println("Hello, Yuva!");
+  }
+}`,
+      python: `print("Hello from Python, Yuva!")`,
+      javascript: `console.log("JavaScript says hi, Yuva!");`,
+      html: `<!DOCTYPE html>
+<html>
+  <body>
+    <h1 style="color:blue;">Hello Yuva!</h1>
+  </body>
+</html>`,
+      css: `body {
+  background-color: lightblue;
+  text-align: center;
+}`
+    };
+
+    // Auto-select template based on course
+    function setCourseLanguages() {
+      if (course.toLowerCase().includes("html")) {
+        langSelectArea.style.display = "none";
+        codeArea.value = templates.html;
+        langSelect.value = "html";
+      } else if (course.toLowerCase().includes("java")) {
+        langSelectArea.style.display = "none";
+        codeArea.value = templates.java;
+        langSelect.value = "java";
+      } else if (course.toLowerCase().includes("python")) {
+        langSelectArea.style.display = "none";
+        codeArea.value = templates.python;
+        langSelect.value = "python";
+      } else if (course.toLowerCase().includes("javascript")) {
+        langSelectArea.style.display = "none";
+        codeArea.value = templates.javascript;
+        langSelect.value = "javascript";
+      } else if (course.toLowerCase().includes("css")) {
+        langSelectArea.style.display = "none";
+        codeArea.value = templates.css;
+        langSelect.value = "css";
+      } else {
+        codeArea.value = templates.java;
+        langSelect.value = "java";
+      }
+    }
+    setCourseLanguages();
+
+    // Change template when language changed
+    langSelect.addEventListener('change', () => {
+      codeArea.value = templates[langSelect.value];
+      output.textContent = "Ready.";
+      preview.style.display = "none";
+    });
+
+    // Run code
+    document.getElementById('runBtn').addEventListener('click', async () => {
+      const lang = langSelect.value;
+      const code = codeArea.value.trim();
+      output.textContent = "Running...";
+      preview.style.display = "none";
+
+      if (lang === "html" || lang === "css" || lang === "javascript") {
+        if (lang === "html") {
+          preview.style.display = "block";
+          preview.srcdoc = code;
+        } else if (lang === "css") {
+          preview.style.display = "block";
+          preview.srcdoc = `<style>${code}</style><h1>CSS Applied!</h1>`;
+        } else {
+          const log = [];
+          const old = console.log;
+          console.log = (...args) => log.push(args.join(" "));
+          try { eval(code); output.textContent = log.join("\n") || "(no output)"; }
+          catch (err) { output.textContent = "Error: " + err.message; }
+          finally { console.log = old; }
+        }
+        return;
+      }
+
+      // Server execution for Java/Python
+      try {
+        const res = await fetch("/run-code", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ language: lang, source: code })
+        });
+
+        const data = await res.json();
+        const result = data.run?.output || data.output || JSON.stringify(data);
+        output.textContent = result.trim();
+      } catch (err) {
+        output.textContent = "⚠️ Error: " + err.message;
+      }
+    });
+
+    // Progress storage
+    const STORAGE_COMPLETED = "FullStackCompleted";
+    const STORAGE_PROGRESS = "FullStackProgress";
+    const TOTAL_LESSONS = 4;
+
+    function loadCompleted() {
+      try {
+        return new Set(JSON.parse(localStorage.getItem(STORAGE_COMPLETED)) || []);
+      } catch { return new Set(); }
+    }
+    function saveCompleted(set) {
+      localStorage.setItem(STORAGE_COMPLETED, JSON.stringify([...set]));
+    }
+    function computeProgress(set) {
+      const pct = Math.round((set.size / TOTAL_LESSONS) * 100);
+      localStorage.setItem(STORAGE_PROGRESS, pct);
+      return pct;
+    }
+
+    // Mark Complete button
+    document.getElementById("completeBtn").addEventListener("click", () => {
+      const completed = loadCompleted();
+      completed.add(lesson);
+      saveCompleted(completed);
+
+      const pct = computeProgress(completed);
+
+      if (completed.size >= TOTAL_LESSONS) {
+        document.getElementById("popupBox").style.display = "flex";
+      } else {
+        window.location.href = `course.html?course=${encodeURIComponent(course)}&progress=${pct}&step=${completed.size}`;
+      }
+    });
+
+    // Final popup close → go to course page
+    document.getElementById("closePopup").addEventListener("click", () => {
+      localStorage.setItem(STORAGE_PROGRESS, "100");
+      window.location.href = `course.html?course=${encodeURIComponent(course)}&progress=100&step=4`;
+    });
+
+  </script>
+</body>
+</html>

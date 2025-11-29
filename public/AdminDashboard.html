@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Admin Dashboard — MindStep</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700&display=swap" rel="stylesheet">
+<style>
+/* keep your styles (unchanged) */
+:root{--accent1:#ff2d55;--accent2:#0066ff;--neon:#00e5ff}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,Arial;background:linear-gradient(180deg,#041022,#020316);color:#dff7ff}
+.container{display:flex;min-height:100vh}
+aside{width:260px;padding:22px;background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01));border-right:1px solid rgba(255,255,255,0.03)}
+.main{flex:1;padding:26px}
+.logo{display:flex;gap:12px;align-items:center}
+.mark{width:44px;height:44px;border-radius:10px;background:linear-gradient(45deg,var(--accent1),var(--accent2));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800}
+.menu{display:flex;flex-direction:column;gap:10px;margin-top:18px}
+.menu button{background:transparent;border:none;color:#cfefff;padding:10px;border-radius:8px;text-align:left;cursor:pointer;font-weight:600}
+.logout{margin-top:20px;padding:10px;border-radius:8px;border:none;background:#ff3b3b;color:white;cursor:pointer;font-weight:700}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.search{padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:rgba(255,255,255,0.02);color:#eaf6ff;min-width:220px}
+.card{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,0.03)}
+table{width:100%;border-collapse:collapse;margin-top:12px}
+th,td{padding:12px;border-bottom:1px solid rgba(255,255,255,0.03);text-align:left;font-size:14px}
+.user{width:46px;height:46px;border-radius:50%;object-fit:cover;border:2px solid var(--neon)}
+.progress{width:160px;height:10px;background:#071326;border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.02)}
+.progress i{display:block;height:100%;background:linear-gradient(90deg,var(--accent1),var(--accent2))}
+.actions{display:flex;gap:8px}
+.btn{padding:8px 11px;border-radius:8px;border:none;cursor:pointer;font-weight:700;color:white}
+.btn.primary{background:var(--accent2)}
+.btn.danger{background:#ff3b3b}
+.theme-switch{position:fixed;right:18px;top:18px}
+.theme-switch select{padding:8px;border-radius:8px}
+.modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:50}
+.modal .box{width:420px;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));padding:18px;border-radius:12px}
+@media(max-width:920px){aside{display:none}}
+</style>
+</head>
+<body>
+  <div class="theme-switch">
+    <select id="themeSel">
+      <option value="A">Theme A - Neon</option>
+      <option value="B">Theme B - Clean</option>
+      <option value="C">Theme C - Glass</option>
+    </select>
+  </div>
+
+  <div class="container">
+    <aside>
+      <div class="logo"><div class="mark">MS</div><div><h3>MindStep Pro</h3><div style="font-size:12px;color:#bfefff">Admin Panel</div></div></div>
+      <nav class="menu">
+        <button onclick="go('dashboard')">📊 Dashboard</button>
+        <button onclick="go('users')">👥 Users</button>
+        <button onclick="exportCsv()">📁 Export CSV</button>
+      </nav>
+      <button class="logout" id="logout">Sign out</button>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <h1 style="color:var(--neon)">Admin Dashboard</h1>
+        <div style="display:flex;gap:10px;align-items:center">
+          <input id="search" class="search" placeholder="Search username or course...">
+          <button id="refreshBtn" class="btn primary">Refresh</button>
+        </div>
+      </div>
+
+      <section class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div id="summary">Loading...</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn" onclick="openCreate()" style="color: #020316 ; background-color: #0066ff;">+ Create User</button>
+            <button class="btn" onclick="openResetAll()">Reset All</button>
+          </div>
+        </div>
+
+        <table>
+          <thead><tr><th>Image</th><th>Username</th><th>Email</th><th>Course</th><th>Progress</th><th>Actions</th></tr></thead>
+          <tbody id="tbody"><tr><td colspan="6">Loading...</td></tr></tbody>
+        </table>
+      </section>
+    </main>
+  </div>
+
+  <div id="modal" class="modal">
+    <div class="box">
+      <h3 id="modalTitle">Create User</h3>
+      <input id="m_username" placeholder="username" style="width:100%;padding:10px;border-radius:8px;margin-bottom:8px">
+      <input id="m_email" placeholder="email" style="width:100%;padding:10px;border-radius:8px;margin-bottom:8px">
+      <input id="m_password" type="password" placeholder="password" style="width:100%;padding:10px;border-radius:8px;margin-bottom:8px">
+      <input id="m_image" type="file" accept="image/*" style="margin-bottom:8px">
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button onclick="closeModal()" class="btn">Cancel</button>
+        <button onclick="createUser()" class="btn primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+/*
+  Fixed Admin Dashboard script
+  - Ensures Authorization header is always added
+  - Handles server errors cleanly (shows message / redirects to login)
+  - Implements client-side CSV export
+  - Handles create/delete/reset with proper error handling
+  - Keeps original UI unchanged
+*/
+
+(async function(){
+  // theme
+  const themeSel = document.getElementById('themeSel');
+  themeSel.addEventListener('change', (e) => {
+    const v = e.target.value;
+    if(v==='B') { document.body.style.background = 'linear-gradient(180deg,#f7f7fb,#fff)'; document.body.style.color='#111'; }
+    else if(v==='C') { document.body.style.background = 'linear-gradient(180deg,#061022,#020316)'; document.body.style.color='#dff7ff'; }
+    else { document.body.style.background = 'linear-gradient(180deg,#041022,#020316)'; document.body.style.color='#dff7ff'; }
+  });
+
+  // helper to get token and build headers
+  function getAuthHeader() {
+    const token = localStorage.getItem('admin_token');
+    return token ? { 'Authorization': 'Bearer ' + token } : {};
+  }
+
+  // Redirect helper for auth missing
+  function requireAuth() {
+    const token = localStorage.getItem('admin_token');
+    if(!token) { localStorage.removeItem('admin_token'); alert('Please login again'); location.href = '/AdminLogin.html'; return false; }
+    return true;
+  }
+
+  // show a message in tbody or summary
+  function showServerError(msg) {
+    document.getElementById('tbody').innerHTML = '<tr><td colspan="6">Server error: '+(msg||'unknown')+'</td></tr>';
+    document.getElementById('summary').textContent = 'Server error';
+  }
+
+  // load rows from server
+  async function load(){
+    if(!requireAuth()) return;
+    const headers = getAuthHeader();
+    try {
+      const r = await fetch('/admin-stats', { headers });
+      if (r.status === 401) { localStorage.removeItem('admin_token'); alert('Session expired'); location.href='/AdminLogin.html'; return; }
+      if (!r.ok) {
+        const txt = await r.text();
+        showServerError(txt || ('HTTP ' + r.status));
+        return;
+      }
+      const rows = await r.json();
+      if (!Array.isArray(rows)) {
+        showServerError('Invalid response format');
+        return;
+      }
+      render(rows);
+      // cache rows for CSV & search
+      window.__admin_rows_cache = rows;
+    } catch (e) {
+      console.error('load error', e);
+      showServerError(e.message || e.toString());
+    }
+  }
+
+  // render table
+  function render(rows){
+    const tbody = document.getElementById('tbody');
+    tbody.innerHTML = '';
+    if(!rows || rows.length === 0){ tbody.innerHTML = '<tr><td colspan="6">No users</td></tr>'; document.getElementById('summary').textContent='0 rows'; return; }
+    document.getElementById('summary').textContent = rows.length + ' rows';
+    rows.forEach(r => {
+      const img = r.image ? '/uploads/' + encodeURIComponent(r.image) : 'https://via.placeholder.com/48';
+      const pct = Number(r.percentage || 0);
+      const tr = document.createElement('tr');
+
+      // create image element with fallback
+      const imgHtml = `<img class="user" src="${img}" onerror="this.onerror=null;this.src='https://via.placeholder.com/48'">`;
+
+      tr.innerHTML = `
+        <td>${imgHtml}</td>
+        <td>${escapeHtml(r.username)}</td>
+        <td>${escapeHtml(r.email || '')}</td>
+        <td>${escapeHtml(r.course || '')}</td>
+        <td>${pct}% <div class="progress" title="${pct}%"><i style="width:${pct}%"></i></div></td>
+        <td><div class="actions">
+           <button class="btn" data-username="${attrEncode(r.username)}" data-course="${attrEncode(r.course||'')}" onclick="resetOneHandler(event)">Reset</button>
+           <button class="btn danger" data-id="${r.id}" onclick="deleteOneHandler(event)">Delete</button>
+        </div></td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // small helpers to avoid XSS
+  function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+  function attrEncode(s){ return String(s||'').replace(/"/g,'&quot;'); }
+
+  // button handlers wired via DOM events (safer for escaping)
+  window.deleteOneHandler = async function(e){
+    if(!requireAuth()) return;
+    const btn = e.currentTarget;
+    const id = btn.dataset.id;
+    if(!confirm('Delete this user ?')) return;
+    try {
+      const res = await fetch('/admin/delete-user', {
+        method:'POST',
+        headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: Number(id) })
+      });
+      const j = await res.json();
+      if(!res.ok) { alert(j.message || 'Delete failed'); return; }
+      alert('Deleted');
+      await load();
+    } catch (err) { alert('Delete error: ' + (err.message||err)); }
+  }
+
+  window.resetOneHandler = async function(e){
+    if(!requireAuth()) return;
+    const btn = e.currentTarget;
+    const username = btn.dataset.username;
+    if(!confirm('Reset progress for ' + username + ' ?')) return;
+    try {
+      const res = await fetch('/admin/reset-progress', {
+        method:'POST',
+        headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username })
+      });
+      const j = await res.json();
+      if(!res.ok) { alert(j.message || 'Reset failed'); return; }
+      alert('Reset done');
+      await load();
+    } catch (err) { alert('Reset error: ' + (err.message||err)); }
+  }
+
+  // client-side CSV export (uses cached rows)
+  window.exportCsv = function(){
+    const rows = window.__admin_rows_cache || [];
+    if(rows.length===0){ alert('No data to export'); return; }
+    const header = ['id','username','email','course','percentage'];
+    const csv = [header.join(',')].concat(rows.map(r => [
+      safeCsv(r.id),
+      safeCsv(r.username),
+      safeCsv(r.email),
+      safeCsv(r.course),
+      safeCsv(r.percentage)
+    ].join(','))).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url;
+    a.download = 'users_export.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function safeCsv(v){
+    if(v === null || v === undefined) return '';
+    const s = String(v).replace(/"/g,'""');
+    return `"${s}"`;
+  }
+
+  // create user modal logic
+  window.openCreate = function(){
+    document.getElementById('modal').style.display = 'flex';
+    document.getElementById('modalTitle').textContent = 'Create User';
+    document.getElementById('m_username').value = '';
+    document.getElementById('m_email').value = '';
+    document.getElementById('m_password').value = '';
+    document.getElementById('m_image').value = '';
+  }
+  window.closeModal = function(){ document.getElementById('modal').style.display = 'none'; }
+
+  window.createUser = async function(){
+    if(!requireAuth()) return;
+    const u = document.getElementById('m_username').value.trim();
+    const e = document.getElementById('m_email').value.trim();
+    const p = document.getElementById('m_password').value.trim();
+    const f = document.getElementById('m_image').files[0];
+    if(!u||!p){ alert('username & password required'); return; }
+    const fd = new FormData(); fd.append('username',u); fd.append('email',e); fd.append('password',p); if(f) fd.append('image', f);
+    try {
+      const res = await fetch('/admin/create-user', { method:'POST', headers: getAuthHeader(), body: fd });
+      // Note: when sending FormData, do not set Content-Type - browser sets it
+      const j = await res.json();
+      if (!res.ok) { alert(j.message || 'Create failed'); return; }
+      alert(j.message || 'Created');
+      closeModal(); load();
+    } catch (err) {
+      alert('Create error: ' + (err.message||err));
+    }
+  }
+
+  // reset all progress
+  window.openResetAll = async function(){
+    if(!requireAuth()) return;
+    if(!confirm('Reset all progress for all users?')) return;
+    try {
+      const r = await fetch('/admin-stats', { headers: getAuthHeader() });
+      if(!r.ok){ alert('Failed to fetch users'); return; }
+      const rows = await r.json();
+      for(const u of rows){
+        if(u.username){
+          await fetch('/admin/reset-progress', {
+            method:'POST',
+            headers:{ ...getAuthHeader(), 'Content-Type':'application/json' },
+            body: JSON.stringify({ username: u.username })
+          });
+        }
+      }
+      alert('All reset');
+      load();
+    } catch (err) { alert('Reset all error: ' + (err.message||err)); }
+  }
+
+  // simple navigation helpers (you had go('dashboard') calls)
+  window.go = function(page){
+    // keep simple routing placeholder
+    if(page === 'users') { alert('Users view not implemented in this demo'); }
+    else if(page === 'dashboard') { /* already here */ }
+  }
+
+  // attach UI events
+  document.getElementById('refreshBtn').addEventListener('click', load);
+  document.getElementById('logout').addEventListener('click', ()=> { localStorage.removeItem('admin_token'); location.href='/AdminLogin.html'; });
+  document.getElementById('search').addEventListener('input', function(){
+    const q = this.value.trim().toLowerCase();
+    document.querySelectorAll('#tbody tr').forEach(tr => {
+      tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  });
+
+  // initial load
+  load();
+
+})();
+</script>
+</body>
+</html>

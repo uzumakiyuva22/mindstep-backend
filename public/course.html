@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MindStep — Course</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary-red: #ff2d55;
+      --primary-blue: #0066ff;
+      --cyan: #00e5ff;
+      --max-width: 1200px;
+      --card-radius: 16px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      font-family: Inter, sans-serif;
+      background: linear-gradient(120deg, #040416 0%, #07102a 100%);
+      color: #eaf6ff;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 28px;
+      background: rgba(255, 255, 255, 0.02);
+      backdrop-filter: blur(6px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    .logo { font-family: Orbitron, sans-serif; font-weight: 700; font-size: 18px; }
+
+    .container { max-width: var(--max-width); margin: 28px auto; padding: 20px; }
+
+    .back-btn {
+      display: inline-flex; gap: 8px; align-items: center; padding: 10px 14px;
+      border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.03);
+      cursor: pointer; font-weight: 700; color: #eaf6ff;
+    }
+
+    .title { margin-top: 18px; font-family: Orbitron, sans-serif; font-size: 34px; text-shadow: 0 0 10px #fff; }
+    .subtitle { margin-top: 8px; color: rgba(230,245,255,0.9); margin-bottom: 12px; }
+
+    .stage {
+      margin-top: 22px;
+      display: flex;
+      gap: 28px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .module {
+      width: 420px;
+      min-height: 320px;
+      border-radius: 20px;
+      backdrop-filter: blur(8px);
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border: 1px solid rgba(255,255,255,0.03);
+      position: relative;
+      overflow: visible;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 14px 40px rgba(0,0,0,0.6);
+      padding: 18px;
+    }
+
+    .card3d {
+      width: 92%;
+      height: 82%;
+      border-radius: 14px;
+      background: linear-gradient(160deg, #001428, #003a6b);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+      transform-style: preserve-3d;
+      transition: transform 600ms cubic-bezier(.2,.9,.3,1);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6), inset 0 -10px 40px rgba(0,0,0,0.2);
+      text-align: center;
+      padding: 18px;
+    }
+
+    .card3d h2 { font-family: Orbitron; margin-bottom: 6px; font-size: 20px; }
+    .card3d p { font-size: 14px; color: rgba(255,255,255,0.9); max-width: 360px; }
+
+    .ring { position: absolute; left: 50%; transform: translateX(-50%); bottom: 8px; width: 190px; height: 190px; pointer-events: none; display: grid; place-items: center; mix-blend-mode: screen; }
+    .ring svg { width: 100%; height: 100%; overflow: visible; }
+    .ring circle { stroke: rgba(0,229,255,0.12); stroke-width: 6; fill: none; filter: blur(6px); }
+
+    .lessons {
+      flex: 1;
+      min-width: 300px;
+      padding: 18px;
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border: 1px solid rgba(255,255,255,0.03);
+    }
+
+    .lesson {
+      padding: 12px 10px; margin-bottom: 10px; border-radius: 10px;
+      background: rgba(255,255,255,0.01);
+      display:flex; justify-content:space-between; align-items:center;
+    }
+    .lesson .play {
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: linear-gradient(90deg, var(--primary-red), var(--primary-blue));
+      color: #fff;
+      font-weight: 800;
+      cursor: pointer;
+      letter-spacing: .3px;
+      border: none;
+      box-shadow: 0 8px 24px rgba(0,0,0,.45), 0 0 0 rgba(0,229,255,0);
+      transform: translateY(0);
+      transition: transform .15s, box-shadow .25s, filter .25s;
+    }
+    .lesson .play:hover { transform: translateY(-1px); filter: saturate(1.1); box-shadow: 0 10px 28px rgba(0,0,0,.5), 0 0 16px rgba(0,229,255,.18); }
+    .lesson .play:active { transform: translateY(1px) scale(.99); }
+
+    /* Stepper */
+    #game-wrap { margin-top: 24px; max-width: 1000px; margin-left: auto; margin-right: auto; }
+    .game-stage { display:flex; flex-direction:column; gap:18px; align-items: center; }
+
+    .intro {
+      display:flex; gap:18px; align-items:center; justify-content:center; color:#eaf6ff; text-align:center;
+      padding: 16px; width:100%; max-width:900px; background: rgba(255,255,255,0.01); border-radius: 14px; border:1px solid rgba(255,255,255,0.03);
+    }
+
+    .intro-svg { width:210px; height:210px; }
+    .ring-bg { fill:none; stroke: rgba(255,255,255,0.05); stroke-width:12; }
+    .ring-anim { fill:none; stroke-width:12; stroke-linecap:round; stroke-dasharray:603; stroke-dashoffset:603; transition: stroke-dashoffset 1.5s ease, transform 1.2s linear; filter: drop-shadow(0 6px 18px rgba(0,0,0,.6)); }
+    .center-circle { fill: rgba(255,255,255,0.04); }
+    .intro-text { fill:#fff; font-family: Orbitron, sans-serif; font-size:20px; font-weight:700; }
+
+    .intro-copy { max-width: 480px; text-align:left; padding: 6px; }
+    .intro-copy h2 { font-family: Orbitron; font-size:20px; margin-bottom:6px; }
+    .intro-copy p { color: rgba(230,245,255,0.9); margin-bottom:12px; }
+    .intro-copy .cta {
+      padding:10px 16px; border-radius:12px; font-weight:700;
+      background: linear-gradient(90deg,var(--primary-red),var(--primary-blue));
+      color:white; border:none; cursor:pointer; box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+    }
+
+    .stepper {
+      width:100%; max-width:1000px; display:flex; flex-direction:column; gap:16px; padding:22px;
+      border-radius:14px; border:1px solid rgba(255,255,255,0.06);
+      background: linear-gradient(135deg, rgba(255,45,85,0.03), rgba(0,102,255,0.03));
+      box-shadow: 0 14px 40px rgba(0,0,0,0.6), inset 0 -6px 24px rgba(0,0,0,0.18);
+    }
+    .steps-track { display:flex; align-items:center; gap:16px; justify-content:space-between; padding:10px; }
+    .step { display:flex; flex-direction:column; align-items:center; gap:8px; width:130px; transition: transform .25s; opacity:.9; cursor:pointer; user-select:none; }
+    .step .num {
+      width:60px; height:60px; border-radius:999px; display:grid; place-items:center;
+      font-weight:800; font-family:Orbitron; background: rgba(255,255,255,0.06);
+      border: 3px solid rgba(255,255,255,0.08); color:#eaf6ff; font-size:18px;
+    }
+    .step .label { font-weight:700; color: rgba(230,245,255,0.95); font-size:14px; }
+    .step-active { transform: translateY(-6px) scale(1.04); opacity:1; }
+    .step-active .num { background: linear-gradient(90deg,var(--primary-red),var(--primary-blue)); color:#fff; box-shadow:0 10px 24px rgba(0,0,0,0.45); border: none; }
+
+    .connector { flex:1; display:flex; align-items:center; padding:0 6px; }
+    .connector-bar { width:100%; height:12px; background: rgba(255,255,255,0.06); border-radius:999px; overflow:hidden; position:relative; box-shadow: inset 0 0 10px rgba(0,0,0,0.35); }
+    .connector-fill {
+      position:absolute; left:0; top:0; bottom:0; width:0%;
+      background: linear-gradient(90deg,var(--primary-red),var(--primary-blue));
+      border-radius:999px; transition: width .5s ease;
+    }
+
+    .panel-wrap { display:flex; gap:14px; padding:14px; min-height:180px; }
+    .panel { flex:1; display:none; padding:14px 18px; border-radius:10px; background: rgba(255,255,255,0.02); color:#eaf6ff; box-shadow: inset 0 0 12px rgba(0,0,0,0.35); }
+    .panel-active { display:block; animation: fadeInUp .45s both; }
+
+    .controls { display:flex; gap:16px; align-items:center; justify-content:center; padding:10px; }
+    .controls .exit-btn {
+      background: rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08);
+      padding:10px 16px; border-radius:10px; cursor:pointer; color:#fff; font-weight:700;
+    }
+    .controls .cta {
+      padding:10px 18px; border-radius:10px; border:none; cursor:pointer;
+      background: linear-gradient(90deg,var(--primary-red),var(--primary-blue));
+      color:#fff; font-weight:700;
+    }
+    .progress-display {
+      display:flex; align-items:center; gap:12px;
+      font-weight:800; color:var(--cyan); font-family: Orbitron, sans-serif;
+    }
+
+    /* Bottom circular progress styles */
+    #progressCircle { width:64px; height:64px; }
+    #progressCircle .ring-bg2 { fill:none; stroke: rgba(255,255,255,0.08); stroke-width:8; }
+    #progressArc {
+      fill:none; stroke: var(--cyan); stroke-width:8; stroke-linecap:round;
+      transform: rotate(-90deg); transform-origin: 50% 50%;
+      transition: stroke-dashoffset .45s ease;
+      filter: drop-shadow(0 4px 14px rgba(0,229,255,.25));
+    }
+
+    @media (max-width:900px) {
+      .stage { flex-direction: column; align-items: stretch; }
+      .module { width:100%; height:auto; min-height: 360px; }
+      .steps-track { gap:10px; }
+      .step { width:100px; }
+      .connector { display:none; }
+    }
+
+    /* subtle intro animation */
+    .fade-in { animation: fadeInUp .6s ease both; }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+  </style>
+</head>
+
+<body>
+  <nav>
+    <div class="logo">MindStep</div>
+    <div style="opacity:0.9;color:#cfeeff;font-weight:700;">Course Player</div>
+  </nav>
+
+  <div class="container fade-in">
+    <button class="back-btn" id="backBtn">← Back to Courses</button>
+
+    <div class="title" id="courseTitle">Course</div>
+    <div class="subtitle" id="courseSubtitle">Loading overview...</div>
+
+    <div class="stage">
+      <div class="module" aria-hidden="false">
+        <div class="card3d" id="card3d">
+          <h2 id="moduleHeading">Module 1</h2>
+          <p id="moduleDesc">Interactive lessons and hands-on tasks show here. Use the step flow below to progress.</p>
+        </div>
+
+        <!-- animated particle ring (decorative) -->
+        <div class="ring" aria-hidden="true">
+          <svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMid meet">
+            <circle cx="100" cy="100" r="80"></circle>
+            <g id="dots">
+              <circle class="dot" cx="100" cy="20" r="4" fill="var(--cyan)" opacity="0.95"></circle>
+              <circle class="dot" cx="180" cy="100" r="4" fill="var(--primary-red)" opacity="0.95"></circle>
+              <circle class="dot" cx="100" cy="180" r="4" fill="var(--primary-blue)" opacity="0.95"></circle>
+            </g>
+          </svg>
+        </div>
+      </div>
+
+      <div class="lessons">
+        <h3 style="font-family:Orbitron;margin-bottom:8px;">Lesson Plan</h3>
+
+        <div class="lesson">
+          <div>Lesson 1: Introduction</div>
+          <button class="play">Start Lesson</button>
+        </div>
+
+        <div class="lesson">
+          <div>Lesson 2: Basics</div>
+          <button class="play">Start Lesson</button>
+        </div>
+
+        <div class="lesson">
+          <div>Lesson 3: Practice</div>
+          <button class="play">Start Lesson</button>
+        </div>
+
+        <div class="lesson">
+          <div>Lesson 4: Project</div>
+          <button class="play">Start Lesson</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- === Step-by-step game flow area === -->
+    <div id="game-wrap">
+      <div class="game-stage">
+
+        <!-- Intro circular animation -->
+        <div class="intro" id="introScreen" role="region" aria-label="Introduction">
+          <svg viewBox="0 0 220 220" class="intro-svg" aria-hidden="true">
+            <defs>
+              <linearGradient id="g1" x1="0" x2="1">
+                <stop offset="0" stop-color="var(--primary-red)"/>
+                <stop offset="1" stop-color="var(--primary-blue)"/>
+              </linearGradient>
+            </defs>
+            <circle cx="110" cy="110" r="96" class="ring-bg" />
+            <circle cx="110" cy="110" r="96" class="ring-anim" stroke="url(#g1)"/>
+            <g class="center-content">
+              <circle cx="110" cy="110" r="48" class="center-circle"/>
+              <text x="110" y="116" text-anchor="middle" class="intro-text">PLAY</text>
+            </g>
+          </svg>
+
+          <div class="intro-copy">
+            <h2>Introduction</h2>
+            <p>Start with a visual introduction — the circle will animate to show the concept. Click <strong>Start</strong> to begin the interactive flow.</p>
+            <div style="display:flex;gap:12px;">
+              <button id="startGameBtn" class="cta" aria-label="Start flow">Start</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stepper (hidden initially) -->
+        <div class="stepper" id="stepper" aria-hidden="true" style="display:none;">
+          <div class="steps-track" role="tablist" aria-label="Progress steps">
+            <div class="step step-active" data-step="1" role="tab" tabindex="0" aria-selected="true"><span class="num">1</span><div class="label">Intro</div></div>
+            <div class="connector"><div class="connector-bar"><div class="connector-fill" id="connectorFill1"></div></div></div>
+            <div class="step" data-step="2" role="tab" tabindex="0"><span class="num">2</span><div class="label">Basic</div></div>
+            <div class="connector"><div class="connector-bar"><div class="connector-fill" id="connectorFill2"></div></div></div>
+            <div class="step" data-step="3" role="tab" tabindex="0"><span class="num">3</span><div class="label">Practice</div></div>
+            <div class="connector"><div class="connector-bar"><div class="connector-fill" id="connectorFill3"></div></div></div>
+            <div class="step" data-step="4" role="tab" tabindex="0"><span class="num">4</span><div class="label">Project</div></div>
+          </div>
+
+          <div class="panel-wrap">
+            <div class="panel panel-active" data-step="1">
+              <h3>Intro - Visual Circle</h3>
+              <p>This stage explained the core concept with a circular visual. Now you'll move on to the basic explanation and micro-challenges.</p>
+            </div>
+            <div class="panel" data-step="2">
+              <h3>Basic Concepts</h3>
+              <p>Short bite-sized explanation. Try clicking "Next" to reveal a tiny interactive example (below you can embed micro challenges later).</p>
+            </div>
+            <div class="panel" data-step="3">
+              <h3>Practice</h3>
+              <p>A small interactive practice to test understanding. Replace with a quiz or mini-game as desired.</p>
+            </div>
+            <div class="panel" data-step="4">
+              <h3>Project</h3>
+              <p>Finally, a mini project or challenge to apply what you've learned. You can redirect to a full project page here.</p>
+            </div>
+          </div>
+
+          <div class="controls" role="group" aria-label="Stepper controls">
+            <button id="prevStep" class="exit-btn" type="button">Prev</button>
+
+            <!-- Bottom circular progress + percent -->
+            <div class="progress-display">
+              <svg id="progressCircle" viewBox="0 0 64 64" aria-label="Course Progress">
+                <circle cx="32" cy="32" r="28" class="ring-bg2"></circle>
+                <circle cx="32" cy="32" r="28" id="progressArc"></circle>
+              </svg>
+              <span id="progressText">0%</span>
+            </div>
+
+            <button id="nextStep" class="cta" type="button">Next</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+<script>
+// course.js
+document.addEventListener("DOMContentLoaded", () => {
+  const params = new URLSearchParams(window.location.search);
+  const course = decodeURIComponent(params.get("course") || "Full Stack Development");
+  const username = localStorage.getItem("username");
+  const TOTAL_LESSONS = Math.max(1, document.querySelectorAll(".lessons .play").length || 4);
+
+  const courseTitle = document.getElementById("courseTitle");
+  const courseSubtitle = document.getElementById("courseSubtitle");
+  const moduleHeading = document.getElementById("moduleHeading");
+  const moduleDesc = document.getElementById("moduleDesc");
+  const introScreen = document.getElementById("introScreen");
+  const startGameBtn = document.getElementById("startGameBtn");
+  const ringAnim = document.querySelector(".ring-anim");
+  const stepper = document.getElementById("stepper");
+  const stepEls = Array.from(document.querySelectorAll(".step"));
+  const connectorFills = Array.from(document.querySelectorAll(".connector-fill"));
+  const progressArc = document.getElementById("progressArc");
+  const progressPercent = document.getElementById("progressPercent");
+  const lessonButtons = Array.from(document.querySelectorAll(".lessons .play"));
+  const finishBtn = document.getElementById("finishBtn") || document.getElementById("nextStep") || document.getElementById("completeBtn");
+  
+  if (courseTitle) courseTitle.textContent = course;
+  if (courseSubtitle) courseSubtitle.textContent = `Structured lesson plans and interactive modules for ${course}.`;
+  if (moduleHeading) moduleHeading.textContent = `${course} Starter Module`;
+  if (moduleDesc) moduleDesc.textContent = `This module introduces the core ideas of ${course} with hands-on exercises.`;
+
+  // circle geometry
+  const R = 28;
+  const C = 2 * Math.PI * R;
+  if (progressArc) { progressArc.style.strokeDasharray = C.toFixed(2); progressArc.style.strokeDashoffset = C.toFixed(2); }
+
+  function setVisual(pct, lessonsDone) {
+    const p = Math.max(0, Math.min(100, Number(pct) || 0));
+    if (progressArc) try { progressArc.style.strokeDashoffset = (C * (1 - p / 100)).toFixed(2); } catch (e) {}
+    if (progressPercent) progressPercent.textContent = p + "%";
+    stepEls.forEach((s, i) => s.classList.toggle("step-active", i < lessonsDone));
+    connectorFills.forEach((c, i) => c.style.width = (i < Math.max(0, lessonsDone - 1) ? "100%" : "0%"));
+  }
+
+  function animateTo(target) {
+    const cur = parseInt((progressPercent && progressPercent.textContent) || "0".replace("%","")) || 0;
+    const from = cur, to = Math.max(0, Math.min(100, Number(target) || 0));
+    const dur = 700; const t0 = performance.now();
+    function frame(t) {
+      const p = Math.min(1, (t - t0) / dur);
+      const v = Math.round(from + (to - from) * p);
+      if (progressPercent) progressPercent.textContent = v + "%";
+      if (progressArc) try { progressArc.style.strokeDashoffset = (C * (1 - v/100)).toFixed(2); } catch (e) {}
+      if (p < 1) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  async function loadProgress() {
+    setVisual(0, 0);
+    if (!username) {
+      const localPct = Number(localStorage.getItem(`progress_${course}`) || 0);
+      const lessons = Math.round((localPct/100) * TOTAL_LESSONS);
+      setVisual(localPct, lessons);
+      return;
+    }
+    try {
+      const res = await fetch("/get-progress", { method: "POST", headers: { "Content-Type":"application/json" }, body: JSON.stringify({ username, course }) });
+      if (!res.ok) { console.warn("get-progress failed", await res.text()); return; }
+      const json = await res.json();
+      const pct = Number(json.percentage || 0);
+      const lessons = Number(json.lessonsCompleted || Math.round((pct/100) * TOTAL_LESSONS));
+      animateTo(pct);
+      setVisual(pct, lessons);
+      if (pct === 0) { if (introScreen) introScreen.style.display = "block"; if (stepper) stepper.style.display = "none"; }
+      else { if (introScreen) introScreen.style.display = "none"; if (stepper) stepper.style.display = "block"; }
+    } catch (e) { console.error("load progress err", e); }
+  }
+
+  startGameBtn?.addEventListener("click", () => {
+    try { if (ringAnim) { ringAnim.style.transition = "stroke-dashoffset 1.2s ease, transform 1.2s ease"; ringAnim.style.strokeDashoffset = "0"; ringAnim.style.transform = "rotate(360deg)"; } } catch(e){}
+    setTimeout(()=> { if (introScreen) introScreen.style.display = "none"; if (stepper) stepper.style.display = "block"; }, 900);
+  });
+
+  lessonButtons.forEach((btn, i) => {
+    btn.addEventListener("click", () => {
+      const n = i + 1;
+      window.location.href = `lesson.html?course=${encodeURIComponent(course)}&lesson=${n}`;
+    });
+  });
+fetch("/progress")
+  .then(res => res.json())
+  .then(data => {
+    document.getElementById("progressText").innerText = data.percentage + "%";
+
+    // If intro lesson completed
+    if (data.completed >= 1) {
+      document.getElementById("introStatus").innerText = "Completed ✔";
+      document.getElementById("introStatus").style.color = "lime";
+    }
+  });
+  finishBtn?.addEventListener("click", async () => {
+    if (!username) { alert("Please login to finish the course."); return; }
+    try {
+      await fetch("/save-progress", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ username, course, percentage:100, lessons_completed: TOTAL_LESSONS })});
+      await fetch("/update-main-progress", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ username })});
+      const box = document.createElement("div");
+      box.style = "position:fixed;left:50%;top:20%;transform:translateX(-50%);background:#082031;color:#9ff;padding:14px 20px;border-radius:10px;z-index:9999;";
+      box.textContent = `🎉 ${course} completed. Redirecting to dashboard...`;
+      document.body.appendChild(box);
+      setTimeout(()=> { box.remove(); window.location.href = "MainPage.html"; }, 1300);
+    } catch (e) { console.error("finish err", e); alert("Failed to complete course."); }
+  });
+
+  window.addEventListener("focus", loadProgress);
+  window.addEventListener("storage", (e) => { if (e.key && e.key.startsWith("progress_")) loadProgress(); });
+
+  loadProgress();
+});
+</script>
+</body>
+</html>

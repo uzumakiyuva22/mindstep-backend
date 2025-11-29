@@ -1,0 +1,495 @@
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindStep</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --primary-red: #ff2d55;
+        --primary-blue: #0066ff;
+        --cyan: #00e5ff;
+        --bg-dark: #070710;
+        --card-radius: 16px;
+        --max-width: 1200px;
+      }
+      
+      * {margin:0; padding:0; box-sizing:border-box;}
+      html, body {
+    height: 100%;
+    font-family: Inter, sans-serif;
+    color: #e9f3ff;
+    overflow-x: hidden;
+    position: relative;
+    background: radial-gradient(circle at 20% 20%, rgba(0, 102, 255, 0.15), transparent 60%),
+                radial-gradient(circle at 80% 70%, rgba(255, 45, 85, 0.15), transparent 60%),
+                linear-gradient(135deg, #050510, #090921, #050510);
+    background-size: 200% 200%;
+    
+  }
+
+
+  /* Animate the nebula flow */
+  @keyframes bgFlow {
+    0% { background-position: 0% 0%; filter: hue-rotate(0deg); }
+    50% { background-position: 100% 100%; filter: hue-rotate(20deg); }
+    100% { background-position: 0% 0%; filter: hue-rotate(-20deg); }
+  }
+
+  /* Floating particle glow effect */
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    background-image:
+      radial-gradient(2px 2px at 20% 30%, rgba(0,229,255,0.6), transparent),
+      radial-gradient(2px 2px at 70% 60%, rgba(255,45,85,0.6), transparent),
+      radial-gradient(1px 1px at 40% 80%, rgba(0,255,170,0.4), transparent),
+      radial-gradient(1.5px 1.5px at 90% 40%, rgba(0,136,255,0.5), transparent),
+      radial-gradient(1px 1px at 10% 90%, rgba(255,255,255,0.3), transparent);
+    animation: floatParticles 25s linear infinite;
+    opacity: 0.6;
+  }
+
+  @keyframes floatParticles {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-40px); }
+    100% { transform: translateY(0px); }
+  }
+
+      nav {
+        position: sticky; top: 0; z-index: 999; display: flex; justify-content: space-between; align-items: center;
+        padding: 16px 24px; background: rgba(255,255,255,0.02); backdrop-filter: blur(10px);
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+      }
+      .logo {font-family: Orbitron, sans-serif; font-weight: 700; font-size: 20px; color: #fff;}
+      .nav-links {display: flex; gap: 20px;}
+      .nav-links a {color: #eaf6ff; text-decoration: none; font-weight: 700; padding: 6px 12px; border-radius: 8px; transition: 0.3s;}
+      .nav-links a:hover {color: var(--cyan); text-shadow: 0 0 10px var(--cyan), 0 0 20px var(--primary-blue);}
+
+      .hero {
+        display: flex; flex-direction: column; align-items: center; justify-content: top; text-align: center; min-height: 90vh;
+        
+        background-size: 400% 400%; animation: gradientMove 15s ease infinite; padding: 40px 20px;
+      }
+      @keyframes gradientMove {0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+      .hero h1 {font-family: Orbitron, sans-serif; font-size: 48px; color: #fff; text-shadow: 0 0 10px #fff, 0 0 20px var(--cyan); margin-bottom: 16px;}
+      .hero p {font-size: 18px; color: rgba(230,245,255,0.9); margin-bottom: 24px;}
+      .hero .cta {padding: 12px 28px; font-weight: 700; border-radius: 12px; border: none;
+                  background: linear-gradient(90deg, var(--primary-red), var(--primary-blue)); color: #fff;
+                  box-shadow: 0 0 20px var(--cyan), 0 0 40px var(--primary-blue); cursor: pointer; transition: 0.3s;}
+      .hero .cta:hover {transform: scale(1.05); box-shadow: 0 0 30px var(--cyan), 0 0 60px var(--primary-blue);}
+
+      .cards {display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: var(--max-width); margin: 40px auto; padding: 0 20px;}
+      .card {
+        background: rgba(255,255,255,0.02); border-radius: var(--card-radius); padding: 20px;
+        border: 1px solid rgba(255,255,255,0.03); backdrop-filter: blur(10px);
+        transition: transform 0.3s, box-shadow 0.3s;
+        opacity: 0; transform: translateY(30px);
+      }
+      .card.visible {opacity: 1; transform: translateY(0);}
+      .card:hover {transform: scale(1.05); box-shadow: 0 0 20px var(--cyan), 0 0 40px var(--primary-blue);}
+      .card h3 {font-family: Orbitron, sans-serif; font-size: 20px; margin-bottom: 8px;}
+      .card p {font-size: 14px; color: rgba(230,245,255,0.9); margin-bottom: 12px;}
+      .card .btn {padding: 8px 16px; font-weight: 700; border-radius: 10px; border: none; cursor: pointer; margin-right: 8px;}
+      .card .btn.enroll {background: linear-gradient(90deg, var(--primary-red), var(--primary-blue)); color: #fff;}
+      .card .btn.preview {background: rgba(255,255,255,0.05); color: #fff;}
+
+      @media (max-width: 980px){.cards {grid-template-columns: repeat(2,1fr);}}
+      @media (max-width: 680px){.cards {grid-template-columns: 1fr;}}
+
+      /* Lesson Plans Section */
+      #lesson-plans {
+        max-width: var(--max-width);
+        margin: 20px auto;
+        padding: 30px;
+        border-radius: var(--card-radius);
+        text-align: center;
+        background: linear-gradient(135deg, rgba(255,45,85,0.12), rgba(0,102,255,0.12));
+        border: 1px solid rgba(255,255,255,0.08);
+        box-shadow: 0 0 20px rgba(0,229,255,0.3), inset 0 0 10px rgba(255,255,255,0.05);
+        display: none;
+        animation: fadeInUp 0.6s ease forwards;
+      }
+      #lesson-plans h2 {font-family: Orbitron, sans-serif; font-size: 26px; margin-bottom: 10px;}
+      #lesson-plans p {font-size: 15px; color: rgba(230,245,255,0.9); margin-bottom: 20px;}
+      #lesson-plans button {
+        padding: 10px 20px; font-weight: 700; border-radius: 10px; border: none; cursor: pointer;
+        background: linear-gradient(90deg, var(--primary-red), var(--primary-blue)); color: #fff;
+        transition: 0.3s;
+      }
+      #lesson-plans button:hover {transform: scale(1.05); box-shadow: 0 0 20px var(--cyan), 0 0 40px var(--primary-blue);}
+      
+      @keyframes fadeInUp {from {opacity: 0; transform: translateY(20px);} to {opacity: 1; transform: translateY(0);}}
+
+      /* Progress Bar */
+      .progress-container {
+        width: 100%;
+        background: rgba(255,255,255,0.05);
+        border-radius: 12px;
+        margin: 20px 0;
+        height: 20px;
+        overflow: hidden;
+        box-shadow: inset 0 0 10px rgba(0,0,0,0.4);
+      }
+      .progress-bar {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, var(--primary-red), var(--primary-blue));
+        border-radius: 12px;
+        transition: width 0.5s ease;
+      }
+      .progress-text {
+        margin-top: 10px;
+        font-weight: 700;
+        color: var(--cyan);
+      }
+      #full-stack-development {
+        max-width: var(--max-width);
+        margin: 30px ;
+        padding: 30px;
+        margin-top: 70px;
+        border-radius: var(--card-radius);
+        text-align: center;
+        background: linear-gradient(135deg, rgba(255,45,85,0.12), rgba(0,102,255,0.12));
+        border: 1px solid rgba(255,255,255,0.08);
+        box-shadow: 0 0 20px rgba(0,229,255,0.3), inset 0 0 10px rgba(255,255,255,0.05);
+        display: block;
+        animation: fadeInUp 0.6s ease forwards;
+        display: flex; flex-direction: column; align-items: center; justify-content: top; text-align: center; min-height: 40vh;
+      }
+      #full-stack-development .fsd {
+        width: 100%;
+        height: 20px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 12px;
+        margin: 20px 0;
+        overflow: hidden;
+        box-shadow: inset 0 0 10px rgba(0,0,0,0.4);
+        position: relative;
+      }
+      #full-stack-development .fsd1 {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, var(--primary-red), var(--primary-blue));
+        border-radius: 12px;
+        transition: width 0.5s ease;
+      }
+      #full-stack-development .fsd3 {
+        margin-top: 10px;
+        font-weight: 700;
+        color: var(--cyan);
+      }
+      #full-stack-development button {
+        padding: 10px 20px; font-weight: 700; border-radius: 10px; border: none; cursor: pointer;
+        background: linear-gradient(90deg, var(--primary-red), var(--primary-blue)); color: #fff;
+        transition: 0.3s;
+      }
+      #full-stack-development h2{font-family: Orbitron, sans-serif; font-size: 26px; margin-bottom: 10px;}
+      #full-stack-development p{font-size: 15px; color: rgba(230,245,255,0.9); margin-bottom: 20px;}
+      footer {padding: 20px; background: linear-gradient(90deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02));
+              border-top: 1px solid rgba(255,255,255,0.03);}
+      .footer-container {max-width: var(--max-width); margin: auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;}
+      .footer-links {display: flex; gap: 20px; margin-top: 10px;}
+      .footer-links a {text-decoration: none; color: #eaf6ff; transition: 0.3s;}
+      .footer-links a:hover {color: var(--cyan);}
+      .socials {display: flex; gap: 12px; margin-top: 10px;}
+      .socials a {display: inline-block; width: 40px; height: 40px; border-radius: 8px; background: linear-gradient(90deg, var(--primary-red), var(--primary-blue)); display: grid; place-items: center; color: #fff; text-decoration: none; transition: 0.3s;}
+      .socials a:hover {transform: scale(1.1); box-shadow: 0 0 20px var(--cyan), 0 0 40px var(--primary-blue);}
+      @media (max-width: 600px) {.footer-container {flex-direction: column; text-align: center;}}
+      #exit-modal {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.6); backdrop-filter: blur(5px);
+        display: flex; align-items: center; justify-content: center;
+        visibility: hidden; opacity: 0; transition: 0.3s ease;
+      }
+      #exit-modal.active {visibility: visible; opacity: 1;}
+      .modal-box {
+        background: linear-gradient(135deg, rgba(255,45,85,0.15), rgba(0,102,255,0.15));
+        border: 1px solid rgba(255,255,255,0.2);
+        box-shadow: 0 0 30px var(--cyan), inset 0 0 15px rgba(255,255,255,0.1);
+        border-radius: 20px; padding: 30px 40px; text-align: center;
+        animation: pulse 0.6s ease;
+      }
+      @keyframes pulse {
+        0% {transform: scale(0.8); opacity: 0;}
+        100% {transform: scale(1); opacity: 1;}
+      }
+      .modal-box h3 {font-family: Orbitron, sans-serif; font-size: 24px; color: #fff; margin-bottom: 16px;}
+      .modal-box p {color: #bde3ff; margin-bottom: 20px;}
+      .modal-buttons {display: flex; justify-content: center; gap: 20px;}
+      .modal-buttons button {
+        padding: 10px 24px; border: none; border-radius: 10px; font-weight: 700; cursor: pointer;
+        color: #fff; transition: 0.3s;
+      }
+      .confirm {background: linear-gradient(90deg, var(--primary-red), var(--primary-blue));}
+      .cancel {background: rgba(255,255,255,0.08);}
+      .modal-buttons button:hover {transform: scale(1.05); box-shadow: 0 0 20px var(--cyan);}
+      .badge{display:inline-block;padding:6px 10px;border-radius:999px;font-weight:700;font-size:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.02)}
+      /* ===== Exit Alert Box ===== */
+  .alert-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.4s ease forwards;
+    z-index: 9999;
+  }
+
+  .alert-box {
+    background: linear-gradient(135deg, rgba(0,229,255,0.15), rgba(255,45,85,0.15));
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 30px;
+    border-radius: 20px;
+    text-align: center;
+    box-shadow: 0 0 25px rgba(0,229,255,0.3), 0 0 50px rgba(255,45,85,0.3);
+    transform: scale(0.7);
+    opacity: 0;
+    animation: popIn 0.5s ease forwards;
+  }
+
+  .alert-box h3 {
+    font-family: Orbitron, sans-serif;
+    margin-bottom: 20px;
+    color: #fff;
+    font-size: 20px;
+  }
+
+  .alert-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+  }
+
+  .alert-buttons button {
+    padding: 10px 20px;
+    font-weight: 700;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+
+  .alert-buttons .ok {
+    background: linear-gradient(90deg, var(--primary-red), var(--primary-blue));
+    color: #fff;
+  }
+
+  .alert-buttons .cancel {
+    background: rgba(255,255,255,0.1);
+    color: #eaf6ff;
+  }
+
+  .alert-buttons button:hover {
+    transform: scale(1.05);
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes popIn {
+    from { transform: scale(0.7); opacity: 0; }
+    60% { transform: scale(1.1); opacity: 1; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  /* Exit Button Style */
+  .exit-btn {
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.05);
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+  .exit-btn:hover {
+    background: linear-gradient(90deg, var(--primary-red), var(--primary-blue));
+    transform: scale(1.05);
+  }
+#generate-certificate
+{
+  padding: 10px 20px; font-weight: 700; border-radius: 10px; border: none; cursor: pointer;
+        background: linear-gradient(90deg, var(--primary-red), var(--primary-blue)); color: #fff;
+        transition: 0.3s;margin-top: 15px;
+}
+    </style>
+  </head>
+  <body>
+
+    <nav>
+      <div class="logo">MindStep</div>
+      <div class="nav-links">
+        <a href="#home">Home</a>
+        <a href="#courses">Courses</a>
+        <a href="#about">Guides</a>
+        <a href="#tasks">Tasks</a>
+        <a href="#exit" id="exit-link">Exit</a>
+      </div>
+    </nav>
+
+    <section class="hero" id="home">
+      <h1>Welcome to MindStep</h1>
+      <p>Practice transforms ability into mastery.</p>
+      <button class="cta" onclick="document.getElementById('courses').scrollIntoView({behavior:'smooth'});">Explore Courses</button>
+      <div style="height: 40px;" id="full-stack-development">
+      <h2>Welcome to Full Stack Development</h2>
+            <p>Course Overview: Dive deep into the world of Full Stack Development, mastering both front-end and back-end technologies.</p>
+            
+            <div class="fsd">
+              <div class="fsd1" id="fsd2"></div>
+            </div>
+            <div class="fsd3" id="fsd5">Completed: 0%</div>
+
+            <button id="generate-certificate">Generate Certificate</button>
+    </div>
+    </section>
+    
+
+    <section class="cards" id="courses">
+      <div class="card reveal">
+      <h3>HTML <span class="badge">Beginner</span></h3>
+        <p>Build semantic, accessible, and modern HTML structures.</p>
+        <button class="btn enroll">Enroll</button>
+      </div>
+      <div class="card reveal">
+        <h3>CSS <span class="badge">Animations</span></h3>
+        <p>Master responsive layouts, gradients, and animations.</p>
+        <button class="btn enroll">Enroll</button>
+      </div>
+      <div class="card reveal">
+        <h3>JavaScript <span class="badge">Interactive</span></h3>
+        <p>Create interactive and dynamic web experiences.</p>
+        <button class="btn enroll">Enroll</button>
+      </div>
+      <div class="card reveal">
+        <h3>Java <span class="badge">Backend</span></h3>
+        <p>Develop backend systems and scalable applications.</p>
+        <button class="btn enroll">Enroll</button>
+      </div>
+      <div class="card reveal">
+        <h3>Python <span class="badge">Automation</span></h3>
+        <p>Automate tasks, analyze data, and build scripts.</p>
+        <button class="btn enroll">Enroll</button>
+      </div>
+    </section>
+
+    <div id="lesson-plans"></div>
+
+    <footer id="contact">
+      <div class="footer-container">
+        <div>© 2025 MindStepLap | MindStep@gmail.com</div>
+        <div class="footer-links"></div>
+        <div class="socials">
+          <a href="">T</a>
+          <a href=""Google.com>G</a>
+          <a href="">in</a>
+        </div>
+      </div>
+    </footer>
+  <!-- 🔥 Exit Modal -->
+    <div id="exit-modal">
+      <div class="modal-box">
+        <h3>Exit MindStep?</h3>
+        <p>Are you sure you want to leave this page?</p>
+        <div class="modal-buttons">
+          <button class="confirm" id="confirm-exit">Yes, Exit</button>
+          <button class="cancel" id="cancel-exit">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- JavaScript Section -->
+<script>
+// MainPage.js
+document.addEventListener("DOMContentLoaded", () => {
+  const username = localStorage.getItem("username");
+  const fsdBar = document.getElementById("fsd2");
+  const fsdText = document.getElementById("fsd5");
+  const lessonBox = document.getElementById("lesson-plans");
+
+  // card appear animations
+  try {
+    const cards = document.querySelectorAll('.card');
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
+    }, { threshold: 0.12 });
+    cards.forEach(c => observer.observe(c));
+  } catch (e) {}
+
+  // enroll buttons -> show Start Learning button (no immediate redirect)
+  document.querySelectorAll('.btn.enroll').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const card = btn.closest('.card');
+      const courseName = (card && (card.querySelector('h3')?.innerText || card.dataset.course)) || "Full Stack Development";
+      if (!lessonBox) return;
+      lessonBox.innerHTML = `
+        <h2>Welcome to ${escapeHtml(courseName)}</h2>
+        <p>Start your journey in <b>${escapeHtml(courseName)}</b> now.</p>
+        <button id="start-btn" class="start">Start Learning</button>
+      `;
+      lessonBox.style.display = 'block';
+      lessonBox.scrollIntoView({ behavior: "smooth" });
+      document.getElementById("start-btn").addEventListener("click", () => {
+        window.location.href = `course.html?course=${encodeURIComponent(courseName)}`;
+      });
+    });
+  });
+
+  function escapeHtml(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+  // animate to target percent
+  function animateTo(target) {
+    const start = Number((fsdBar && fsdBar.style.width && fsdBar.style.width.replace('%','')) || 0);
+    const to = Math.max(0, Math.min(100, Number(target) || 0));
+    const dur = 700;
+    const t0 = performance.now();
+    function frame(t) {
+      const p = Math.min(1, (t - t0) / dur);
+      const v = Math.round(start + (to - start) * p);
+      if (fsdBar) fsdBar.style.width = v + "%";
+      if (fsdText) fsdText.textContent = "Completed: " + v + "%";
+      if (p < 1) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  async function loadMainProgress() {
+    if (!username) {
+      if (fsdBar) fsdBar.style.width = "0%";
+      if (fsdText) fsdText.textContent = "Login to view progress";
+      return;
+    }
+    try {
+      const res = await fetch("/get-main-progress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username })
+      });
+      if (!res.ok) {
+        fsdText.textContent = "Error loading progress.";
+        return;
+      }
+      const json = await res.json();
+      animateTo(json.fullStack || 0);
+    } catch (e) {
+      console.error("main progress err", e);
+      if (fsdText) fsdText.textContent = "Error loading progress.";
+    }
+  }
+
+  loadMainProgress();
+  window.addEventListener("focus", loadMainProgress);
+  window.addEventListener("storage", (e) => { if (e.key && e.key.startsWith("progress_")) loadMainProgress(); });
+});
+</script>
+ </body>
+  </html>
