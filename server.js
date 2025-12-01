@@ -348,9 +348,9 @@ app.post('/api/run', async (req, res) => {
 
 // serve frontend files if present
 app.get('/', (req, res) => {
-  const file = path.join(PUBLIC_DIR, 'MainPage.html');
+  const file = path.join(PUBLIC_DIR, 'LoginPage.html');
   if (fs.existsSync(file)) return res.sendFile(file);
-  return res.send('MainPage not found. Upload your public/MainPage.html');
+  return res.send('LoginPage not found.');
 });
 app.get('/course.html', (req, res) => {
   const file = path.join(PUBLIC_DIR, 'course.html');

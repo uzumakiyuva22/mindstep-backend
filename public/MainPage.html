@@ -321,6 +321,108 @@
         background: linear-gradient(90deg, var(--primary-red), var(--primary-blue)); color: #fff;
         transition: 0.3s;margin-top: 15px;
 }
+/* ================================
+   RESPONSIVE FIXES — ADD ONLY THIS
+================================ */
+
+/* Tablets */
+@media (max-width: 1024px) {
+
+  .hero h1 {
+    font-size: 40px;
+  }
+  .hero p {
+    font-size: 17px;
+  }
+
+  .cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Phones */
+@media (max-width: 768px) {
+
+  nav {
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .nav-links {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  #userBox {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    text-align: center;
+  }
+
+  #full-stack-development {
+    width: 100%;
+    padding: 20px;
+  }
+
+  .hero h1 {
+    font-size: 32px;
+  }
+  .hero p {
+    font-size: 15px;
+  }
+
+  .cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Small Phones */
+@media (max-width: 480px) {
+
+  .hero h1 {
+    font-size: 26px;
+  }
+  .hero p {
+    font-size: 14px;
+  }
+
+  #userBox img {
+    width: 45px;
+    height: 45px;
+  }
+
+  .cta {
+    width: 100%;
+  }
+
+  #full-stack-development h2 {
+    font-size: 22px;
+  }
+}
+
+/* Very Small Phones */
+@media (max-width: 360px) {
+
+  .hero h1 {
+    font-size: 22px;
+  }
+  .hero p {
+    font-size: 13px;
+  }
+
+  .nav-links a {
+    font-size: 13px;
+    padding: 4px 8px;
+  }
+
+  .card h3 {
+    font-size: 18px;
+  }
+}
+
     </style>
   </head>
   <body>
@@ -335,6 +437,14 @@
         <a href="#exit" id="exit-link">Exit</a>
       </div>
     </nav>
+    <div id="userBox" style="display:flex;align-items:center;gap:12px;padding:15px;">
+  <img id="userImg" width="50" height="50" style="border-radius:50%;border:2px solid #00e5ff;">
+  <div>
+    <div id="userName" style="font-weight:700;font-size:18px;"></div>
+    <div id="userQuote" style="opacity:.8;font-size:13px;"></div>
+  </div>
+</div>
+
 
     <section class="hero" id="home">
       <h1>Welcome to MindStep</h1>
@@ -415,7 +525,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const fsdBar = document.getElementById("fsd2");
   const fsdText = document.getElementById("fsd5");
   const lessonBox = document.getElementById("lesson-plans");
-
+  
+document.getElementById("userName").textContent = localStorage.getItem("ms_username");
+document.getElementById("userImg").src = localStorage.getItem("ms_image");
+document.getElementById("userQuote").textContent = localStorage.getItem("ms_quote");
   // card appear animations
   try {
     const cards = document.querySelectorAll('.card');
