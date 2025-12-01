@@ -3,135 +3,295 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Login / Signup Page</title>
+<title>MindStep — Premium Login</title>
 
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+/* BASIC RESET */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Inter", "Segoe UI", sans-serif;
+}
 
+/* PREMIUM BACKGROUND */
 body {
-  display: flex; justify-content: center; align-items: center;
-  height: 100vh;
-  background: linear-gradient(135deg, #e74c3c, #3498db);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  
+  background: radial-gradient(circle at 25% 20%, #b8d4ff, #8ab2ff, #6a78ff);
+  background-size: cover;
+  padding: 20px;
+  overflow: hidden;
 }
 
-.container {
-  position: relative;
-  width: 800px; height: 550px;
-  border-radius: 12px;
-  display: flex; overflow: hidden;
-  box-shadow: 0 0 20px rgba(0,0,0,0.6);
-}
-
-/* Login & Signup boxes */
-.form-box {
+/* PREMIUM BLUR BALLS */
+.glass-ball {
   position: absolute;
-  width: 50%; height: 100%;
-  background: rgba(0,0,0,0.9);
-  padding: 40px;
-  display: flex; flex-direction: column; justify-content: center;
-  color: white;
-  transition: .6s ease-in-out;
+  width: 380px;
+  height: 380px;
+  border-radius: 50%;
+  filter: blur(70px);
+  opacity: 0.5;
+  animation: float 8s infinite alternate ease-in-out;
+}
+#ball1 { background: #6aa9ff; top: -120px; left: -80px; }
+#ball2 { background: #ff6ad5; bottom: -120px; right: -80px; }
+
+@keyframes float {
+  0%   { transform: translateY(0px); }
+  100% { transform: translateY(50px); }
 }
 
-.login-box { left: 0; z-index: 2; }
-.signup-box { left: 0; opacity: 0; transform: translateX(-100%); z-index: 1; }
+/* MAIN CONTAINER (GLASS CARD) */
+.container {
+  width: 880px;
+  max-width: 100%;
+  height: 600px;
+  backdrop-filter: blur(25px);
+  background: rgba(255,255,255,0.1);
+  border-radius: 25px;
+  position: relative;
+  overflow: hidden;
 
+  box-shadow: 0 15px 40px rgba(0,0,0,0.25);
+  border: 1px solid rgba(255,255,255,0.35);
+
+  display: flex;
+}
+
+/* LEFT LOGIN/SIGNUP FORMS */
+.form-box {
+  width: 50%;
+  height: 100%;
+  padding: 50px 45px;
+  position: absolute;
+  top: 0;
+  background: rgba(0, 0, 21, 0.55);
+  backdrop-filter: blur(40px);
+
+  transition: .7s ease;
+  overflow-y: auto;
+
+  color: white;
+  border-right: 1px solid rgba(255,255,255,0.25);
+}
+.form-box::-webkit-scrollbar { width: 0; }
+
+/* LOGIN = DEFAULT */
+.login-box {
+  left: 0;
+  z-index: 2;
+}
+
+/* SIGNUP START HIDDEN */
+.signup-box {
+  left: 0;
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+/* WHEN TAPPED "SIGNUP" */
 .container.active .login-box {
   transform: translateX(100%);
-  opacity: 0; z-index: 1;
+  opacity: 0;
 }
 
 .container.active .signup-box {
   transform: translateX(0);
-  opacity: 1; z-index: 2;
+  opacity: 1;
+  z-index: 3;
 }
 
+/* PREMIUM RIGHT PANEL */
 .welcome-box {
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.6),
+    rgba(255, 255, 255, 0.2)
+  );
+  backdrop-filter: blur(30px);
+
+  padding: 45px;
+  color: #0f1b33;
+  
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  text-align: center;
   position: absolute;
   right: 0;
-  width: 50%; height: 100%;
-  background: linear-gradient(135deg,#3498db,#e74c3c);
-  display: flex; flex-direction: column;
-  justify-content: center; align-items: center;
-  text-align: center; padding: 40px; color: white;
+
+  border-left: 1px solid rgba(255,255,255,0.3);
 }
 
-/* Form fields */
+/* PREMIUM HEADINGS */
+.welcome-box h1 {
+  font-size: 42px;
+  font-weight: 700;
+  background: linear-gradient(90deg, #4a6bff, #b45cff);
+  -webkit-background-clip: text;
+  color: transparent;
+  margin-bottom: 12px;
+}
+
+/* FORM HEADINGS */
+.form-box h2 {
+  font-size: 32px;
+  font-weight: 700;
+  background: linear-gradient(90deg,#7dabff,#e18aff);
+  -webkit-background-clip: text;
+  color: transparent;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+/* PREMIUM INPUT */
 .input-box {
-  position: relative; margin-bottom: 18px;
+  margin: 22px 0;
 }
 
 .input-box input {
   width: 100%;
-  padding: 12px;
-  padding-left: 12px;
-  border: none;
-  border-bottom: 2px solid #666;
-  background: transparent;
-  color: white;
+  padding: 15px;
   font-size: 16px;
-}
-.input-box input:focus { border-bottom-color: #3498db; }
-
-.btn {
-  width: 100%; padding: 12px;
-  border-radius: 25px;
-  background: linear-gradient(to right, #e74c3c,#3498db);
-  border: none; color: white; font-size: 18px;
-  cursor: pointer;
-}
-
-/* Admin Login Button FIXED */
-.admin-btn {
-  margin-top: 15px;
-  background: #222;
-  width: 100%;
-  padding: 10px;
+  
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.20);
+  
+  color: #fff;
   border-radius: 12px;
+  outline: none;
+  transition: .3s;
+}
+
+.input-box input:focus {
+  border-color: #84a2ff;
+  box-shadow: 0 0 12px rgba(135,162,255,0.45);
+}
+
+/* PREMIUM BUTTON */
+.btn {
+  width: 100%;
+  padding: 15px;
+  border: none;
+  border-radius: 12px;
+  margin-top: 20px;
+
+  background: linear-gradient(45deg, #5d8cff, #955bff);
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: .3s;
+}
+
+.btn:hover {
+  transform: scale(1.05);
+}
+
+/* ADMIN BUTTON */
+.admin-btn {
+  background: rgba(255,255,255,0.12);
+  margin-top: 20px;
+  padding: 13px;
+  border-radius: 12px;
+  text-align: center;
   color: white;
   cursor: pointer;
+  transition:.3s;
+}
+.admin-btn:hover { background: rgba(255,255,255,0.25); }
+
+/* SWITCH TEXT */
+.toggle-text {
+  margin-top: 20px;
+  font-size: 15px;
   text-align: center;
+  color: #ccc;
+}
+.toggle-text a{
+  font-weight: bold;
+  color: #84a2ff;
+  cursor: pointer;
 }
 
-.toggle-text { margin-top: 10px; text-align: center; }
-.toggle-text a { cursor:pointer; font-weight:bold; color:#eee; }
-
-/* Signup image preview */
+/* PROFILE UPLOAD */
 #profileLabel {
-  width: 100px; height: 100px;
-  border-radius: 50%; border: 2px dashed #3498db;
-  display:flex; justify-content:center; align-items:center;
-  margin: 0 auto 15px; cursor:pointer; color:#3498db;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  border: 3px dashed #84a2ff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 auto 15px;
+  font-size: 28px;
+  color: #84a2ff;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
 }
 
 #signup-preview {
-  width: 100px; height: 100px;
+  width: 110px;
+  height: 110px;
   border-radius: 50%;
   object-fit: cover;
-  border:3px solid #3498db;
-  margin:0 auto 15px; display:none;
+  border: 3px solid #84a2ff;
+  margin: 0 auto 15px;
+  display: none;
 }
 
+/* TOAST */
 .toast {
-  position:fixed; bottom:30px; left:50%;
-  transform:translateX(-50%);
-  background:#333; padding:12px 25px; color:white;
-  border-radius:25px;
-  opacity:0; transition:.4s;
+  position: fixed;
+  bottom: 35px;
+  left: 50%;
+  transform: translateX(-50%);
+  
+  background: rgba(0,0,30,0.75);
+  padding: 12px 25px;
+  color: white;
+  border-radius: 14px;
+  opacity: 0;
+
+  transition: .4s;
+  box-shadow:0 8px 20px rgba(0,0,0,0.4);
 }
-.toast.show { opacity:1; bottom:50px; }
+.toast.show {
+  opacity: 1;
+  bottom: 50px;
+}
+
+/* RESPONSIVE */
+@media(max-width:760px){
+  .container { flex-direction: column; height: auto; }
+  .welcome-box { display: none; }
+  .form-box { width: 100%; position: relative; }
+}
 </style>
 </head>
 
 <body>
+
+<!-- PREMIUM BACKGROUND GLOW -->
+<div id="ball1" class="glass-ball"></div>
+<div id="ball2" class="glass-ball"></div>
+
 <div class="container" id="container">
 
-  <!-- LOGIN BOX -->
+  <!-- LOGIN -->
   <div class="form-box login-box">
-    <h2>Login</h2>
+    <h2>Welcome Back</h2>
 
     <div class="input-box">
-      <input id="login-username" type="text" placeholder="Username">
+      <input id="login-username" type="text" placeholder="Username or Email">
     </div>
 
     <div class="input-box">
@@ -140,21 +300,23 @@ body {
 
     <button class="btn" id="loginBtn">Login</button>
 
-    <div class="admin-btn" onclick="window.location.href='AdminLogin.html'">👨‍💼 Administrator Login</div>
+    <div class="admin-btn" onclick="location.href='AdminLogin.html'">🔐 Administrator Login</div>
 
-    <div class="toggle-text">Don't have an account? <a id="showSignup">Sign Up</a></div>
+    <div class="toggle-text">
+      Don't have an account? <a id="showSignup">Sign Up</a>
+    </div>
   </div>
 
-  <!-- SIGNUP BOX -->
+  <!-- SIGNUP -->
   <div class="form-box signup-box">
-    <h2>Sign Up</h2>
+    <h2>Create Account</h2>
 
     <label id="profileLabel">+</label>
     <input id="signup-image" type="file" accept="image/*" style="display:none;">
     <img id="signup-preview">
 
     <div class="input-box">
-      <input id="signup-username" type="text" placeholder="Username">
+      <input id="signup-username" type="text" placeholder="Full Name">
     </div>
 
     <div class="input-box">
@@ -171,92 +333,102 @@ body {
 
     <button class="btn" id="signupBtn">Sign Up</button>
 
-    <div class="toggle-text">Already have an account? <a id="showLogin">Login</a></div>
+    <div class="toggle-text">
+      Already have an account? <a id="showLogin">Login</a>
+    </div>
   </div>
 
-  <!-- WELCOME BOX -->
+  <!-- RIGHT WELCOME PANEL -->
   <div class="welcome-box">
-    <h1>WELCOME BACK!</h1>
-    <p>Your learning journey continues here 🚀</p>
+    <h1>Hello Again 👋</h1>
+    <p style="max-width: 85%;">
+      Your MindStep world is ready. Explore lessons, track progress, and continue your journey.
+    </p>
   </div>
+
 </div>
 
-<div class="toast" id="toast"></div>
+<!-- TOAST -->
+<div id="toast" class="toast"></div>
 
 <script>
-// ---------------- Form switching ----------------
-const container = document.getElementById("container");
-document.getElementById("showSignup").onclick = () => container.classList.add("active");
-document.getElementById("showLogin").onclick = () => container.classList.remove("active");
+// Form Switch
+document.getElementById("showSignup").onclick = () =>
+  document.getElementById("container").classList.add("active");
 
-// ---------------- Image Preview ----------------
+document.getElementById("showLogin").onclick = () =>
+  document.getElementById("container").classList.remove("active");
+
+// Image Preview
 document.getElementById("profileLabel").onclick = () =>
   document.getElementById("signup-image").click();
 
 document.getElementById("signup-image").onchange = e => {
   const file = e.target.files[0];
   if (!file) return;
-  document.getElementById("signup-preview").src = URL.createObjectURL(file);
-  document.getElementById("signup-preview").style.display = "block";
+
+  const preview = document.getElementById("signup-preview");
+  preview.src = URL.createObjectURL(file);
+  preview.style.display = "block";
   document.getElementById("profileLabel").style.display = "none";
 };
 
-// ---------------- Toast ----------------
-function toast(msg) {
+// Toast
+function toast(msg){
   const t = document.getElementById("toast");
   t.textContent = msg;
   t.classList.add("show");
-  setTimeout(() => t.classList.remove("show"), 2500);
+  setTimeout(()=>t.classList.remove("show"),2500);
 }
 
-// ---------------- SIGNUP ----------------
+// SIGNUP
 document.getElementById("signupBtn").onclick = async () => {
-  const username = signup-username.value.trim();
-  const email = signup-email.value.trim();
-  const password = signup-password.value.trim();
-  const confirm = signup-confirm.value.trim();
+  const name = document.getElementById("signup-username").value.trim();
+  const email = document.getElementById("signup-email").value.trim();
+  const password = document.getElementById("signup-password").value.trim();
+  const confirm = document.getElementById("signup-confirm").value.trim();
   const img = document.getElementById("signup-image").files[0];
 
-  if (!username || !email || !password || !confirm)
+  if(!name || !email || !password || !confirm)
     return toast("Fill all fields");
-  if (password !== confirm)
+
+  if(password !== confirm)
     return toast("Passwords do not match");
 
   const fd = new FormData();
-  fd.append("username", username);
+  fd.append("name", name);
   fd.append("email", email);
   fd.append("password", password);
-  if (img) fd.append("image", img);
+  if(img) fd.append("image", img);
 
-  const res = await fetch("/signup", { method: "POST", body: fd });
+  const res = await fetch("/api/signup", { method:"POST", body:fd });
   const data = await res.json();
 
-  if (res.ok) {
-    toast("Signup success!");
-    setTimeout(() => location.href="/main", 1500);
-  } else toast(data.message || "Signup failed");
+  if(data.success){
+    toast("Signup successful!");
+    setTimeout(()=>location.href="LoginPage.html",1500);
+  } else toast(data.error || "Signup failed");
 };
 
-// ---------------- LOGIN ----------------
+// LOGIN
 document.getElementById("loginBtn").onclick = async () => {
-  const username = login-username.value.trim();
-  const password = login-password.value.trim();
-  if (!username || !password) return toast("Enter username & password");
+  const user = document.getElementById("login-username").value.trim();
+  const pass = document.getElementById("login-password").value.trim();
 
-  const res = await fetch("/login", {
+  if(!user || !pass)
+    return toast("Enter username & password");
+
+  const res = await fetch("/api/login",{
     method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({ username, password })
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ usernameOrEmail:user, password:pass })
   });
-
   const data = await res.json();
 
-  if (res.ok) {
-    localStorage.setItem("username", data.user.username);
-    localStorage.setItem("userImage", data.user.image);
-    toast("Login success!");
-    setTimeout(()=> location.href="/MainPage.html", 1200);
-  } else toast(data.message);
+  if(data.success){
+    toast("Login successful!");
+    setTimeout(()=>location.href="MainPage.html",1200);
+  }else toast("Invalid login");
 };
 </script>
 
