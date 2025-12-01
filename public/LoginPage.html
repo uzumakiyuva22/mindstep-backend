@@ -91,6 +91,55 @@ body{
   border-radius:25px;opacity:0;transition:.4s;
 }
 .toast.show{opacity:1;bottom:50px;}
+@media (max-width: 850px) {
+  .container {
+    flex-direction: column;
+    max-width: 500px;
+  }
+
+  .form-box,
+  .welcome-box {
+    width: 100%;
+    height: auto;
+    padding: 35px;
+  }
+
+  .welcome-box {
+    order: -1;
+  }
+}
+
+/* Phones */
+@media (max-width: 520px) {
+
+  .container {
+    max-width: 100%;
+    border-radius: 10px;
+  }
+
+  .form-box,
+  .welcome-box {
+    padding: 25px;
+  }
+
+  h1 {
+    font-size: 26px;
+  }
+
+  h2 {
+    font-size: 22px;
+  }
+
+  .btn {
+    font-size: 16px;
+    padding: 10px;
+  }
+
+  .admin-btn {
+    font-size: 14px;
+    padding: 8px;
+  }
+}
 </style>
 </head>
 
