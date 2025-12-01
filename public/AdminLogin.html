@@ -1,101 +1,242 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<title>Admin Login — MindStep</title>
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700;800&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MindStep Admin Login</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
 <style>
-:root{--accent1:#ff2d55;--accent2:#0066ff;--neon:#00e5ff}
-*{box-sizing:border-box}
-body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:Inter,system-ui,Arial;background:linear-gradient(180deg,#041022,#020316)}
-.card{width:420px;border-radius:14px;padding:26px;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));box-shadow:0 20px 60px rgba(0,0,0,0.6);color:#eaf6ff}
-.brand{display:flex;gap:12px;align-items:center;margin-bottom:12px}
-.logo{width:46px;height:46px;border-radius:10px;background:linear-gradient(45deg,var(--accent1),var(--accent2));display:flex;align-items:center;justify-content:center;color:white;font-weight:800}
-.title{font-size:18px;margin:0}
-.small{font-size:13px;color:#cfefff}
-.field{margin-bottom:12px}
-.label{display:block;font-size:13px;margin-bottom:6px;color:#9fdfff}
-input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:rgba(10,14,24,0.6);color:#eaf6ff;font-size:14px}
-.btn{width:100%;padding:12px;border-radius:12px;border:none;cursor:pointer;background:linear-gradient(90deg,var(--accent1),var(--accent2));color:white;font-weight:700;margin-top:8px}
-.btn.secondary{background:transparent;border:1px solid rgba(255,255,255,0.06);color:#cfefff;margin-top:10px}
-.note{margin-top:12px;color:#aeefff;font-size:13px}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:28px;padding:10px 14px;border-radius:10px;background:#111;color:#fff;opacity:0;transition:.25s}
-.themeSel{position:absolute;right:14px;top:14px;padding:6px;border-radius:6px;border:none}
+:root {
+  --cyan: #00eaff;
+  --blue: #4d7cff;
+  --pink: #ff3ea5;
+  --glass: rgba(255,255,255,0.08);
+  --border: rgba(255,255,255,0.15);
+}
+
+*{
+  margin:0; padding:0; box-sizing:border-box;
+  font-family: Inter, sans-serif;
+}
+
+body{
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(0,150,255,0.22), transparent 60%),
+    radial-gradient(circle at 70% 80%, rgba(255,0,150,0.22), transparent 60%),
+    linear-gradient(135deg, #02020d, #08081d, #04040e);
+  overflow:hidden;
+  animation: bgMove 18s ease infinite;
+}
+
+@keyframes bgMove {
+  0% { background-position: 0% 0%; }
+  50% { background-position: 100% 80%; }
+  100% { background-position: 0% 0%; }
+}
+
+/* Floating particle glow */
+body::before{
+  content:"";
+  position:fixed; inset:0;
+  background-image:
+    radial-gradient(2px 2px at 30% 40%, rgba(0,229,255,0.6), transparent),
+    radial-gradient(2px 2px at 75% 65%, rgba(255,62,160,0.6), transparent),
+    radial-gradient(1px 1px at 50% 85%, rgba(255,255,255,0.5), transparent);
+  animation: float 25s infinite ease-in-out;
+  opacity:.4;
+}
+
+@keyframes float {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-50px); }
+  100% { transform: translateY(0); }
+}
+
+/* MAIN CARD */
+.card{
+  width: 420px;
+  padding: 40px;
+  border-radius: 22px;
+  background: rgba(255,255,255,0.07);
+  backdrop-filter: blur(25px);
+  border: 1px solid rgba(255,255,255,0.2);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+  animation: pop 0.5s ease;
+  text-align:center;
+  color:white;
+}
+
+@keyframes pop {
+  from{ transform:scale(.8); opacity:0; }
+  to{ transform:scale(1); opacity:1; }
+}
+
+/* HEADER */
+.card h1{
+  font-family: Orbitron;
+  font-size: 32px;
+  margin-bottom: 10px;
+  background: linear-gradient(90deg, var(--pink), var(--cyan));
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.card p{
+  margin-bottom: 25px;
+  opacity: .7;
+}
+
+/* INPUT BOX */
+.input-box{
+  text-align:left;
+  margin-bottom:22px;
+}
+
+.input-box label{
+  font-size:14px;
+  font-weight:600;
+  display:block;
+  margin-bottom:6px;
+}
+
+.input-box input{
+  width:100%;
+  padding:14px;
+  border-radius:12px;
+  border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.08);
+  color:white;
+  outline:none;
+  font-size:15px;
+  transition:.3s;
+}
+
+.input-box input:focus{
+  border-color: var(--cyan);
+  box-shadow: 0 0 12px rgba(0,229,255,0.45);
+}
+
+/* LOGIN BUTTON */
+.btn{
+  width:100%;
+  padding:14px;
+  border-radius:12px;
+  background:linear-gradient(90deg, var(--pink), var(--blue));
+  border:none;
+  color:white;
+  cursor:pointer;
+  font-size:17px;
+  font-weight:700;
+  margin-top:10px;
+  box-shadow:0 0 15px rgba(0,229,255,0.5);
+  transition:.3s;
+}
+
+.btn:hover{
+  transform:scale(1.05);
+}
+
+/* BACK BUTTON */
+.back-btn {
+  margin-top: 18px;
+  font-size: 14px;
+  color: var(--cyan);
+  cursor:pointer;
+  opacity:.8;
+  transition:.3s;
+}
+.back-btn:hover{
+  opacity:1;
+  text-shadow:0 0 10px var(--cyan);
+}
+
+/* ERROR TOAST */
+.toast{
+  position:fixed;
+  left:50%;
+  bottom:25px;
+  transform:translateX(-50%);
+  background:rgba(0,0,0,0.8);
+  padding:12px 20px;
+  color:white;
+  border-radius:12px;
+  opacity:0;
+  transition:.4s;
+}
+
+.toast.show{
+  opacity:1;
+  bottom:40px;
+}
+
 </style>
 </head>
 <body>
-  <select id="themeSel" class="themeSel" title="Theme">
-    <option value="A">Theme A — Neon</option>
-    <option value="B">Theme B — Clean</option>
-    <option value="C">Theme C — Glass</option>
-  </select>
 
-  <div class="card">
-    <div class="brand"><div class="logo">MS</div><div><h2 class="title">MindStep — Admin</h2><div class="small">Secure admin access • Premium panel</div></div></div>
+<div class="card">
 
-    <div class="note">Default admin (auto-created): <strong>Admin_Yuva</strong> / <strong>yuvarajan22</strong></div>
+  <h1>Admin Panel</h1>
+  <p>Sign in to access administrator controls</p>
 
-    <div class="field">
-      <label class="label">Admin username</label>
-      <input id="adminUser" type="text" value="Admin_Yuva" autocomplete="username">
-    </div>
-    <div class="field">
-      <label class="label">Admin password</label>
-      <input id="adminPass" type="password" value="yuvarajan22" autocomplete="current-password">
-    </div>
-
-    <button id="loginBtn" class="btn">Sign in</button>
-    <button id="backBtn" class="btn secondary">← Back to User Login</button>
-    <div id="status" class="note">Checking admin...</div>
+  <div class="input-box">
+    <label>Admin Email</label>
+    <input id="admin-email" type="email" placeholder="admin@mindstep.com">
   </div>
 
-  <div id="toast" class="toast"></div>
+  <div class="input-box">
+    <label>Password</label>
+    <input id="admin-pass" type="password" placeholder="••••••••">
+  </div>
+
+  <button class="btn" id="adminLoginBtn">Login</button>
+
+  <div class="back-btn" onclick="location.href='LoginPage.html'">← Back to User Login</div>
+
+</div>
+
+<div class="toast" id="toast"></div>
 
 <script>
-(function(){
-  const toastEl = document.getElementById('toast');
-  function toast(msg, error=false){
-    toastEl.textContent = msg;
-    toastEl.style.background = error ? 'linear-gradient(90deg,#b33,#6b0000)' : '#111';
-    toastEl.style.opacity = '1';
-    setTimeout(()=> toastEl.style.opacity = '0', 2600);
+
+// Toast
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),2500);
+}
+
+// ADMIN LOGIN
+document.getElementById("adminLoginBtn").onclick = async ()=>{
+  const email = document.getElementById("admin-email").value.trim();
+  const password = document.getElementById("admin-pass").value.trim();
+
+  if(!email || !password)
+    return toast("Enter admin email & password");
+
+  const res = await fetch("/api/admin/login", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ email, password })
+  });
+
+  const data = await res.json();
+
+  if(data.success){
+    toast("Login successful!");
+    setTimeout(()=>location.href="AdminDashboard.html",1200);
+  } else {
+    toast(data.error || "Invalid login");
   }
+};
 
-  document.getElementById('themeSel').addEventListener('change', (e)=>{
-    const v = e.target.value;
-    if(v==='B') document.body.style.background = 'linear-gradient(180deg,#f7f7fb,#fff)';
-    else if(v==='C') document.body.style.background = 'linear-gradient(180deg,#061022,#020316)';
-    else document.body.style.background = 'linear-gradient(180deg,#041022,#020316)';
-  });
-
-  document.getElementById('status').textContent = 'Default admin ready';
-  document.getElementById('backBtn').addEventListener('click', ()=> location.href = '/LoginPage.html');
-
-  document.getElementById('loginBtn').addEventListener('click', async ()=>{
-    const u = document.getElementById('adminUser').value.trim();
-    const p = document.getElementById('adminPass').value.trim();
-    if(!u||!p){ toast('Enter credentials', true); return; }
-    try {
-      const res = await fetch('/admin/login', {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json' },
-        body: JSON.stringify({ username: u, password: p })
-      });
-      const j = await res.json().catch(()=>({}));
-      if(res.ok && j.token){
-        localStorage.setItem('admin_token', j.token);
-        toast('Login success');
-        setTimeout(()=> location.href = '/AdminDashboard.html', 500);
-      } else {
-        toast(j.message || 'Invalid admin', true);
-      }
-    } catch(err){
-      console.error(err);
-      toast('Server error', true);
-    }
-  });
-})();
 </script>
+
 </body>
 </html>
