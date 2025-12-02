@@ -265,6 +265,132 @@ app.post("/api/complete", async (req, res) => {
 
   res.json({ success: true, percentage: percent });
 });
+// --------------------
+// ADMIN: get single user + lessons count
+// --------------------
+app.get("/api/admin/user/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const user = await get("SELECT id, username, email, image, percentage, created_at FROM users WHERE id = ?", [id]);
+    if (!user) return res.json({ success: false, error: "User not found" });
+
+    const row = await get("SELECT COUNT(*) AS c FROM completions WHERE user_id = ?", [id]);
+    const lessonsDone = row ? row.c : 0;
+    res.json({ success: true, user, lessonsDone });
+  } catch (err) {
+    console.error(err); res.json({ success: false });
+  }
+});
+
+// --------------------
+// ADMIN: update user (name/email/password)
+// --------------------
+app.put("/api/admin/user/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { username, email, password } = req.body;
+    // basic validation
+    if(!username || !email) return res.json({ success:false, error: "Missing fields" });
+
+    // check for collisions (other users)
+    const other = await get("SELECT id FROM users WHERE (username=? OR email=?) AND id<>?", [username, email, id]);
+    if(other) return res.json({ success:false, error: "Username or email already used" });
+
+    if(password && password.length > 0) {
+      const hashed = bcrypt.hashSync(password, 10);
+      await run("UPDATE users SET username=?, email=?, password=? WHERE id=?", [username, email, hashed, id]);
+    } else {
+      await run("UPDATE users SET username=?, email=? WHERE id=?", [username, email, id]);
+    }
+    res.json({ success:true });
+  } catch(err){ console.error(err); res.json({ success:false }); }
+});
+
+// --------------------
+// ADMIN: upload user image
+// --------------------
+app.post("/api/admin/user/:id/image", upload.single("image"), async (req, res) => {
+  try {
+    const id = req.params.id;
+    if(!req.file) return res.json({ success:false, error: "No file" });
+    const imagePath = "/uploads/" + req.file.filename;
+    await run("UPDATE users SET image=? WHERE id=?", [imagePath, id]);
+    res.json({ success:true, image: imagePath });
+  } catch(err){ console.error(err); res.json({ success:false }); }
+});
+
+// --------------------
+// ADMIN: delete user
+// --------------------
+app.delete("/api/admin/user/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    // remove completions first (foreign-like cleanup)
+    await run("DELETE FROM completions WHERE user_id = ?", [id]);
+    await run("DELETE FROM users WHERE id = ?", [id]);
+    res.json({ success: true });
+  } catch(err){ console.error(err); res.json({ success:false }); }
+});
+
+// --------------------
+// ADMIN: reset user progress
+// --------------------
+app.post("/api/admin/user/:id/reset", async (req, res) => {
+  try {
+    const id = req.params.id;
+    await run("DELETE FROM completions WHERE user_id = ?", [id]);
+    await run("UPDATE users SET percentage = 0 WHERE id = ?", [id]);
+    res.json({ success:true });
+  } catch(err){ console.error(err); res.json({ success:false }); }
+});
+
+// --------------------
+// ADMIN: lessons count for a user (used to fill table)
+// --------------------
+app.get("/api/admin/user/:id/lessons", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const row = await get("SELECT COUNT(*) AS c FROM completions WHERE user_id = ?", [id]);
+    res.json({ success:true, count: row ? row.c : 0 });
+  } catch(err){ console.error(err); res.json({ success:false }); }
+});
+
+// --------------------
+// COURSES CRUD (simple table-based)
+// --------------------
+db.serialize(() => {
+  db.run(`CREATE TABLE IF NOT EXISTS courses (
+    id TEXT PRIMARY KEY,
+    title TEXT,
+    description TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  )`);
+});
+
+app.post("/api/admin/course", async (req, res) => {
+  try {
+    const { title, desc } = req.body;
+    if(!title) return res.json({ success:false, error:"Title required" });
+    const id = uuidv4();
+    await run("INSERT INTO courses (id, title, description) VALUES (?,?,?)", [id, title, desc||'']);
+    res.json({ success:true, id });
+  } catch(err){ console.error(err); res.json({ success:false }); }
+});
+
+app.get("/api/admin/courses", async (req, res) => {
+  try {
+    const rows = await all("SELECT id, title, description, created_at FROM courses ORDER BY created_at DESC");
+    res.json({ success:true, courses: rows });
+  } catch(err){ console.error(err); res.json({ success:false }); }
+});
+
+app.delete("/api/admin/course/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    await run("DELETE FROM courses WHERE id = ?", [id]);
+    res.json({ success:true });
+  } catch(err){ console.error(err); res.json({ success:false }); }
+});
 
 // --------------------
 // GET MAIN PROGRESS
