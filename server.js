@@ -153,6 +153,18 @@ app.post("/api/login", async (req, res) => {
   res.json({ success: true, user });
 });
 
+app.post("/api/admin-login", async (req, res) => {
+  const { username, password } = req.body;
+
+  const admin = await get("SELECT * FROM admins WHERE username=?", [username]);
+  if (!admin) return res.json({ error: "Admin not found" });
+
+  const ok = bcrypt.compareSync(password, admin.password);
+  if (!ok) return res.json({ error: "Wrong password" });
+
+  return res.json({ success: true, admin });
+});
+
 // --------------------
 // MARK LESSON COMPLETE
 // --------------------

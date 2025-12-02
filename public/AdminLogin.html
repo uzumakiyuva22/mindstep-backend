@@ -213,29 +213,41 @@ function toast(msg){
 }
 
 // ADMIN LOGIN
-document.getElementById("adminLoginBtn").onclick = async ()=>{
-  const email = document.getElementById("admin-email").value.trim();
-  const password = document.getElementById("admin-pass").value.trim();
+document.getElementById("loginBtn").onclick = async () => {
 
-  if(!email || !password)
-    return toast("Enter admin email & password");
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value.trim();
+  const msg = document.getElementById("msg");
 
-  const res = await fetch("/api/admin/login", {
+  if(!username || !password){
+    msg.textContent = "Enter admin details";
+    return;
+  }
+
+  const res = await fetch("/api/admin-login", {
     method:"POST",
     headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({ email, password })
+    body:JSON.stringify({ username, password })
   });
 
   const data = await res.json();
 
   if(data.success){
-    toast("Login successful!");
-    setTimeout(()=>location.href="AdminDashboard.html",1200);
+    msg.style.color = "#00ffaa";
+    msg.textContent = "Login successful!";
+
+    // store admin login
+    localStorage.setItem("adminLogged", "true");
+    localStorage.setItem("adminName", username);
+
+    setTimeout(() => {
+      location.href = "AdminDashboard.html";
+    }, 700);
+
   } else {
-    toast(data.error || "Invalid login");
+    msg.textContent = data.error;
   }
 };
-
 </script>
 
 </body>

@@ -383,7 +383,9 @@ async function loadUsers(){
     console.log("Error loading users");
   }
 }
-
+if(localStorage.getItem("adminLogged") !== "true"){
+  location.href = "AdminLogin.html";
+}
 loadUsers();
 
 </script>
