@@ -74,16 +74,16 @@ db.serialize(() => {
     )
   `);
 
-  db.run(`
-    CREATE TABLE IF NOT EXISTS admins (
-  id TEXT PRIMARY KEY,
-  username TEXT UNIQUE,
-  password TEXT,
-  display_name TEXT,
-  created_at TEXT DEFAULT (datetime('now'))
-);
+db.run(`
+  CREATE TABLE IF NOT EXISTS admins (
+    id TEXT PRIMARY KEY,
+    username TEXT UNIQUE,
+    password TEXT,
+    display_name TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+`);
 
-  `);
 
   db.run(`
     CREATE TABLE IF NOT EXISTS lessons (
@@ -118,7 +118,6 @@ db.get("SELECT * FROM admins WHERE username = ?", ["Uzumaki_Yuva"], async (err, 
     console.log("✔ Custom admin created (Uzumaki_Yuva / yuva22)");
   }
 });
-
 });
 
 // --------------------
