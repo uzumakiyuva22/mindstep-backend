@@ -388,11 +388,15 @@ app.post("/run-code", async (req, res) => {
     const { language, source } = req.body;
     if (!language || !source) return res.status(400).json({ error: "Missing language/source" });
 
-    // fallback JDK paths — adjust if your JDK folder differs
-    const JAVAC_FALLBACK = `"C:\\Program Files\\Java\\jdk-17\\bin\\javac.exe"`;
-    const JAVA_FALLBACK  = `"C:\\Program Files\\Java\\jdk-17\\bin\\java.exe"`;
-    const JAVAC_FALLBACK2 = `"C:\\Program Files\\Java\\jdk-17.0.12\\bin\\javac.exe"`;
-    const JAVA_FALLBACK2  = `"C:\\Program Files\\Java\\jdk-17.0.12\\bin\\java.exe"`;
+    // fallback JDK paths — adjust if your JDK folder differs. We only use
+    // the Windows paths when running on Windows. On non-Windows hosts the
+    // code uses the `javac` / `java` commands on PATH and otherwise returns
+    // an error rather than trying to invoke a Windows path on /bin/sh.
+    const isWin = process.platform === "win32";
+    const JAVAC_FALLBACK_WIN = 'C:\\Program Files\\Java\\jdk-17\\bin\\javac.exe';
+    const JAVA_FALLBACK_WIN  = 'C:\\Program Files\\Java\\jdk-17\\bin\\java.exe';
+    const JAVAC_FALLBACK_WIN2 = 'C:\\Program Files\\Java\\jdk-17.0.12\\bin\\javac.exe';
+    const JAVA_FALLBACK_WIN2  = 'C:\\Program Files\\Java\\jdk-17.0.12\\bin\\java.exe';
 
     // ----- JAVA -----
     if (language === "java") {
@@ -400,23 +404,40 @@ app.post("/run-code", async (req, res) => {
       const javacOk = await commandAvailable("javac");
       const javaOk  = await commandAvailable("java");
 
-      // choose commands (prefer system)
-      let javacCmd = javacOk ? "javac" : (fs.existsSync("C:\\Program Files\\Java\\jdk-17\\bin\\javac.exe") ? JAVAC_FALLBACK : JAVAC_FALLBACK2);
-      let javaCmd  = javaOk  ? "java"  : (fs.existsSync("C:\\Program Files\\Java\\jdk-17\\bin\\java.exe") ? JAVA_FALLBACK : JAVA_FALLBACK2);
+      // choose commands (prefer system); only try Windows-specific paths if
+      // running on Windows. If neither PATH nor fallback exists, return a
+      // helpful error to the client rather than attempting to run a
+      // non-existent binary on another OS's shell (/bin/sh) which causes
+      // confusing errors like the one in your screenshot.
+      let javacCmd = javacOk ? "javac" : null;
+      let javaCmd  = javaOk  ? "java"  : null;
+      if (!javacCmd && isWin) {
+        if (fs.existsSync(JAVAC_FALLBACK_WIN)) javacCmd = JAVAC_FALLBACK_WIN;
+        else if (fs.existsSync(JAVAC_FALLBACK_WIN2)) javacCmd = JAVAC_FALLBACK_WIN2;
+      }
+      if (!javaCmd && isWin) {
+        if (fs.existsSync(JAVA_FALLBACK_WIN)) javaCmd = JAVA_FALLBACK_WIN;
+        else if (fs.existsSync(JAVA_FALLBACK_WIN2)) javaCmd = JAVA_FALLBACK_WIN2;
+      }
 
-      // if still missing, respond error
-      try {
-        // quick check
-        await execP(`${javacCmd} -version`).catch(()=>{});
-        await execP(`${javaCmd} -version`).catch(()=>{});
-      } catch {}
+      if (!javacCmd || !javaCmd) {
+        return res.json({ error: 'Java not available on server. Please make sure a JDK is installed and `javac`/`java` are on PATH' });
+      }
+
+      // prepare quoted versions for commands (quote Windows paths with spaces)
+      const qJavac = (isWin && javacCmd.includes(' ')) ? `"${javacCmd}"` : javacCmd;
+      const qJava  = (isWin && javaCmd.includes(' ')) ? `"${javaCmd}"` : javaCmd;
+
+      // quick check — don't block on failure
+      try { await execP(`${qJavac} -version`).catch(()=>{}); } catch {}
+      try { await execP(`${qJava} -version`).catch(()=>{}); } catch {}
 
       // still attempt to run — if system truly has none, this will throw and we return error
       const javaFile = path.join(__dirname, "Main.java");
       const classFile = path.join(__dirname, "Main.class");
       try {
         fs.writeFileSync(javaFile, source, "utf8");
-        await execP(`${javacCmd} "${javaFile}"`);
+        await execP(`${qJavac} "${javaFile}"`);
       } catch (compileErr) {
         safeUnlink(javaFile); safeUnlink(classFile);
         const msg = (compileErr.stderr || compileErr.message || String(compileErr)).toString();
@@ -424,7 +445,7 @@ app.post("/run-code", async (req, res) => {
       }
 
       try {
-        const { stdout } = await execP(`${javaCmd} -cp "${__dirname}" Main`);
+        const { stdout } = await execP(`${qJava} -cp "${__dirname}" Main`);
         return res.json({ output: stdout });
       } catch (runErr) {
         const msg = (runErr.stderr || runErr.message || String(runErr)).toString();
