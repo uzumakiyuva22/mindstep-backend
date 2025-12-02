@@ -336,7 +336,6 @@ table tr:hover{
     </div>
   </div>
 </div>
-
 <script>
 
 /* Show widgets animation */
@@ -357,38 +356,42 @@ document.getElementById("yesLogout").onclick = ()=>{
   location.href="AdminLogin.html";
 };
 
-/* LOAD USERS INTO TABLE (API CALL REQUIRED) */
+/* LOAD USERS */
 async function loadUsers(){
   try{
     const res = await fetch("/api/admin/users");
     const data = await res.json();
 
     if(data.success){
+
+      // USER COUNT
       document.getElementById("uCount").textContent = data.users.length;
 
+      // FIXED FIELD NAMES
       const rows = data.users.map(
         u => `
         <tr>
           <td>${u.id}</td>
-          <td>${u.name}</td>
+          <td>${u.username}</td>
           <td>${u.email}</td>
-          <td>${u.joined}</td>
+          <td>${u.created_at}</td>
         </tr>`
       ).join("");
 
       document.getElementById("userRows").innerHTML = rows;
     }
 
-  }catch(e){
-    console.log("Error loading users");
+  } catch(e){
+    console.log("Error loading users:", e);
   }
 }
+
 if(localStorage.getItem("adminLogged") !== "true"){
   location.href = "AdminLogin.html";
 }
+
 loadUsers();
 
 </script>
-
 </body>
 </html>
