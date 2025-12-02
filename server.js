@@ -201,7 +201,7 @@ app.post("/api/admin-login", async (req, res) => {
 app.get("/api/admin/users", async (req, res) => {
   try {
     const rows = await all(
-      "SELECT id, username, email, created_at FROM users ORDER BY created_at DESC"
+      "SELECT id, username, email, image, percentage, created_at FROM users ORDER BY created_at DESC"
     );
     res.json({ success: true, users: rows });
   } catch (err) {

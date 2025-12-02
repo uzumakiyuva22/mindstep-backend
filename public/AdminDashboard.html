@@ -258,7 +258,7 @@ async function handleRowAction(e){
 /* open user modal (fetch user details + completions count) */
 async function openUserModal(id, editable){
   try{
-    const res = await fetch(`/api/admin/user/${id}`);
+    const res = await fetch(`/api/admin/user/${id}/image`, { method: "POST", body: fd });
     const d = await res.json();
     if(!d.success) return alert("Unable to fetch user");
     const u = d.user;
@@ -308,6 +308,14 @@ el("saveUserBtn").onclick = async function(){
     loadUsers(); loadOverview();
   } else alert(d.error || "Save failed");
 };
+const imgUpload = await fetch(`/api/admin/user/${id}/image`, {
+  method: "POST",
+  body: fd
+});
+const imgData = await imgUpload.json();
+if(imgData.success){
+   el("modalImage").src = imgData.image;
+}
 
 /* delete user (API) */
 async function deleteUser(id){
