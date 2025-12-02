@@ -76,11 +76,13 @@ db.serialize(() => {
 
   db.run(`
     CREATE TABLE IF NOT EXISTS admins (
-      id TEXT PRIMARY KEY,
-      username TEXT UNIQUE,
-      password TEXT,
-      created_at TEXT DEFAULT (datetime('now'))
-    )
+  id TEXT PRIMARY KEY,
+  username TEXT UNIQUE,
+  password TEXT,
+  display_name TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
   `);
 
   db.run(`
