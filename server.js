@@ -165,6 +165,35 @@ app.post("/api/signup", upload.single("image"), async (req, res) => {
   }
 });
 
+const { exec } = require("child_process");
+
+app.post("/api/run", (req, res) => {
+  const code = req.body.code;
+
+  if (!code) {
+    return res.json({ error: "No code provided" });
+  }
+
+  // SAVE CODE TO TEMP FILE
+  const fs = require("fs");
+  fs.writeFileSync("temp.java", code);
+
+  // COMPILE JAVA
+  exec("javac temp.java", (compileErr) => {
+    if (compileErr) {
+      return res.json({ error: compileErr.message });
+    }
+
+    // RUN JAVA
+    exec("java HelloWorld", (runErr, output) => {
+      if (runErr) {
+        return res.json({ error: runErr.message });
+      }
+
+      return res.json({ output });
+    });
+  });
+});
 
 // --------------------
 // LOGIN API
