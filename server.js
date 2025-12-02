@@ -165,35 +165,72 @@ app.post("/api/signup", upload.single("image"), async (req, res) => {
   }
 });
 
+//------------------------------------------------------
+// RUN CODE API (FULL WORKING FOR JAVA, PYTHON, JS)
+//------------------------------------------------------
 const { exec } = require("child_process");
+const fs = require("fs");
 
-app.post("/api/run", (req, res) => {
-  const code = req.body.code;
+app.post("/run-code", async (req, res) => {
+  try {
+    const { language, source } = req.body;
 
-  if (!code) {
-    return res.json({ error: "No code provided" });
-  }
+    if (!language || !source)
+      return res.json({ error: "Missing language or source code" });
 
-  // SAVE CODE TO TEMP FILE
-  const fs = require("fs");
-  fs.writeFileSync("temp.java", code);
+    // -------------------------
+    // 1. Java Execution
+    // -------------------------
+    if (language === "java") {
+      fs.writeFileSync("Main.java", source);
 
-  // COMPILE JAVA
-  exec("javac temp.java", (compileErr) => {
-    if (compileErr) {
-      return res.json({ error: compileErr.message });
+      exec("javac Main.java", (compileErr) => {
+        if (compileErr) return res.json({ error: compileErr.message });
+
+        exec("java Main", (runErr, output) =>
+          runErr ? res.json({ error: runErr.message }) : res.json({ output })
+        );
+      });
+
+      return;
     }
 
-    // RUN JAVA
-    exec("java HelloWorld", (runErr, output) => {
-      if (runErr) {
-        return res.json({ error: runErr.message });
-      }
+    // -------------------------
+    // 2. Python Execution
+    // -------------------------
+    if (language === "python") {
+      fs.writeFileSync("script.py", source);
 
-      return res.json({ output });
-    });
-  });
+      exec("python script.py", (err, output) =>
+        err ? res.json({ error: err.message }) : res.json({ output })
+      );
+
+      return;
+    }
+
+    // -------------------------
+    // 3. JavaScript Execution
+    // -------------------------
+    if (language === "javascript") {
+      try {
+        let result = eval(source);
+        res.json({ output: String(result ?? "") });
+      } catch (err) {
+        res.json({ error: err.message });
+      }
+      return;
+    }
+
+    // -------------------------
+    // OTHER languages (not supported)
+    // -------------------------
+    return res.json({ error: "Language not supported on server" });
+
+  } catch (err) {
+    res.json({ error: "Server error: " + err.message });
+  }
 });
+
 app.post("/api/run", (req, res) => {
   try {
     const result = eval(req.body.code);
