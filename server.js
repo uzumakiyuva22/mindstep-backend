@@ -1,5 +1,5 @@
 // =====================
-//  server.js - FINAL CLEANED VERSION (100% WORKING)
+//  FINAL PRODUCTION SERVER.JS (100% WORKING)
 // =====================
 
 require("dotenv").config();
@@ -20,41 +20,32 @@ const PORT = 10000;
 const PUBLIC_DIR = path.join(__dirname, "public");
 const UPLOADS_DIR = path.join(PUBLIC_DIR, "uploads");
 
+// Ensure folders exist
 if (!fs.existsSync(PUBLIC_DIR)) fs.mkdirSync(PUBLIC_DIR);
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR);
 
 // --------------------
-// MULTER
-// --------------------
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOADS_DIR),
-  filename: (req, file, cb) =>
-    cb(null, uuidv4() + path.extname(file.originalname)),
-});
-const upload = multer({ storage });
-
-// --------------------
-// DATABASE
+// DATABASE (Permanent)
 // --------------------
 const DB_FILE = path.join(__dirname, "users.db");
+console.log("📌 Using Database:", DB_FILE);
+
 const db = new sqlite3.Database(DB_FILE);
 
-// Promise wrappers
+// PROMISE HELPERS
 function run(sql, params = []) {
   return new Promise((resolve, reject) => {
     db.run(sql, params, function (err) {
       if (err) reject(err);
-      else resolve({ lastID: this.lastID });
+      else resolve({ lastID: this.lastID, changes: this.changes });
     });
   });
 }
-
 function get(sql, params = []) {
   return new Promise((resolve, reject) => {
     db.get(sql, params, (err, row) => (err ? reject(err) : resolve(row)));
   });
 }
-
 function all(sql, params = []) {
   return new Promise((resolve, reject) => {
     db.all(sql, params, (err, rows) => (err ? reject(err) : resolve(rows)));
@@ -62,7 +53,7 @@ function all(sql, params = []) {
 }
 
 // --------------------
-// TABLES
+// DATABASE SETUP
 // --------------------
 db.serialize(() => {
   db.run(`
@@ -105,10 +96,8 @@ db.serialize(() => {
     )
   `);
 
-  // --------------------
-  // DEFAULT ADMIN
-  // --------------------
-  db.get("SELECT * FROM admins WHERE username=?", ["Uzumaki_Yuva"], async (err, row) => {
+  // CREATE DEFAULT ADMIN IF NOT EXISTS
+  db.get("SELECT * FROM admins WHERE username = ?", ["Uzumaki_Yuva"], async (err, row) => {
     if (!row) {
       await run(
         "INSERT INTO admins (id, username, password, display_name) VALUES (?, ?, ?, ?)",
@@ -119,13 +108,13 @@ db.serialize(() => {
           "MindStep Administrator"
         ]
       );
-      console.log("✔ Custom admin created (Uzumaki_Yuva / yuva22)");
+      console.log("✔ Default admin created: Uzumaki_Yuva / yuva22");
     }
   });
 });
 
 // --------------------
-// EXPRESS
+// EXPRESS APP
 // --------------------
 const app = express();
 app.use(cors());
@@ -135,12 +124,21 @@ app.use(express.static(PUBLIC_DIR));
 app.use("/uploads", express.static(UPLOADS_DIR));
 
 // --------------------
+// FILE UPLOAD (PROFILE PIC)
+// --------------------
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, UPLOADS_DIR),
+  filename: (req, file, cb) =>
+    cb(null, uuidv4() + path.extname(file.originalname)),
+});
+const upload = multer({ storage });
+
+// --------------------
 // SIGNUP
 // --------------------
 app.post("/api/signup", upload.single("image"), async (req, res) => {
   try {
     const { username, email, password } = req.body;
-
     if (!username || !email || !password)
       return res.json({ error: "Missing fields" });
 
@@ -152,6 +150,7 @@ app.post("/api/signup", upload.single("image"), async (req, res) => {
 
     const hashed = bcrypt.hashSync(password, 10);
     const id = uuidv4();
+
     const imagePath = req.file ? "/uploads/" + req.file.filename : null;
 
     await run(
@@ -161,7 +160,9 @@ app.post("/api/signup", upload.single("image"), async (req, res) => {
 
     const user = await get("SELECT * FROM users WHERE id=?", [id]);
     res.json({ success: true, user });
+
   } catch (err) {
+    console.log("Signup error:", err);
     res.json({ error: "Server error" });
   }
 });
@@ -173,18 +174,18 @@ app.post("/api/login", async (req, res) => {
   try {
     const { usernameOrEmail, password } = req.body;
 
-    let user = await get("SELECT * FROM users WHERE username=? OR email=?", [
-      usernameOrEmail,
-      usernameOrEmail
-    ]);
+    const user = await get(
+      "SELECT * FROM users WHERE username=? OR email=?",
+      [usernameOrEmail, usernameOrEmail]
+    );
 
     if (!user) return res.json({ error: "Invalid Login" });
-
-    const ok = bcrypt.compareSync(password, user.password);
-    if (!ok) return res.json({ error: "Invalid Login" });
+    if (!bcrypt.compareSync(password, user.password))
+      return res.json({ error: "Invalid Login" });
 
     res.json({ success: true, user });
-  } catch {
+
+  } catch (err) {
     res.json({ error: "Server error" });
   }
 });
@@ -198,70 +199,34 @@ app.post("/api/admin-login", async (req, res) => {
   const admin = await get("SELECT * FROM admins WHERE username=?", [username]);
   if (!admin) return res.json({ error: "Admin not found" });
 
-  const ok = bcrypt.compareSync(password, admin.password);
-  if (!ok) return res.json({ error: "Wrong password" });
+  if (!bcrypt.compareSync(password, admin.password))
+    return res.json({ error: "Wrong password" });
 
   return res.json({ success: true, admin });
 });
 
 // --------------------
-// ADMIN: USERS LIST
+// GET USERS (ADMIN)
 // --------------------
 app.get("/api/admin/users", async (req, res) => {
-  const rows = await all(
-    "SELECT id, username, email, image, percentage, created_at FROM users ORDER BY created_at DESC"
-  );
-  res.json({ success: true, users: rows });
+  try {
+    const rows = await all(
+      "SELECT id, username, email, image, percentage, created_at FROM users ORDER BY created_at DESC"
+    );
+    res.json({ success: true, users: rows });
+  } catch (err) {
+    res.json({ success: false });
+  }
 });
 
 // --------------------
-// ADMIN: GET USER DETAILS
+// ADMIN DELETE USER
 // --------------------
-app.get("/api/admin/user/:id", async (req, res) => {
-  const id = req.params.id;
-  const user = await get(
-    "SELECT id, username, email, image, percentage, created_at FROM users WHERE id=?",
-    [id]
-  );
-  if (!user) return res.json({ success: false, error: "User not found" });
-
-  const row = await get(
-    "SELECT COUNT(*) AS c FROM completions WHERE user_id=?",
-    [id]
-  );
-
-  res.json({ success: true, user, lessonsDone: row.c });
-});
-
-// --------------------
-// ADMIN: UPDATE USER
-// --------------------
-app.put("/api/admin/user/:id", async (req, res) => {
+app.delete("/api/admin/user/:id", async (req, res) => {
   try {
     const id = req.params.id;
-    const { username, email, password } = req.body;
-
-    if (!username || !email)
-      return res.json({ success: false, error: "Missing fields" });
-
-    const exists = await get(
-      "SELECT id FROM users WHERE (username=? OR email=?) AND id<>?",
-      [username, email, id]
-    );
-    if (exists) return res.json({ success: false, error: "Already used" });
-
-    if (password) {
-      const hashed = bcrypt.hashSync(password, 10);
-      await run(
-        "UPDATE users SET username=?, email=?, password=? WHERE id=?",
-        [username, email, hashed, id]
-      );
-    } else {
-      await run(
-        "UPDATE users SET username=?, email=? WHERE id=?",
-        [username, email, id]
-      );
-    }
+    await run("DELETE FROM completions WHERE user_id = ?", [id]);
+    await run("DELETE FROM users WHERE id = ?", [id]);
     res.json({ success: true });
   } catch {
     res.json({ success: false });
@@ -269,143 +234,54 @@ app.put("/api/admin/user/:id", async (req, res) => {
 });
 
 // --------------------
-// ADMIN: UPLOAD USER IMAGE
+// RUN CODE (Java / Python / JS)
 // --------------------
-app.post("/api/admin/user/:id/image", upload.single("image"), async (req, res) => {
-  if (!req.file) return res.json({ success: false });
+app.post("/run-code", (req, res) => {
+  const { language, source } = req.body;
 
-  const id = req.params.id;
-  const imagePath = "/uploads/" + req.file.filename;
+  if (!language || !source)
+    return res.json({ error: "Missing fields" });
 
-  await run("UPDATE users SET image=? WHERE id=?", [imagePath, id]);
-  res.json({ success: true, image: imagePath });
-});
+  // ---------------- JAVA ----------------
+  if (language === "java") {
+    fs.writeFileSync("Main.java", source);
 
-// --------------------
-// ADMIN: DELETE USER
-// --------------------
-app.delete("/api/admin/user/:id", async (req, res) => {
-  const id = req.params.id;
+    exec("javac Main.java", (err) => {
+      if (err) return res.json({ error: err.message });
 
-  await run("DELETE FROM completions WHERE user_id=?", [id]);
-  await run("DELETE FROM users WHERE id=?", [id]);
-
-  res.json({ success: true });
-});
-
-// --------------------
-// ADMIN: RESET PROGRESS
-// --------------------
-app.post("/api/admin/user/:id/reset", async (req, res) => {
-  const id = req.params.id;
-
-  await run("DELETE FROM completions WHERE user_id=?", [id]);
-  await run("UPDATE users SET percentage=0 WHERE id=?", [id]);
-
-  res.json({ success: true });
-});
-
-// --------------------
-// ADMIN: LESSON COUNT
-// --------------------
-app.get("/api/admin/user/:id/lessons", async (req, res) => {
-  const id = req.params.id;
-  const row = await get(
-    "SELECT COUNT(*) AS c FROM completions WHERE user_id=?",
-    [id]
-  );
-  res.json({ success: true, count: row.c });
-});
-
-// --------------------
-// COURSE CRUD
-// --------------------
-app.post("/api/admin/course", async (req, res) => {
-  const { title, desc } = req.body;
-  if (!title) return res.json({ success: false });
-
-  const id = uuidv4();
-  await run("INSERT INTO courses (id, title, description) VALUES (?,?,?)", [
-    id,
-    title,
-    desc || "",
-  ]);
-
-  res.json({ success: true });
-});
-
-app.get("/api/admin/courses", async (req, res) => {
-  const rows = await all(
-    "SELECT id, title, description, created_at FROM courses ORDER BY created_at DESC"
-  );
-  res.json({ success: true, courses: rows });
-});
-
-app.delete("/api/admin/course/:id", async (req, res) => {
-  await run("DELETE FROM courses WHERE id=?", [req.params.id]);
-  res.json({ success: true });
-});
-
-// --------------------
-// RUN CODE (JAVA / PYTHON / JS)
-// --------------------
-app.post("/run-code", async (req, res) => {
-  try {
-    const { language, source } = req.body;
-
-    if (!language || !source)
-      return res.json({ error: "Missing inputs" });
-
-    if (language === "java") {
-      fs.writeFileSync("Main.java", source);
-      exec("javac Main.java", (err) => {
-        if (err) return res.json({ error: err.message });
-
-        exec("java Main", (err2, output) => {
-          if (err2) return res.json({ error: err2.message });
-          res.json({ output });
-        });
-      });
-      return;
-    }
-
-    if (language === "python") {
-      fs.writeFileSync("script.py", source);
-      exec("python script.py", (err, output) => {
-        if (err) return res.json({ error: err.message });
-        res.json({ output });
-      });
-      return;
-    }
-
-    if (language === "javascript") {
-      try {
-        const result = eval(source);
-        res.json({ output: String(result) });
-      } catch (error) {
-        res.json({ error: error.message });
-      }
-      return;
-    }
-
-    res.json({ error: "Unsupported language" });
-  } catch (err) {
-    res.json({ error: err.message });
+      exec("java Main", (err, output) =>
+        err ? res.json({ error: err.message }) : res.json({ output })
+      );
+    });
+    return;
   }
+
+  // ---------------- PYTHON ----------------
+  if (language === "python") {
+    fs.writeFileSync("script.py", source);
+
+    exec("python script.py", (err, output) =>
+      err ? res.json({ error: err.message }) : res.json({ output })
+    );
+    return;
+  }
+
+  // ---------------- JAVASCRIPT ----------------
+  if (language === "javascript") {
+    try {
+      let result = eval(source);
+      res.json({ output: String(result ?? "") });
+    } catch (err) {
+      res.json({ error: err.message });
+    }
+    return;
+  }
+
+  res.json({ error: "Language not supported" });
 });
 
 // --------------------
-// MAIN PROGRESS
-// --------------------
-app.post("/get-main-progress", async (req, res) => {
-  const user = await get("SELECT percentage FROM users WHERE username=?", [
-    req.body.username,
-  ]);
-  res.json({ fullStack: user?.percentage || 0 });
-});
-
-// --------------------
-// PAGE ROUTES
+// DEFAULT PAGE
 // --------------------
 app.get("/", (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, "LoginPage.html"));
@@ -415,5 +291,5 @@ app.get("/", (req, res) => {
 // START SERVER
 // --------------------
 app.listen(PORT, () =>
-  console.log(`🔥 Server running on http://localhost:${PORT}`)
+  console.log(`🔥 MindStep Server running → http://localhost:${PORT}`)
 );
