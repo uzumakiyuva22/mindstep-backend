@@ -148,6 +148,7 @@ app.post("/api/signup", upload.single("image"), async (req, res) => {
 
     const hashed = bcrypt.hashSync(password, 10);
     const id = uuidv4();
+
     const imagePath = req.file ? "/uploads/" + req.file.filename : null;
 
     await run(
@@ -156,13 +157,14 @@ app.post("/api/signup", upload.single("image"), async (req, res) => {
     );
 
     const user = await get("SELECT * FROM users WHERE id=?", [id]);
-    res.json({ success: true, user });
 
+    res.json({ success: true, user });
   } catch (err) {
     console.log("Signup error:", err);
     res.json({ error: "Server error" });
   }
 });
+
 
 // --------------------
 // LOGIN API
