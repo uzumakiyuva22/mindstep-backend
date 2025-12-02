@@ -165,6 +165,40 @@ app.post("/api/admin-login", async (req, res) => {
 
   return res.json({ success: true, admin });
 });
+app.get("/api/admin/users", async (req, res) => {
+  try {
+    const rows = await all("SELECT id, username, email, created_at FROM users ORDER BY created_at DESC");
+    res.json({ success: true, users: rows });
+  } catch (err) {
+    console.error(err);
+    res.json({ success: false });
+  }
+});
+app.get("/api/admin/total-users", async (req, res) => {
+  try {
+    const row = await get("SELECT COUNT(*) AS total FROM users");
+    res.json({ success: true, total: row.total });
+  } catch (err) {
+    console.error(err);
+    res.json({ success: false });
+  }
+});
+app.get("/api/admin/overview", async (req, res) => {
+  try {
+    const users = await get("SELECT COUNT(*) AS total FROM users");
+
+    res.json({
+      success: true,
+      totalUsers: users.total,
+      activeCourses: 5,
+      dailyVisits: 224,
+      reports: 3
+    });
+
+  } catch (err) {
+    res.json({ success: false });
+  }
+});
 
 // --------------------
 // MARK LESSON COMPLETE
