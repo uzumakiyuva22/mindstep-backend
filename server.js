@@ -101,56 +101,57 @@ app.use("/uploads", express.static(UPLOADS_DIR));
 app.post("/api/signup", upload.single("image"), async (req, res) => {
   try {
     const { username, email, password } = req.body;
-    const file = req.file;
 
     if (!username || !email || !password)
-      return res.json({ error: "Fill all fields" });
+      return res.json({ error: "Missing fields" });
 
+    // check existing user
     const exists = await get(
       "SELECT 1 FROM users WHERE username=? OR email=?",
       [username, email]
     );
-
-    if (exists) {
-      if (file) fs.unlinkSync(file.path);
-      return res.json({ error: "User already exists" });
-    }
+    if (exists) return res.json({ error: "User already exists" });
 
     const hashed = bcrypt.hashSync(password, 10);
     const id = uuidv4();
-    const imgPath = file ? "/uploads/" + file.filename : null;
+
+    const imagePath = req.file ? "/uploads/" + req.file.filename : null;
 
     await run(
-      "INSERT INTO users (id, username, email, password, image) VALUES (?, ?, ?, ?, ?)",
-      [id, username, email, hashed, imgPath]
+      "INSERT INTO users (id, username, email, password, image, display_name) VALUES (?, ?, ?, ?, ?, ?)",
+      [id, username, email, hashed, imagePath, username]
     );
 
     const user = await get("SELECT * FROM users WHERE id=?", [id]);
     res.json({ success: true, user });
+
   } catch (err) {
-    console.log("Signup Error:", err);
+    console.log("Signup error:", err);
     res.json({ error: "Server error" });
   }
 });
-
 // --------------------
 // LOGIN API
 // --------------------
 app.post("/api/login", async (req, res) => {
-  const { usernameOrEmail, password } = req.body;
+  try {
+    const { usernameOrEmail, password } = req.body;
 
-  let user = await get("SELECT * FROM users WHERE username=?", [
-    usernameOrEmail,
-  ]);
-  if (!user)
-    user = await get("SELECT * FROM users WHERE email=?", [usernameOrEmail]);
+    let user = await get("SELECT * FROM users WHERE username=? OR email=?", [
+      usernameOrEmail,
+      usernameOrEmail
+    ]);
 
-  if (!user) return res.json({ error: "User not found" });
+    if (!user) return res.json({ error: "Invalid Login" });
 
-  const match = bcrypt.compareSync(password, user.password);
-  if (!match) return res.json({ error: "Wrong password" });
+    const ok = bcrypt.compareSync(password, user.password);
+    if (!ok) return res.json({ error: "Invalid Login" });
 
-  res.json({ success: true, user });
+    res.json({ success: true, user });
+
+  } catch (err) {
+    res.json({ error: "Server error" });
+  }
 });
 
 app.post("/api/admin-login", async (req, res) => {
