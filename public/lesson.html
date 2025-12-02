@@ -142,7 +142,7 @@
         langSelectArea.style.display = "none";
         codeArea.value = templates.html;
         langSelect.value = "html";
-      } else if (course.toLowerCase().includes("java")) {
+      } else if (course.toLowerCase() === "java" || course.toLowerCase().includes("core java")){
         langSelectArea.style.display = "none";
         codeArea.value = templates.java;
         langSelect.value = "java";
