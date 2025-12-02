@@ -1,5 +1,5 @@
 // =====================
-//  server.js FULL WORKING PROJECT
+//  server.js FULL WORKING PROJECT (FIXED VERSION)
 // =====================
 
 require("dotenv").config();
@@ -47,9 +47,16 @@ function run(sql, params = []) {
     });
   });
 }
+
 function get(sql, params = []) {
   return new Promise((resolve, reject) => {
     db.get(sql, params, (err, row) => (err ? reject(err) : resolve(row)));
+  });
+}
+
+function all(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.all(sql, params, (err, rows) => (err ? reject(err) : resolve(rows)));
   });
 }
 
@@ -63,6 +70,15 @@ db.serialize(() => {
       password TEXT,
       image TEXT,
       percentage INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS admins (
+      id TEXT PRIMARY KEY,
+      username TEXT UNIQUE,
+      password TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     )
   `);
@@ -83,6 +99,17 @@ db.serialize(() => {
       UNIQUE(user_id, lesson_id)
     )
   `);
+
+  // DEFAULT ADMIN
+  db.get("SELECT * FROM admins WHERE username='admin'", async (err, row) => {
+    if (!row) {
+      await run(
+        "INSERT INTO admins (id, username, password) VALUES (?, ?, ?)",
+        [uuidv4(), "admin", bcrypt.hashSync("admin123", 10)]
+      );
+      console.log("✔ Default admin created (admin / admin123)");
+    }
+  });
 });
 
 // --------------------
@@ -96,7 +123,7 @@ app.use(express.static(PUBLIC_DIR));
 app.use("/uploads", express.static(UPLOADS_DIR));
 
 // --------------------
-// SIGNUP API
+// SIGNUP API (FIXED display_name issue)
 // --------------------
 app.post("/api/signup", upload.single("image"), async (req, res) => {
   try {
@@ -105,7 +132,6 @@ app.post("/api/signup", upload.single("image"), async (req, res) => {
     if (!username || !email || !password)
       return res.json({ error: "Missing fields" });
 
-    // check existing user
     const exists = await get(
       "SELECT 1 FROM users WHERE username=? OR email=?",
       [username, email]
@@ -114,12 +140,11 @@ app.post("/api/signup", upload.single("image"), async (req, res) => {
 
     const hashed = bcrypt.hashSync(password, 10);
     const id = uuidv4();
-
     const imagePath = req.file ? "/uploads/" + req.file.filename : null;
 
     await run(
-      "INSERT INTO users (id, username, email, password, image, display_name) VALUES (?, ?, ?, ?, ?, ?)",
-      [id, username, email, hashed, imagePath, username]
+      "INSERT INTO users (id, username, email, password, image) VALUES (?, ?, ?, ?, ?)",
+      [id, username, email, hashed, imagePath]
     );
 
     const user = await get("SELECT * FROM users WHERE id=?", [id]);
@@ -130,6 +155,7 @@ app.post("/api/signup", upload.single("image"), async (req, res) => {
     res.json({ error: "Server error" });
   }
 });
+
 // --------------------
 // LOGIN API
 // --------------------
@@ -154,6 +180,9 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
+// --------------------
+// ADMIN LOGIN API (fixed table)
+// --------------------
 app.post("/api/admin-login", async (req, res) => {
   const { username, password } = req.body;
 
@@ -165,15 +194,25 @@ app.post("/api/admin-login", async (req, res) => {
 
   return res.json({ success: true, admin });
 });
+
+// --------------------
+// ADMIN USERS
+// --------------------
 app.get("/api/admin/users", async (req, res) => {
   try {
-    const rows = await all("SELECT id, username, email, created_at FROM users ORDER BY created_at DESC");
+    const rows = await all(
+      "SELECT id, username, email, created_at FROM users ORDER BY created_at DESC"
+    );
     res.json({ success: true, users: rows });
   } catch (err) {
     console.error(err);
     res.json({ success: false });
   }
 });
+
+// --------------------
+// ADMIN TOTAL USERS
+// --------------------
 app.get("/api/admin/total-users", async (req, res) => {
   try {
     const row = await get("SELECT COUNT(*) AS total FROM users");
@@ -183,6 +222,10 @@ app.get("/api/admin/total-users", async (req, res) => {
     res.json({ success: false });
   }
 });
+
+// --------------------
+// ADMIN OVERVIEW
+// --------------------
 app.get("/api/admin/overview", async (req, res) => {
   try {
     const users = await get("SELECT COUNT(*) AS total FROM users");
