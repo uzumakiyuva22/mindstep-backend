@@ -101,7 +101,7 @@ db.serialize(() => {
   `);
 
   // DEFAULT ADMIN
-// DEFAULT ADMIN (CUSTOM)
+  // DEFAULT ADMIN (CUSTOM)
 db.get("SELECT * FROM admins WHERE username = ?", ["Uzumaki_Yuva"], async (err, row) => {
   if (!row) {
     await run(
@@ -116,7 +116,7 @@ db.get("SELECT * FROM admins WHERE username = ?", ["Uzumaki_Yuva"], async (err, 
     console.log("✔ Custom admin created (Uzumaki_Yuva / yuva22)");
   }
 });
-
+});
 
 // --------------------
 // EXPRESS APP
