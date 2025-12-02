@@ -212,30 +212,28 @@ function toast(msg){
   setTimeout(()=>t.classList.remove("show"),2500);
 }
 
-// ADMIN LOGIN
+// ADMIN LOGIN — FIXED IDs
 document.getElementById("adminLoginBtn").onclick = async () => {
 
-  // FIXED IDS
   const username = document.getElementById("admin-email").value.trim();
   const password = document.getElementById("admin-pass").value.trim();
 
   if(!username || !password){
-    toast("Enter admin email & password");
+    toast("Enter admin login details");
     return;
   }
 
   const res = await fetch("/api/admin-login", {
     method:"POST",
     headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({ username, password })
+    body: JSON.stringify({ username, password })
   });
 
   const data = await res.json();
 
   if(data.success){
-    toast("Login Successful!");
+    toast("Login successful!");
 
-    // Save admin session
     localStorage.setItem("adminLogged", "true");
     localStorage.setItem("adminName", username);
 
@@ -246,6 +244,7 @@ document.getElementById("adminLoginBtn").onclick = async () => {
   } else {
     toast(data.error || "Login failed");
   }
+
 };
 
 </script>
