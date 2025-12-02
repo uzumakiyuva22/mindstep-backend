@@ -101,16 +101,22 @@ db.serialize(() => {
   `);
 
   // DEFAULT ADMIN
-  db.get("SELECT * FROM admins WHERE username='admin'", async (err, row) => {
-    if (!row) {
-      await run(
-        "INSERT INTO admins (id, username, password) VALUES (?, ?, ?)",
-        [uuidv4(), "admin", bcrypt.hashSync("admin123", 10)]
-      );
-      console.log("✔ Default admin created (admin / admin123)");
-    }
-  });
+// DEFAULT ADMIN (CUSTOM)
+db.get("SELECT * FROM admins WHERE username = ?", ["Uzumaki_Yuva"], async (err, row) => {
+  if (!row) {
+    await run(
+      "INSERT INTO admins (id, username, password, display_name) VALUES (?, ?, ?, ?)",
+      [
+        uuidv4(),
+        "Uzumaki_Yuva",
+        bcrypt.hashSync("yuva22", 10),
+        "MindStep Administrator"
+      ]
+    );
+    console.log("✔ Custom admin created (Uzumaki_Yuva / yuva22)");
+  }
 });
+
 
 // --------------------
 // EXPRESS APP

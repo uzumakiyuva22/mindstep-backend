@@ -172,51 +172,42 @@ table img.user-thumb{width:44px;height:44px;border-radius:50%;object-fit:cover;b
     </div>
   </div>
 </div>
-
 <script>
-/* small helpers */
 function el(id){return document.getElementById(id);}
-function toast(msg){
-  // simple console toast (UI safe)
-  console.log("TOAST:", msg);
-}
+function toast(msg){console.log("TOAST:", msg);}
 
-/* show widgets */
 document.querySelectorAll(".widget").forEach((w,i)=>setTimeout(()=>w.classList.add("show"),200*i));
 
-/* auth check */
 if(localStorage.getItem("adminLogged") !== "true"){
   location.href = "AdminLogin.html";
 }
 
-/* logout */
 el("logoutBtn").onclick = ()=> {
   localStorage.removeItem("adminLogged");
   location.href = "AdminLogin.html";
 };
 
-/* load overview & counts */
 async function loadOverview(){
   try{
-    const r = await fetch("/api/admin/overview"); const d = await r.json();
+    const r = await fetch("/api/admin/overview");
+    const d = await r.json();
     if(d.success){
       el("uCount").textContent = d.totalUsers;
       el("cCount").textContent = d.activeCourses || 0;
       el("vCount").textContent = d.dailyVisits || 0;
       el("rCount").textContent = d.reports || 0;
     }
-  }catch(e){console.error(e)}
+  }catch(e){}
 }
 
-/* load users list */
 async function loadUsers(){
   try{
     const r = await fetch("/api/admin/users");
     const d = await r.json();
     if(!d.success) return;
+
     const rows = d.users.map(u=>{
       const thumb = u.image ? u.image : "/placeholder.png";
-      // lessons done: we will request summary when viewing; show placeholder now
       return `
       <tr data-id="${u.id}" data-username="${u.username}">
         <td><img src="${thumb}" class="user-thumb" /></td>
@@ -231,141 +222,148 @@ async function loadUsers(){
           <button class="action-btn edit-btn" data-action="edit" data-id="${u.id}">Edit</button>
           <button class="action-btn delete-btn" data-action="delete" data-id="${u.id}">Delete</button>
         </td>
-      </tr>`});
+      </tr>`;
+    });
+
     el("userRows").innerHTML = rows.join("");
-    // attach event listeners
     document.querySelectorAll('button[data-action]').forEach(b=>{
       b.onclick = handleRowAction;
     });
-  }catch(e){console.error(e)}
+
+  }catch(e){}
 }
 
-/* handle View / Edit / Delete */
 async function handleRowAction(e){
   const id = e.target.getAttribute("data-id");
   const action = e.target.getAttribute("data-action");
+
   if(action === "view" || action === "edit"){
     openUserModal(id, action === "edit");
-  } else if(action === "delete"){
+  } 
+  else if(action === "delete"){
     if(confirm("Delete this user permanently?")) {
       await deleteUser(id);
-      await loadUsers();
-      await loadOverview();
+      loadUsers();
+      loadOverview();
     }
   }
 }
 
-/* open user modal (fetch user details + completions count) */
 async function openUserModal(id, editable){
   try{
-    const res = await fetch(`/api/admin/user/${id}/image`, { method: "POST", body: fd });
+    const res = await fetch(`/api/admin/user/${id}`);
     const d = await res.json();
     if(!d.success) return alert("Unable to fetch user");
+
     const u = d.user;
+
     el("modalTitle").textContent = editable ? "Edit User" : "View User";
     el("modalImage").src = u.image || "/placeholder.png";
     el("modalUsername").textContent = u.username;
     el("modalEmail").textContent = u.email;
+
     el("editName").value = u.username;
     el("editEmail").value = u.email;
     el("editPass").value = "";
+
     el("modalProgress").textContent = (u.percentage||0) + "%";
     el("modalLessons").textContent = d.lessonsDone || 0;
+
     el("deleteUserBtn").setAttribute("data-id", id);
     el("saveUserBtn").setAttribute("data-id", id);
     el("resetProgressBtn").setAttribute("data-id", id);
-    // show modal
+
     el("userModal").style.display = "flex";
-  }catch(err){console.error(err);}
+
+  }catch(e){}
 }
 
-/* save user (update name/email/password) */
 el("saveUserBtn").onclick = async function(){
   const id = this.getAttribute("data-id");
   const name = el("editName").value.trim();
   const email = el("editEmail").value.trim();
   const pass = el("editPass").value;
+
   if(!name || !email) return alert("Name & email required");
-  // update text fields
+
   const body = { username: name, email };
   if(pass) body.password = pass;
+
   const res = await fetch(`/api/admin/user/${id}`, {
     method: "PUT",
     headers: {"Content-Type":"application/json"},
     body: JSON.stringify(body)
   });
+
   const d = await res.json();
+
   if(d.success){
-    // if image chosen, upload
     const file = el("editImage").files[0];
     if(file){
       const fd = new FormData();
       fd.append("image", file);
-      await fetch(`/api/admin/user/${id}/image`, { method: "POST", body: fd });
+      await fetch(`/api/admin/user/${id}/image`, {
+        method: "POST",
+        body: fd
+      });
     }
+
     alert("Saved");
     el("userModal").style.display = "none";
-    loadUsers(); loadOverview();
+    loadUsers();
+    loadOverview();
+
   } else alert(d.error || "Save failed");
 };
-const imgUpload = await fetch(`/api/admin/user/${id}/image`, {
-  method: "POST",
-  body: fd
-});
-const imgData = await imgUpload.json();
-if(imgData.success){
-   el("modalImage").src = imgData.image;
-}
 
-/* delete user (API) */
 async function deleteUser(id){
-  const res = await fetch(`/api/admin/user/${id}`, { method: "DELETE" });
+  const res = await fetch(`/api/admin/user/${id}`, { method:"DELETE" });
   const d = await res.json();
-  if(d.success) toast("Deleted");
-  else alert(d.error || "Delete failed");
+  if(!d.success) alert(d.error);
 }
 
-/* reset progress */
 el("resetProgressBtn").onclick = async function(){
   const id = this.getAttribute("data-id");
-  if(!confirm("Reset progress to 0%?")) return;
-  const res = await fetch(`/api/admin/user/${id}/reset`, { method:"POST" });
-  const d = await res.json();
-  if(d.success){ alert("Progress reset"); el("userModal").style.display="none"; loadUsers(); loadOverview(); }
-  else alert("Failed");
-};
+  if(!confirm("Reset progress?")) return;
 
-/* delete from modal */
-el("deleteUserBtn").onclick = async function(){
-  const id = this.getAttribute("data-id");
-  if(confirm("Delete permanently?")){
-    await deleteUser(id);
+  const r = await fetch(`/api/admin/user/${id}/reset`, { method:"POST" });
+  const d = await r.json();
+
+  if(d.success){
+    alert("Progress reset");
     el("userModal").style.display = "none";
-    loadUsers(); loadOverview();
+    loadUsers();
+    loadOverview();
   }
 };
 
-/* close modal when clicking outside */
 document.getElementById("userModal").onclick = function(e){
   if(e.target === this) this.style.display = "none";
 };
 
-/* ADD COURSE modal handlers */
+/* course modal */
 el("addCourseBtn").onclick = ()=> el("courseModal").style.display = "flex";
 el("closeCourse").onclick = ()=> el("courseModal").style.display = "none";
+
 el("saveCourse").onclick = async function(){
   const title = el("courseTitle").value.trim();
   const desc = el("courseDesc").value.trim();
   if(!title) return alert("Course title required");
-  const res = await fetch("/api/admin/course", {
-    method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ title, desc })
+
+  const r = await fetch("/api/admin/course", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({ title, desc })
   });
-  const d = await res.json();
-  if(d.success){ alert("Course added"); el("courseModal").style.display="none"; loadOverview(); }
-  else alert("Failed to add");
+
+  const d = await r.json();
+  if(d.success){
+    alert("Course added");
+    el("courseModal").style.display="none";
+    loadOverview();
+  }
 };
 
-/* helper: update lessons count cells for each user */
 async function fillLessonsCounts(){
   const rows = document.querySelectorAll("#userRows tr");
   for(const row of rows){
@@ -378,12 +376,12 @@ async function fillLessonsCounts(){
   }
 }
 
-/* initial load */
 (async function(){
   await loadOverview();
   await loadUsers();
   await fillLessonsCounts();
 })();
 </script>
+
 </body>
 </html>
