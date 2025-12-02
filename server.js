@@ -118,6 +118,7 @@ db.get("SELECT * FROM admins WHERE username = ?", ["Uzumaki_Yuva"], async (err, 
     console.log("✔ Custom admin created (Uzumaki_Yuva / yuva22)");
   }
 });
+
 });
 
 // --------------------
