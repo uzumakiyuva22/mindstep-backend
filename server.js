@@ -1,4 +1,4 @@
-// server.js (final cleaned & hardened)
+// server.js (final full with missing endpoints added)
 require("dotenv").config();
 const fs = require("fs");
 const path = require("path");
@@ -119,7 +119,7 @@ db.serialize(() => {
 // --------------------
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: "2mb" }));
+app.use(express.json({ limit: "4mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(PUBLIC_DIR));
 app.use("/uploads", express.static(UPLOADS_DIR));
@@ -136,34 +136,21 @@ const upload = multer({ storage });
 // --------------------
 // Helpers
 // --------------------
-// Check if command exists by attempting -version or --version
 async function commandAvailable(cmd) {
   try {
-    // Try common flags. Many Java tools use -version; python uses --version.
-    // Try both to be safe.
+    await execP(`${cmd} -version`);
+    return true;
+  } catch (e1) {
     try {
-      await execP(`${cmd} -version`);
+      await execP(`${cmd} --version`);
       return true;
-    } catch (e1) {
-      try {
-        await execP(`${cmd} --version`);
-        return true;
-      } catch (e2) {
-        return false;
-      }
+    } catch (e2) {
+      return false;
     }
-  } catch {
-    return false;
   }
 }
-
-// remove file if exists (silent)
 function safeUnlink(filePath) {
-  try {
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-  } catch (e) {
-    // ignore
-  }
+  try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch (e) {}
 }
 
 // --------------------
@@ -240,7 +227,7 @@ app.post("/api/admin-login", async (req, res) => {
 });
 
 // --------------------
-// Admin endpoints
+// Admin endpoints (existing)
 // --------------------
 app.get("/api/admin/users", async (req, res) => {
   try {
@@ -311,6 +298,68 @@ app.get("/api/admin/user/:id/lessons", async (req, res) => {
 });
 
 // --------------------
+// MISSING ADMIN endpoints ADDED
+// --------------------
+
+// Admin overview used by AdminDashboard
+app.get("/api/admin/overview", async (req, res) => {
+  try {
+    const totalUsersRow = await get("SELECT COUNT(*) AS c FROM users");
+    const totalCoursesRow = await get("SELECT COUNT(*) AS c FROM courses");
+    const totalCompletionsRow = await get("SELECT COUNT(*) AS c FROM completions");
+
+    const totalUsers = totalUsersRow ? totalUsersRow.c : 0;
+    const activeCourses = totalCoursesRow ? totalCoursesRow.c : 0;
+    const totalCompletions = totalCompletionsRow ? totalCompletionsRow.c : 0;
+
+    // Derive a simple "average progress" for display (not required but useful)
+    const avgPercentRow = await get("SELECT AVG(percentage) AS avgp FROM users");
+    const avgPercent = avgPercentRow ? Math.round(avgPercentRow.avgp || 0) : 0;
+
+    return res.json({
+      success: true,
+      totalUsers,
+      activeCourses,
+      dailyVisits: 224, // static placeholder
+      reports: 3,       // static placeholder
+      totalCompletions,
+      averageProgress: avgPercent
+    });
+  } catch (err) {
+    console.error("admin overview error:", err);
+    return res.status(500).json({ success: false });
+  }
+});
+
+// Get user (full) used by AdminDashboard when opening a user
+app.get("/api/admin/user/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const user = await get("SELECT id, username, email, image, percentage, created_at FROM users WHERE id=?", [id]);
+    if (!user) return res.json({ success: false, error: "User not found" });
+    const lessonsRow = await get("SELECT COUNT(*) AS c FROM completions WHERE user_id=?", [id]);
+    const lessonsDone = lessonsRow ? lessonsRow.c : 0;
+    return res.json({ success: true, user, lessonsDone });
+  } catch (err) {
+    console.error("admin get user error:", err);
+    return res.status(500).json({ success: false });
+  }
+});
+
+// Reset a user's progress (delete completions and set percentage 0)
+app.post("/api/admin/user/:id/reset", async (req, res) => {
+  try {
+    const id = req.params.id;
+    await run("DELETE FROM completions WHERE user_id=?", [id]);
+    await run("UPDATE users SET percentage=0 WHERE id=?", [id]);
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("admin reset user error:", err);
+    return res.status(500).json({ success: false });
+  }
+});
+
+// --------------------
 // Mark lesson complete
 // --------------------
 app.post("/api/complete", async (req, res) => {
@@ -332,38 +381,50 @@ app.post("/api/complete", async (req, res) => {
 });
 
 // --------------------
-// Run code (Java / Python / JS)
-// returns JSON-only responses (no HTML)
+// Run code (Java / Python / JS) with Java PATH fallback
 // --------------------
 app.post("/run-code", async (req, res) => {
   try {
     const { language, source } = req.body;
     if (!language || !source) return res.status(400).json({ error: "Missing language/source" });
 
+    // fallback JDK paths — adjust if your JDK folder differs
+    const JAVAC_FALLBACK = `"C:\\Program Files\\Java\\jdk-17\\bin\\javac.exe"`;
+    const JAVA_FALLBACK  = `"C:\\Program Files\\Java\\jdk-17\\bin\\java.exe"`;
+    const JAVAC_FALLBACK2 = `"C:\\Program Files\\Java\\jdk-17.0.12\\bin\\javac.exe"`;
+    const JAVA_FALLBACK2  = `"C:\\Program Files\\Java\\jdk-17.0.12\\bin\\java.exe"`;
+
     // ----- JAVA -----
     if (language === "java") {
+      // test system path first
       const javacOk = await commandAvailable("javac");
-      const javaOk = await commandAvailable("java");
-      if (!javacOk || !javaOk) {
-        return res.json({ error: "Java JDK not available on server. Install JDK (javac & java) to run Java code." });
-      }
+      const javaOk  = await commandAvailable("java");
 
+      // choose commands (prefer system)
+      let javacCmd = javacOk ? "javac" : (fs.existsSync("C:\\Program Files\\Java\\jdk-17\\bin\\javac.exe") ? JAVAC_FALLBACK : JAVAC_FALLBACK2);
+      let javaCmd  = javaOk  ? "java"  : (fs.existsSync("C:\\Program Files\\Java\\jdk-17\\bin\\java.exe") ? JAVA_FALLBACK : JAVA_FALLBACK2);
+
+      // if still missing, respond error
+      try {
+        // quick check
+        await execP(`${javacCmd} -version`).catch(()=>{});
+        await execP(`${javaCmd} -version`).catch(()=>{});
+      } catch {}
+
+      // still attempt to run — if system truly has none, this will throw and we return error
       const javaFile = path.join(__dirname, "Main.java");
       const classFile = path.join(__dirname, "Main.class");
       try {
         fs.writeFileSync(javaFile, source, "utf8");
-        // compile
-        await execP(`javac "${javaFile}"`);
+        await execP(`${javacCmd} "${javaFile}"`);
       } catch (compileErr) {
-        // cleanup and return compile error (stderr if available)
-        safeUnlink(javaFile);
-        safeUnlink(classFile);
+        safeUnlink(javaFile); safeUnlink(classFile);
         const msg = (compileErr.stderr || compileErr.message || String(compileErr)).toString();
         return res.json({ error: "Compilation failed: " + msg });
       }
 
       try {
-        const { stdout } = await execP(`java -cp "${__dirname}" Main`);
+        const { stdout } = await execP(`${javaCmd} -cp "${__dirname}" Main`);
         return res.json({ output: stdout });
       } catch (runErr) {
         const msg = (runErr.stderr || runErr.message || String(runErr)).toString();
@@ -397,7 +458,7 @@ app.post("/run-code", async (req, res) => {
     // ----- JAVASCRIPT -----
     if (language === "javascript") {
       try {
-        const result = eval(source); // keep as project had; be careful with security
+        const result = eval(source);
         return res.json({ output: String(result ?? "") });
       } catch (err) {
         return res.json({ error: "JS Error: " + err.message });
@@ -407,6 +468,109 @@ app.post("/run-code", async (req, res) => {
     return res.json({ error: "Language not supported" });
   } catch (err) {
     console.error("run-code handler error:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+});
+
+// --------------------
+// Course-related endpoints (used by course.html & main page)
+// --------------------
+
+// Return progress for a given username + course (course kept for compatibility)
+app.post("/get-progress", async (req, res) => {
+  try {
+    const { username, course } = req.body;
+    if (!username) return res.status(400).json({ error: "Missing username" });
+
+    const user = await get("SELECT id, username, percentage FROM users WHERE username = ?", [username]);
+    if (!user) return res.json({ success:false, error: "User not found" });
+
+    const comp = await get("SELECT COUNT(*) AS c FROM completions WHERE user_id = ?", [user.id]);
+    const lessonsCompleted = comp ? comp.c : 0;
+    return res.json({ success: true, percentage: user.percentage || 0, lessonsCompleted });
+  } catch (e) {
+    console.error("get-progress error:", e);
+    return res.status(500).json({ success:false, error: "Server error" });
+  }
+});
+
+// Save progress (username, course, percentage, lessons_completed)
+app.post("/save-progress", async (req, res) => {
+  try {
+    const { username, course, percentage, lessons_completed } = req.body;
+    if (!username) return res.status(400).json({ error: "Missing username" });
+
+    const user = await get("SELECT id FROM users WHERE username = ?", [username]);
+    if (!user) return res.json({ success:false, error: "User not found" });
+
+    const uid = user.id;
+    // create completions rows for lessons 1..lessons_completed
+    const n = Math.max(0, Number(lessons_completed || 0));
+    for (let i = 1; i <= n; i++) {
+      await run("INSERT OR IGNORE INTO completions (id, user_id, lesson_id) VALUES (?,?,?)", [uuidv4(), uid, String(i)]);
+    }
+
+    // update percentage
+    const pct = Math.max(0, Math.min(100, Number(percentage || 0)));
+    await run("UPDATE users SET percentage=? WHERE id=?", [pct, uid]);
+
+    return res.json({ success: true, percentage: pct, lessons_completed: n });
+  } catch (e) {
+    console.error("save-progress error:", e);
+    return res.status(500).json({ success:false, error: "Server error" });
+  }
+});
+
+// Recompute percentage from completions and update users.percentage (used by course page)
+app.post("/update-main-progress", async (req, res) => {
+  try {
+    const { username } = req.body;
+    if (!username) return res.status(400).json({ error: "Missing username" });
+
+    const user = await get("SELECT id FROM users WHERE username = ?", [username]);
+    if (!user) return res.json({ success:false, error: "User not found" });
+
+    const row = await get("SELECT COUNT(*) AS c FROM completions WHERE user_id = ?", [user.id]);
+    const totalLessons = 4;
+    const percent = Math.round(((row && row.c) || 0) / totalLessons * 100);
+    await run("UPDATE users SET percentage=? WHERE id=?", [percent, user.id]);
+
+    return res.json({ success:true, percentage: percent });
+  } catch (e) {
+    console.error("update-main-progress error:", e);
+    return res.status(500).json({ success:false, error: "Server error" });
+  }
+});
+
+// Return main progress for MainPage (simple endpoint)
+app.post("/get-main-progress", async (req, res) => {
+  try {
+    const { username } = req.body;
+    if (!username) return res.status(400).json({ error: "Missing username" });
+
+    const user = await get("SELECT percentage FROM users WHERE username = ?", [username]);
+    return res.json({ success: true, fullStack: (user ? user.percentage : 0) || 0 });
+  } catch (e) {
+    console.error("get-main-progress error:", e);
+    return res.status(500).json({ success:false, error: "Server error" });
+  }
+});
+
+// Simple public summary used by course.html fetch("/progress")
+app.get("/progress", async (req, res) => {
+  try {
+    const usersRow = await get("SELECT COUNT(*) AS c FROM users");
+    const usersCount = usersRow ? usersRow.c : 0;
+    const completionsRow = await get("SELECT COUNT(*) AS c FROM completions");
+    const totalCompletions = completionsRow ? completionsRow.c : 0;
+
+    // compute rough percentage average across all users (if users exist)
+    const avgPercentRow = await get("SELECT AVG(percentage) AS avgp FROM users");
+    const avgPct = avgPercentRow ? Math.round(avgPercentRow.avgp || 0) : 0;
+
+    return res.json({ percentage: avgPct, completed: totalCompletions, users: usersCount });
+  } catch (e) {
+    console.error("progress summary error:", e);
     return res.status(500).json({ error: "Server error" });
   }
 });
