@@ -215,12 +215,12 @@ function toast(msg){
 // ADMIN LOGIN
 document.getElementById("adminLoginBtn").onclick = async () => {
 
-  const username = document.getElementById("username").value.trim();
-  const password = document.getElementById("password").value.trim();
-  const msg = document.getElementById("msg");
+  // FIXED IDS
+  const username = document.getElementById("admin-email").value.trim();
+  const password = document.getElementById("admin-pass").value.trim();
 
   if(!username || !password){
-    msg.textContent = "Enter admin details";
+    toast("Enter admin email & password");
     return;
   }
 
@@ -233,10 +233,9 @@ document.getElementById("adminLoginBtn").onclick = async () => {
   const data = await res.json();
 
   if(data.success){
-    msg.style.color = "#00ffaa";
-    msg.textContent = "Login successful!";
+    toast("Login Successful!");
 
-    // store admin login
+    // Save admin session
     localStorage.setItem("adminLogged", "true");
     localStorage.setItem("adminName", username);
 
@@ -245,9 +244,10 @@ document.getElementById("adminLoginBtn").onclick = async () => {
     }, 700);
 
   } else {
-    msg.textContent = data.error;
+    toast(data.error || "Login failed");
   }
 };
+
 </script>
 
 </body>
