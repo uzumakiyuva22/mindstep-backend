@@ -194,6 +194,14 @@ app.post("/api/run", (req, res) => {
     });
   });
 });
+app.post("/api/run", (req, res) => {
+  try {
+    const result = eval(req.body.code);
+    res.json({ output: String(result) });
+  } catch (err) {
+    res.json({ error: err.message });
+  }
+});
 
 // --------------------
 // LOGIN API
