@@ -14,10 +14,10 @@
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
-    "express": "^4.21.2",
+    "express": "^4.22.1",
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
-    "sqlite3": "^5.1.6",
+    "sqlite3": "^5.1.7",
     "uuid": "^9.0.1"
   },
   "description": "��#\u0000 \u0000m\u0000i\u0000n\u0000d\u0000s\u0000t\u0000e\u0000p\u0000-\u0000b\u0000a\u0000c\u0000k\u0000e\u0000n\u0000d\u0000\r\u0000 \u0000",
