@@ -1,4 +1,4 @@
-// reset-db.js
+// reset-db.js  — run manually only with: node reset-db.js
 const fs = require('fs');
 const path = require('path');
 const dbFile = path.join(__dirname, 'users.db');
