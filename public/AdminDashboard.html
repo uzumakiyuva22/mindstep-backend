@@ -187,6 +187,7 @@ el("logoutBtn").onclick = ()=> {
   location.href = "AdminLogin.html";
 };
 
+// ---------------- OVERVIEW ----------------
 async function loadOverview(){
   try{
     const r = await fetch("/api/admin/overview");
@@ -200,6 +201,7 @@ async function loadOverview(){
   }catch(e){}
 }
 
+// ---------------- USERS TABLE ----------------
 async function loadUsers(){
   try{
     const r = await fetch("/api/admin/users");
@@ -207,32 +209,34 @@ async function loadUsers(){
     if(!d.success) return;
 
     const rows = d.users.map(u=>{
+      const id = u._id;  // FIXED
       const thumb = u.image ? u.image : "/placeholder.png";
       return `
-      <tr data-id="${u.id}" data-username="${u.username}">
+      <tr data-id="${id}" data-username="${u.username}">
         <td><img src="${thumb}" class="user-thumb" /></td>
-        <td>${u.id.slice(0,8)}</td>
+        <td>${id.slice(0,8)}</td>
         <td>${u.username}</td>
         <td>${u.email}</td>
         <td>${u.percentage || 0}%</td>
-        <td id="lessons-${u.id}">—</td>
-        <td>${u.created_at}</td>
+        <td id="lessons-${id}">—</td>
+        <td>${new Date(u.created_at).toLocaleDateString()}</td>
         <td>
-          <button class="action-btn view-btn" data-action="view" data-id="${u.id}">View</button>
-          <button class="action-btn edit-btn" data-action="edit" data-id="${u.id}">Edit</button>
-          <button class="action-btn delete-btn" data-action="delete" data-id="${u.id}">Delete</button>
+          <button class="action-btn view-btn" data-action="view" data-id="${id}">View</button>
+          <button class="action-btn edit-btn" data-action="edit" data-id="${id}">Edit</button>
+          <button class="action-btn delete-btn" data-action="delete" data-id="${id}">Delete</button>
         </td>
       </tr>`;
     });
 
     el("userRows").innerHTML = rows.join("");
-    document.querySelectorAll('button[data-action]').forEach(b=>{
-      b.onclick = handleRowAction;
-    });
+    document.querySelectorAll('button[data-action]').forEach(b=> b.onclick = handleRowAction );
 
-  }catch(e){}
+  }catch(e){
+    console.log(e);
+  }
 }
 
+// ---------------- ROW ACTION ----------------
 async function handleRowAction(e){
   const id = e.target.getAttribute("data-id");
   const action = e.target.getAttribute("data-action");
@@ -249,6 +253,7 @@ async function handleRowAction(e){
   }
 }
 
+// ---------------- MODAL ----------------
 async function openUserModal(id, editable){
   try{
     const res = await fetch(`/api/admin/user/${id}`);
@@ -302,10 +307,7 @@ el("saveUserBtn").onclick = async function(){
     if(file){
       const fd = new FormData();
       fd.append("image", file);
-      await fetch(`/api/admin/user/${id}/image`, {
-        method: "POST",
-        body: fd
-      });
+      await fetch(`/api/admin/user/${id}/image`, { method: "POST", body: fd });
     }
 
     alert("Saved");
@@ -317,15 +319,17 @@ el("saveUserBtn").onclick = async function(){
 };
 
 async function deleteUser(id){
-  const res = await fetch(`/api/admin/user/${id}`, { method:"DELETE" });
-  const d = await res.json();
+  const r = await fetch(`/api/admin/user/${id}/purge`, {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({force:true})
+  });
+  const d = await r.json();
   if(!d.success) alert(d.error);
 }
 
 el("resetProgressBtn").onclick = async function(){
   const id = this.getAttribute("data-id");
-  if(!confirm("Reset progress?")) return;
-
   const r = await fetch(`/api/admin/user/${id}/reset`, { method:"POST" });
   const d = await r.json();
 
@@ -340,6 +344,19 @@ el("resetProgressBtn").onclick = async function(){
 document.getElementById("userModal").onclick = function(e){
   if(e.target === this) this.style.display = "none";
 };
+
+// ---------------- LESSON COUNTS ----------------
+async function fillLessonsCounts(){
+  const rows = document.querySelectorAll("#userRows tr");
+  for(const row of rows){
+    const id = row.getAttribute("data-id");
+    try{
+      const res = await fetch(`/api/admin/user/${id}/lessons`);
+      const d = await res.json();
+      if(d.success) el(`lessons-${id}`).textContent = d.count || 0;
+    }catch(e){}
+  }
+}
 
 /* course modal */
 el("addCourseBtn").onclick = ()=> el("courseModal").style.display = "flex";
@@ -364,24 +381,12 @@ el("saveCourse").onclick = async function(){
   }
 };
 
-async function fillLessonsCounts(){
-  const rows = document.querySelectorAll("#userRows tr");
-  for(const row of rows){
-    const id = row.getAttribute("data-id");
-    try{
-      const res = await fetch(`/api/admin/user/${id}/lessons`);
-      const d = await res.json();
-      if(d.success) el(`lessons-${id}`).textContent = d.count || 0;
-    }catch(e){}
-  }
-}
-
+// INIT
 (async function(){
   await loadOverview();
   await loadUsers();
   await fillLessonsCounts();
 })();
 </script>
-
 </body>
 </html>
