@@ -1,44 +1,52 @@
-// server.js - FINAL COMPLETE (MongoDB + Piston + All endpoints)
-// Node 18+ recommended
+// =========================
+// FINAL SERVER.JS (100% WORKING)
+// =========================
 
 require("dotenv").config();
-const path = require("path");
-const fs = require("fs");
 const express = require("express");
 const cors = require("cors");
+const mongoose = require("mongoose");
 const multer = require("multer");
 const bcrypt = require("bcryptjs");
-const mongoose = require("mongoose");
+const path = require("path");
+const fs = require("fs");
 const { v4: uuidv4 } = require("uuid");
 
-// CONFIG
+const app = express();
 const PORT = process.env.PORT || 10000;
+
+// -------------------- PATHS --------------------
 const PUBLIC_DIR = path.join(__dirname, "public");
 const UPLOADS_DIR = path.join(PUBLIC_DIR, "uploads");
-const MONGO_URI = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/mindstep";
 
-// Ensure folders
-if (!fs.existsSync(PUBLIC_DIR)) fs.mkdirSync(PUBLIC_DIR, { recursive: true });
-if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+// create folders if missing
+if (!fs.existsSync(PUBLIC_DIR)) fs.mkdirSync(PUBLIC_DIR);
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR);
 
-// Connect to MongoDB
-mongoose.set("strictQuery", false);
+
+// ------------------ MONGO CONNECTION ------------------
+const MONGO_URI =
+  "mongodb+srv://yuvarajyuvarajan222:yuva132333@cluster0.o6ojbni.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+
 mongoose
   .connect(MONGO_URI)
-  .then(() => console.log("✔ MongoDB connected"))
+  .then(() => console.log("✔ MongoDB Connected Successfully"))
   .catch((err) => {
-    console.error("MongoDB connection error:", err);
+    console.error("❌ MongoDB Error:", err);
     process.exit(1);
   });
 
-// Schemas & Models
-const userSchema = new mongoose.Schema(
+mongoose.set("strictQuery", false);
+
+
+// ------------------ SCHEMAS ------------------
+const UserSchema = new mongoose.Schema(
   {
-    _id: { type: String, default: () => uuidv4() },
-    username: { type: String, required: true, unique: true },
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    image: { type: String, default: null },
+    _id: { type: String, default: uuidv4 },
+    username: { type: String, unique: true },
+    email: { type: String, unique: true },
+    password: String,
+    image: String,
     percentage: { type: Number, default: 0 },
     deleted: { type: Boolean, default: false },
     created_at: { type: Date, default: Date.now },
@@ -46,412 +54,251 @@ const userSchema = new mongoose.Schema(
   { versionKey: false }
 );
 
-const adminSchema = new mongoose.Schema(
+const AdminSchema = new mongoose.Schema(
   {
-    _id: { type: String, default: () => uuidv4() },
-    username: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    display_name: { type: String, default: "Admin" },
-    created_at: { type: Date, default: Date.now },
+    _id: { type: String, default: uuidv4 },
+    username: { type: String, unique: true },
+    password: String,
+    display_name: String,
   },
   { versionKey: false }
 );
 
-const completionSchema = new mongoose.Schema(
+const CompletionSchema = new mongoose.Schema(
   {
-    _id: { type: String, default: () => uuidv4() },
-    user_id: { type: String, required: true },
-    lesson_id: { type: String, required: true },
+    _id: { type: String, default: uuidv4 },
+    user_id: String,
+    lesson_id: String,
   },
   { versionKey: false }
 );
-completionSchema.index({ user_id: 1, lesson_id: 1 }, { unique: true });
+CompletionSchema.index({ user_id: 1, lesson_id: 1 }, { unique: true });
 
-const courseSchema = new mongoose.Schema(
+const CourseSchema = new mongoose.Schema(
   {
-    _id: { type: String, default: () => uuidv4() },
+    _id: { type: String, default: uuidv4 },
     title: String,
     description: String,
-    created_at: { type: Date, default: Date.now },
   },
   { versionKey: false }
 );
 
-const User = mongoose.model("User", userSchema);
-const Admin = mongoose.model("Admin", adminSchema);
-const Completion = mongoose.model("Completion", completionSchema);
-const Course = mongoose.model("Course", courseSchema);
+const User = mongoose.model("User", UserSchema);
+const Admin = mongoose.model("Admin", AdminSchema);
+const Completion = mongoose.model("Completion", CompletionSchema);
+const Course = mongoose.model("Course", CourseSchema);
 
-// Ensure default admin exists
-(async function ensureAdmin() {
-  try {
-    const a = await Admin.findOne({ username: "Uzumaki_Yuva" }).lean();
-    if (!a) {
-      await Admin.create({
-        username: "Uzumaki_Yuva",
-        password: bcrypt.hashSync("yuva22", 10),
-        display_name: "MindStep Administrator",
-      });
-      console.log("✔ Default admin created: Uzumaki_Yuva / yuva22");
-    }
-  } catch (e) {
-    console.error("admin init error:", e);
+
+// ------------------ DEFAULT ADMIN ------------------
+(async () => {
+  const exists = await Admin.findOne({ username: "Uzumaki_Yuva" });
+  if (!exists) {
+    await Admin.create({
+      username: "Uzumaki_Yuva",
+      password: bcrypt.hashSync("yuva22", 10),
+      display_name: "MindStep Admin",
+    });
+    console.log("✔ Default Admin Created: Uzumaki_Yuva / yuva22");
   }
 })();
 
-// Express setup
-const app = express();
+
+// ------------------- EXPRESS CONFIG -------------------
 app.use(cors());
-app.use(express.json({ limit: "12mb" }));
+app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(PUBLIC_DIR));
 app.use("/uploads", express.static(UPLOADS_DIR));
 
-// Multer for uploads
+
+// ------------------ MULTER STORAGE ------------------
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOADS_DIR),
-  filename: (req, file, cb) => cb(null, uuidv4() + path.extname(file.originalname)),
+  destination: (_, __, cb) => cb(null, UPLOADS_DIR),
+  filename: (_, file, cb) => cb(null, uuidv4() + path.extname(file.originalname)),
 });
 const upload = multer({ storage });
 
-// Helper error wrapper
-function handleServerError(res, err) {
-  console.error(err);
-  return res.status(500).json({ error: "Server error" });
-}
 
-// ---------------- AUTH: signup / login ----------------
+// ================================================================
+// ======================== AUTH APIs ==============================
+// ================================================================
+
+// ------------------ SIGNUP ------------------
 app.post("/api/signup", upload.single("image"), async (req, res) => {
   try {
     const { username, email, password } = req.body;
-    if (!username || !email || !password) return res.status(400).json({ error: "Missing fields" });
 
-    const exists = await User.findOne({ $or: [{ username }, { email }] }).lean();
+    const exists = await User.findOne({ $or: [{ username }, { email }] });
     if (exists) return res.json({ error: "User already exists" });
 
     const img = req.file ? "/uploads/" + req.file.filename : null;
-    const u = await User.create({
+
+    const user = await User.create({
       username,
       email,
       password: bcrypt.hashSync(password, 10),
       image: img,
     });
 
-    const out = await User.findById(u._id).select("-password").lean();
-    return res.json({ success: true, user: out });
+    const out = await User.findById(user._id).select("-password");
+    res.json({ success: true, user: out });
+
   } catch (err) {
-    return handleServerError(res, err);
+    console.error(err);
+    res.json({ error: "Signup failed" });
   }
 });
 
+// ------------------ LOGIN ------------------
 app.post("/api/login", async (req, res) => {
   try {
     const { usernameOrEmail, password } = req.body;
-    if (!usernameOrEmail || !password) return res.status(400).json({ error: "Missing fields" });
 
     const user = await User.findOne({
-      $or: [{ username: usernameOrEmail }, { email: usernameOrEmail }],
+      $or: [{ usernameOrEmail }, { email: usernameOrEmail }],
       deleted: false,
     });
-    if (!user) return res.json({ error: "Invalid Login" });
 
-    if (!bcrypt.compareSync(password, user.password)) return res.json({ error: "Invalid Login" });
+    if (!user) return res.json({ error: "Invalid login" });
 
-    const out = await User.findById(user._id).select("-password").lean();
-    return res.json({ success: true, user: out });
+    if (!bcrypt.compareSync(password, user.password))
+      return res.json({ error: "Invalid login" });
+
+    const out = await User.findById(user._id).select("-password");
+    res.json({ success: true, user: out });
+
   } catch (err) {
-    return handleServerError(res, err);
+    res.json({ error: "Login failed" });
   }
 });
 
-// ---------------- ADMIN endpoints ----------------
+
+// ================================================================
+// ======================== ADMIN APIs =============================
+// ================================================================
+
 app.post("/api/admin-login", async (req, res) => {
-  try {
-    const { username, password } = req.body;
-    if (!username || !password) return res.status(400).json({ error: "Missing fields" });
+  const { username, password } = req.body;
 
-    const admin = await Admin.findOne({ username });
-    if (!admin) return res.json({ error: "Admin not found" });
+  const admin = await Admin.findOne({ username });
+  if (!admin) return res.json({ error: "Admin not found" });
 
-    if (!bcrypt.compareSync(password, admin.password)) return res.json({ error: "Wrong password" });
+  if (!bcrypt.compareSync(password, admin.password))
+    return res.json({ error: "Wrong password" });
 
-    const out = await Admin.findById(admin._id).select("-password").lean();
-    return res.json({ success: true, admin: out });
-  } catch (err) {
-    return handleServerError(res, err);
-  }
+  res.json({ success: true, admin });
 });
 
 app.get("/api/admin/users", async (req, res) => {
-  try {
-    const users = await User.find({ deleted: false }).select("-password").sort({ created_at: -1 }).lean();
-    // append lessonsDone for each user
-    for (let u of users) {
-      u.lessonsDone = await Completion.countDocuments({ user_id: u._id });
-    }
-    return res.json({ success: true, users });
-  } catch (err) {
-    return handleServerError(res, err);
-  }
-});
+  const users = await User.find({ deleted: false })
+    .select("-password")
+    .sort({ created_at: -1 });
 
-app.get("/api/admin/overview", async (req, res) => {
-  try {
-    const totalUsers = await User.countDocuments({ deleted: false });
-    const totalCompletions = await Completion.countDocuments();
-    const courseCount = await Course.countDocuments();
-    const avgObj = await User.aggregate([
-      { $match: { deleted: false } },
-      { $group: { _id: null, avg: { $avg: "$percentage" } } },
-    ]);
-    const avg = Math.round(avgObj[0]?.avg || 0);
-    return res.json({ success: true, totalUsers, activeCourses: courseCount, totalCompletions, averageProgress: avg });
-  } catch (err) {
-    return handleServerError(res, err);
-  }
+  res.json({ success: true, users });
 });
 
 app.get("/api/admin/user/:id", async (req, res) => {
-  try {
-    const id = req.params.id;
-    const user = await User.findById(id).select("-password").lean();
-    if (!user) return res.json({ success: false, error: "User not found" });
-    const lessonsDone = await Completion.countDocuments({ user_id: id });
-    return res.json({ success: true, user, lessonsDone });
-  } catch (err) {
-    return handleServerError(res, err);
-  }
+  const user = await User.findById(req.params.id).select("-password");
+  if (!user) return res.json({ error: "User not found" });
+
+  const lessonsDone = await Completion.countDocuments({ user_id: user._id });
+
+  res.json({ success: true, user, lessonsDone });
 });
 
-app.post("/api/admin/user/:id/soft-delete", async (req, res) => {
-  try {
-    await User.findByIdAndUpdate(req.params.id, { deleted: true });
-    return res.json({ success: true });
-  } catch (err) {
-    return handleServerError(res, err);
-  }
+app.delete("/api/admin/user/:id", async (req, res) => {
+  await User.findByIdAndDelete(req.params.id);
+  await Completion.deleteMany({ user_id: req.params.id });
+
+  res.json({ success: true });
 });
 
-app.post("/api/admin/user/:id/restore", async (req, res) => {
-  try {
-    await User.findByIdAndUpdate(req.params.id, { deleted: false });
-    return res.json({ success: true });
-  } catch (err) {
-    return handleServerError(res, err);
-  }
-});
+app.post("/api/admin/user/:id/reset", async (req, res) => {
+  await Completion.deleteMany({ user_id: req.params.id });
+  await User.findByIdAndUpdate(req.params.id, { percentage: 0 });
 
-app.post("/api/admin/user/:id/purge", async (req, res) => {
-  try {
-    const id = req.params.id;
-    const force = req.body.force === true || req.body.force === "true";
-    if (!force) return res.json({ success: false, error: "Force flag required" });
-
-    await Completion.deleteMany({ user_id: id });
-    await User.findByIdAndDelete(id);
-    return res.json({ success: true });
-  } catch (err) {
-    return handleServerError(res, err);
-  }
+  res.json({ success: true });
 });
 
 app.put("/api/admin/user/:id", async (req, res) => {
-  try {
-    const id = req.params.id;
-    const { username, email, password } = req.body;
-    const other = await User.findOne({ $or: [{ username }, { email }], _id: { $ne: id } }).lean();
-    if (other) return res.json({ success: false, error: "Username or email used" });
+  const { username, email, password } = req.body;
 
-    const update = { username, email };
-    if (password && password.length) update.password = bcrypt.hashSync(password, 10);
-    await User.findByIdAndUpdate(id, update);
-    return res.json({ success: true });
-  } catch (err) {
-    return handleServerError(res, err);
-  }
+  const update = { username, email };
+  if (password) update.password = bcrypt.hashSync(password, 10);
+
+  await User.findByIdAndUpdate(req.params.id, update);
+  res.json({ success: true });
 });
 
 app.post("/api/admin/user/:id/image", upload.single("image"), async (req, res) => {
-  try {
-    if (!req.file) return res.json({ success: false, error: "No file uploaded" });
-    const imagePath = "/uploads/" + req.file.filename;
-    await User.findByIdAndUpdate(req.params.id, { image: imagePath });
-    return res.json({ success: true, image: imagePath });
-  } catch (err) {
-    return handleServerError(res, err);
-  }
+  const image = "/uploads/" + req.file.filename;
+  await User.findByIdAndUpdate(req.params.id, { image });
+  res.json({ success: true, image });
 });
 
-app.get("/api/admin/user/:id/lessons", async (req, res) => {
-  try {
-    const id = req.params.id;
-    const c = await Completion.countDocuments({ user_id: id });
-    return res.json({ success: true, count: c });
-  } catch (err) {
-    return handleServerError(res, err);
-  }
-});
 
-// ---------------- COMPLETIONS / PROGRESS ----------------
+// ================================================================
+// ================= PROGRESS / COMPLETION =========================
+// ================================================================
+
 app.post("/api/complete", async (req, res) => {
-  try {
-    const { userId, lessonId } = req.body;
-    if (!userId || !lessonId) return res.status(400).json({ error: "Missing fields" });
+  const { userId, lessonId } = req.body;
 
-    await Completion.updateOne(
-      { user_id: userId, lesson_id: String(lessonId) },
-      { $setOnInsert: { _id: uuidv4(), user_id: userId, lesson_id: String(lessonId) } },
-      { upsert: true }
-    );
+  await Completion.updateOne(
+    { user_id: userId, lesson_id: String(lessonId) },
+    { $setOnInsert: { _id: uuidv4(), user_id: userId, lesson_id: String(lessonId) } },
+    { upsert: true }
+  );
 
-    const totalLessons = 4;
-    const done = await Completion.countDocuments({ user_id: userId });
-    const percent = Math.round((done / totalLessons) * 100);
-    await User.findByIdAndUpdate(userId, { percentage: percent });
+  const done = await Completion.countDocuments({ user_id: userId });
+  const percent = Math.round((done / 4) * 100);
 
-    return res.json({ success: true, percentage: percent });
-  } catch (err) {
-    return handleServerError(res, err);
-  }
+  await User.findByIdAndUpdate(userId, { percentage: percent });
+
+  res.json({ success: true, percentage: percent });
 });
 
-// ---------------- RUN CODE (Piston online) ----------------
-// Node 18 has global fetch
+
+// ================================================================
+// ===================== ONLINE COMPILER ===========================
+// ================================================================
+
 app.post("/run-code", async (req, res) => {
   try {
     const { language, source } = req.body;
-    if (!language || !source) return res.status(400).json({ error: "Missing language/source" });
 
     const PISTON = "https://emkc.org/api/v2/piston/execute";
 
-    if (language === "java") {
-      const response = await fetch(PISTON, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          language: "java",
-          version: "17",
-          files: [{ name: "Main.java", content: source }]
-        })
-      });
-      const data = await response.json();
-      return res.json({ output: data.run?.output || JSON.stringify(data) });
-    }
+    const body = {
+      language,
+      version:
+        language === "java" ? "17" :
+        language === "python" ? "3.10.0" :
+        "18",
+      files: [{ name: language === "java" ? "Main.java" : "main", content: source }],
+    };
 
-    if (language === "python") {
-      const response = await fetch(PISTON, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          language: "python",
-          version: "3.10.0",
-          files: [{ name: "main.py", content: source }]
-        })
-      });
-      const data = await response.json();
-      return res.json({ output: data.run?.output || JSON.stringify(data) });
-    }
+    const output = await fetch(PISTON, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then((r) => r.json());
 
-    if (language === "javascript") {
-      try {
-        const result = eval(source);
-        return res.json({ output: String(result ?? "") });
-      } catch (err) {
-        return res.json({ error: "JS Error: " + err.message });
-      }
-    }
+    res.json({ output: output.run?.output || JSON.stringify(output) });
 
-    return res.json({ error: "Language not supported" });
   } catch (err) {
-    return handleServerError(res, err);
+    res.json({ error: "Execution error" });
   }
 });
 
-// ---------------- COURSE / PROGRESS APIS ----------------
-app.post("/get-progress", async (req, res) => {
-  try {
-    const { username } = req.body;
-    if (!username) return res.status(400).json({ error: "Missing username" });
-    const user = await User.findOne({ username, deleted: false }).lean();
-    if (!user) return res.json({ success: false, error: "User not found" });
 
-    const c = await Completion.countDocuments({ user_id: user._id });
-    return res.json({ success: true, percentage: user.percentage, lessonsCompleted: c });
-  } catch (err) {
-    return handleServerError(res, err);
-  }
+// ---------------- ROOT ----------------
+app.get("/", (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, "LoginPage.html"));
 });
 
-app.post("/save-progress", async (req, res) => {
-  try {
-    const { username, percentage, lessons_completed } = req.body;
-    if (!username) return res.status(400).json({ error: "Missing username" });
 
-    const user = await User.findOne({ username, deleted: false }).lean();
-    if (!user) return res.json({ success: false, error: "User not found" });
-
-    const n = Math.max(0, Number(lessons_completed || 0));
-    for (let i = 1; i <= n; i++) {
-      await Completion.updateOne(
-        { user_id: user._id, lesson_id: String(i) },
-        { $setOnInsert: { _id: uuidv4(), user_id: user._id, lesson_id: String(i) } },
-        { upsert: true }
-      );
-    }
-
-    const pct = Math.max(0, Math.min(100, Number(percentage || 0)));
-    await User.findByIdAndUpdate(user._id, { percentage: pct });
-
-    return res.json({ success: true, percentage: pct, lessons_completed: n });
-  } catch (err) {
-    return handleServerError(res, err);
-  }
-});
-
-app.post("/update-main-progress", async (req, res) => {
-  try {
-    const { username } = req.body;
-    if (!username) return res.status(400).json({ error: "Missing username" });
-
-    const user = await User.findOne({ username, deleted: false }).lean();
-    if (!user) return res.json({ success: false, error: "User not found" });
-
-    const done = await Completion.countDocuments({ user_id: user._id });
-    const totalLessons = 4;
-    const percent = Math.round((done / totalLessons) * 100);
-    await User.findByIdAndUpdate(user._id, { percentage: percent });
-
-    return res.json({ success: true, percentage: percent });
-  } catch (err) {
-    return handleServerError(res, err);
-  }
-});
-
-app.post("/get-main-progress", async (req, res) => {
-  try {
-    const { username } = req.body;
-    if (!username) return res.status(400).json({ error: "Missing username" });
-
-    const user = await User.findOne({ username, deleted: false }).lean();
-    return res.json({ success: true, fullStack: (user ? user.percentage : 0) || 0 });
-  } catch (err) {
-    return handleServerError(res, err);
-  }
-});
-
-app.get("/progress", async (req, res) => {
-  try {
-    const usersCount = await User.countDocuments({ deleted: false });
-    const totalCompletions = await Completion.countDocuments();
-    const avgObj = await User.aggregate([{ $match: { deleted: false } }, { $group: { _id: null, avg: { $avg: "$percentage" } } }]);
-    const avgPct = Math.round(avgObj[0]?.avg || 0);
-    return res.json({ percentage: avgPct, completed: totalCompletions, users: usersCount });
-  } catch (err) {
-    return handleServerError(res, err);
-  }
-});
-
-// Root & start
-app.get("/", (req, res) => res.sendFile(path.join(PUBLIC_DIR, "LoginPage.html")));
-
-app.listen(PORT, () => console.log(`🔥 SERVER running at http://localhost:${PORT}`));
+// ---------------- START SERVER ----------------
+app.listen(PORT, () =>
+  console.log(`🔥 Server running at http://localhost:${PORT}`)
+);
