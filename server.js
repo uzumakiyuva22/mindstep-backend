@@ -287,7 +287,7 @@ app.post("/run-code", async (req, res) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           language: "java",
-          version: "17",
+          version: "latest",
           files: [{ name: "Main.java", content: source }],
         }),
       });
