@@ -1,6 +1,4 @@
-// ======================================
-// FINAL SERVER.JS (Render + MongoDB Atlas + Cloudinary + Code Runner)
-// ======================================
+// server.js
 
 require("dotenv").config();
 const path = require("path");
