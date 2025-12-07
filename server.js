@@ -10,55 +10,54 @@ const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
 const { v4: uuidv4 } = require("uuid");
 
-// ---------------------- CONFIG ----------------------
+// ---------- CONFIG ----------
 const PORT = process.env.PORT || 10000;
 const PUBLIC_DIR = path.join(__dirname, "public");
-const UPLOADS_DIR = path.join(PUBLIC_DIR, "uploads");
 
-const MONGO_URI = process.env.MONGO_URI;
-const CLOUDINARY_URL = process.env.CLOUDINARY_URL;
-
-if (!MONGO_URI) {
-  console.error("❌ ERROR: MONGO_URI missing in Render Environment Variables");
+if (!process.env.MONGO_URI) {
+  console.error("❌ MONGO_URI missing");
+  process.exit(1);
+}
+if (!process.env.CLOUDINARY_URL) {
+  console.error("❌ CLOUDINARY_URL missing");
   process.exit(1);
 }
 
-if (!CLOUDINARY_URL) {
-  console.error("❌ ERROR: CLOUDINARY_URL missing");
-  process.exit(1);
-}
-
-// Cloudinary Setup
+// ---------- CLOUDINARY ----------
 const cloudinary = require("cloudinary").v2;
 cloudinary.config({
   secure: true
 });
 
-// Ensure folders exist
-if (!fs.existsSync(PUBLIC_DIR)) fs.mkdirSync(PUBLIC_DIR, { recursive: true });
-if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+// ---------- EXPRESS ----------
+const app = express();
+app.use(cors());
+app.use(express.json({ limit: "20mb" }));
+app.use(express.urlencoded({ extended: true }));
 
-// ------------------- DATABASE CONNECT -------------------
+// ---------- MULTER TEMP UPLOAD ----------
+const upload = multer({ dest: "temp/" });
+
+// ---------- DATABASE ----------
 mongoose.set("strictQuery", false);
 mongoose
-  .connect(MONGO_URI)
+  .connect(process.env.MONGO_URI)
   .then(() => console.log("✔ MongoDB Connected"))
   .catch((err) => {
     console.error("❌ MongoDB Error:", err.message);
     process.exit(1);
   });
 
-// ---------------------- SCHEMAS ----------------------
+// ---------- SCHEMAS ----------
 const userSchema = new mongoose.Schema(
   {
     _id: { type: String, default: uuidv4 },
-    username: { type: String, unique: true },
-    email: { type: String, unique: true },
+    username: String,
+    email: String,
     password: String,
     image: String,
     percentage: { type: Number, default: 0 },
-    deleted: { type: Boolean, default: false },
-    created_at: { type: Date, default: Date.now },
+    deleted: { type: Boolean, default: false }
   },
   { versionKey: false }
 );
@@ -66,9 +65,8 @@ const userSchema = new mongoose.Schema(
 const adminSchema = new mongoose.Schema(
   {
     _id: { type: String, default: uuidv4 },
-    username: { type: String, unique: true },
-    password: String,
-    display_name: String,
+    username: String,
+    password: String
   },
   { versionKey: false }
 );
@@ -77,44 +75,32 @@ const completionSchema = new mongoose.Schema(
   {
     _id: { type: String, default: uuidv4 },
     user_id: String,
-    lesson_id: String,
+    lesson_id: String
   },
   { versionKey: false }
 );
-
 completionSchema.index({ user_id: 1, lesson_id: 1 }, { unique: true });
 
 const User = mongoose.model("User", userSchema);
 const Admin = mongoose.model("Admin", adminSchema);
 const Completion = mongoose.model("Completion", completionSchema);
 
-// ---------------------- DEFAULT ADMIN ----------------------
+// ---------- DEFAULT ADMIN ----------
 (async () => {
-  const exists = await Admin.findOne({ username: "Uzumaki_Yuva" });
-  if (!exists) {
+  const admin = await Admin.findOne({ username: "Uzumaki_Yuva" });
+  if (!admin) {
     await Admin.create({
       username: "Uzumaki_Yuva",
-      password: bcrypt.hashSync("yuva22", 10),
-      display_name: "MindStep Admin",
+      password: bcrypt.hashSync("yuva22", 10)
     });
     console.log("✔ Default Admin Created");
   }
 })();
 
-// ---------------------- EXPRESS APP ----------------------
-const app = express();
-app.use(cors());
-app.use(express.json({ limit: "20mb" }));
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(PUBLIC_DIR));
-
-// Multer temp upload
-const upload = multer({ dest: "temp/" });
-
-// ---------------------- HEALTH CHECK ----------------------
+// ---------- HEALTH ----------
 app.get("/health", (req, res) => res.json({ ok: true }));
 
-// ---------------------- SIGNUP ----------------------
+// ---------- SIGNUP ----------
 app.post("/api/signup", upload.single("image"), async (req, res) => {
   try {
     const { username, email, password } = req.body;
@@ -122,21 +108,20 @@ app.post("/api/signup", upload.single("image"), async (req, res) => {
     const exists = await User.findOne({ $or: [{ username }, { email }] });
     if (exists) return res.json({ error: "User already exists" });
 
-    let imageUrl = null;
-
+    let imgUrl = null;
     if (req.file) {
-      const cloud = await cloudinary.uploader.upload(req.file.path, {
-        folder: "mindstep_users",
+      const img = await cloudinary.uploader.upload(req.file.path, {
+        folder: "mindstep_users"
       });
-      imageUrl = cloud.secure_url;
-      fs.unlinkSync(req.file.path); // delete temp file
+      imgUrl = img.secure_url;
+      fs.unlinkSync(req.file.path);
     }
 
     const user = await User.create({
       username,
       email,
       password: bcrypt.hashSync(password, 10),
-      image: imageUrl,
+      image: imgUrl
     });
 
     const out = await User.findById(user._id).select("-password");
@@ -146,19 +131,20 @@ app.post("/api/signup", upload.single("image"), async (req, res) => {
   }
 });
 
-// ---------------------- LOGIN ----------------------
+// ---------- LOGIN ----------
 app.post("/api/login", async (req, res) => {
   try {
     const { usernameOrEmail, password } = req.body;
 
     const user = await User.findOne({
       $or: [{ username: usernameOrEmail }, { email: usernameOrEmail }],
-      deleted: false,
+      deleted: false
     });
 
-    if (!user) return res.json({ error: "Invalid Login" });
+    if (!user) return res.json({ error: "Invalid login" });
+
     if (!bcrypt.compareSync(password, user.password))
-      return res.json({ error: "Invalid Login" });
+      return res.json({ error: "Invalid login" });
 
     const out = await User.findById(user._id).select("-password");
     res.json({ success: true, user: out });
@@ -167,57 +153,37 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
-// ---------------------- ADMIN LOGIN ----------------------
-app.post("/api/admin-login", async (req, res) => {
-  try {
-    const { username, password } = req.body;
-
-    const admin = await Admin.findOne({ username });
-    if (!admin) return res.json({ error: "Admin not found" });
-
-    if (!bcrypt.compareSync(password, admin.password))
-      return res.json({ error: "Wrong password" });
-
-    const out = await Admin.findById(admin._id).select("-password");
-    res.json({ success: true, admin: out });
-  } catch (err) {
-    res.json({ error: err.message });
-  }
-});
-
-// ---------------------- CODE RUNNER ----------------------
+// ---------- RUN CODE (PISTON API) ----------
 app.post("/run-code", async (req, res) => {
   try {
     const { language, source } = req.body;
 
-    const PISTON = "https://emkc.org/api/v2/piston/execute";
-
     const config = {
-      java: { language: "java", version: "17.0.3" },
+      java: { language: "java", version: "17" },
       python: { language: "python", version: "3.10.0" },
-      javascript: { language: "javascript", version: "18.15.0" },
+      javascript: { language: "javascript", version: "18.15.0" }
     };
 
     if (!config[language])
       return res.json({ error: "Language not supported" });
 
-    const pistonRes = await fetch(PISTON, {
+    const pistonRes = await fetch("https://emkc.org/api/v2/piston/execute", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...config[language],
-        files: [{ name: "Main", content: source }],
-      }),
+        files: [{ name: "Main", content: source }]
+      })
     });
 
     const data = await pistonRes.json();
-    res.json({ output: data.run?.output || JSON.stringify(data) });
+    res.json({ output: data.run?.output || "" });
   } catch (err) {
     res.json({ error: err.message });
   }
 });
 
-// ---------------------- LESSON COMPLETION ----------------------
+// ---------- COMPLETE LESSON ----------
 app.post("/api/complete", async (req, res) => {
   try {
     const { userId, lessonId } = req.body;
@@ -228,9 +194,9 @@ app.post("/api/complete", async (req, res) => {
       { upsert: true }
     );
 
-    const totalLessons = 4;
     const done = await Completion.countDocuments({ user_id: userId });
-    const percent = Math.round((done / totalLessons) * 100);
+    const total = 4;
+    const percent = Math.round((done / total) * 100);
 
     await User.findByIdAndUpdate(userId, { percentage: percent });
 
@@ -240,12 +206,12 @@ app.post("/api/complete", async (req, res) => {
   }
 });
 
-// ---------------------- ROOT ----------------------
-app.get("/", (req, res) =>
-  res.sendFile(path.join(PUBLIC_DIR, "LoginPage.html"))
-);
+// ---------- ROOT ----------
+app.get("/", (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, "LoginPage.html"));
+});
 
-// ---------------------- START SERVER ----------------------
+// ---------- START SERVER ----------
 app.listen(PORT, () =>
-  console.log(`🔥 SERVER LIVE → http://localhost:${PORT}`)
+  console.log(`🔥 SERVER LIVE on port ${PORT}`)
 );
