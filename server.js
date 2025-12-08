@@ -228,6 +228,28 @@ app.post("/run-code", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+app.get("/user-info", adminAuth, async (req, res) => {
+    try {
+        const userId = req.user.id; // from JWT
+        db.get(
+            "SELECT id, username, email, image FROM users WHERE id = ?",
+            [userId],
+            (err, row) => {
+                if (err) return res.status(500).json({ error: "DB error" });
+                if (!row) return res.status(404).json({ error: "User not found" });
+
+                res.json({
+                    id: row.id,
+                    username: row.username,
+                    email: row.email,
+                    image: row.image ? `/uploads/${row.image}` : "/default.png"
+                });
+            }
+        );
+    } catch (e) {
+        res.status(500).json({ error: "Server error" });
+    }
+});
 
 // ---------- COMPLETE LESSON ----------
 app.post("/api/complete", async (req, res) => {
