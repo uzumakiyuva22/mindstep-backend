@@ -514,22 +514,16 @@
 <script>
 // MainPage.js
 document.addEventListener("DOMContentLoaded", () => {
+const userId = localStorage.getItem("userId");
 
-  // GET USER DATA FROM localStorage
-  const userId = localStorage.getItem("userId");
-
-  // ---- LOAD USER IMAGE & NAME ----
-  if (userId) {
-    fetch(`/user-info/${userId}`)
-    .then(res => res.json())
-    .then(user => {
-      if (user.username) {
-        document.getElementById("username").innerText = user.username;
-        document.getElementById("profileImg").src = user.image || "default.png";
-      }
-    })
-    .catch(err => console.error("User load error:", err));
-  }
+if (userId) {
+    fetch(`/api/get-user/${userId}`)
+        .then(res => res.json())
+        .then(user => {
+            document.getElementById("username").innerText = user.username;
+            document.getElementById("profileImg").src = user.image || "default.png";
+        });
+}
 
   // ---- PROGRESS BAR ----
   const fsdBar = document.getElementById("fsd2");
