@@ -366,6 +366,14 @@ app.get("/api/get-user/:id", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+app.get("/test-cloud", async (req, res) => {
+  try {
+    const r = await cloudinary.v2.uploader.upload("https://via.placeholder.com/150");
+    res.json(r);
+  } catch (e) {
+    res.json({ error: e.message });
+  }
+});
 
 // ROOT
 app.get("/", (req, res) => {
