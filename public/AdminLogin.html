@@ -204,28 +204,54 @@ body::before{
 <div class="toast" id="toast"></div>
 
 <script>
-document.getElementById("loginBtn").onclick = async function () {
-    const username = document.getElementById("username").value.trim();
-    const password = document.getElementById("password").value.trim();
-    const msg = document.getElementById("msg");
+// ===============================
+// ADMIN LOGIN — FINAL WORKING JS
+// ===============================
 
-    msg.textContent = "";
+function showToast(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    setTimeout(() => t.classList.remove("show"), 2500);
+}
 
-    const res = await fetch("/api/admin-login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password })
-    });
+document.getElementById("adminLoginBtn").onclick = async () => {
+    const username = document.getElementById("admin-email").value.trim();
+    const password = document.getElementById("admin-pass").value.trim();
 
-    const data = await res.json();
+    if (!username || !password) {
+        showToast("Enter admin username & password");
+        return;
+    }
 
-    if (data.success) {
-        // THIS MUST MATCH ADMIN_SECRET IN RENDER
-        localStorage.setItem("admin_token", data.adminToken);
+    try {
+        const res = await fetch("/api/admin-login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password })
+        });
 
-        window.location.href = "AdminDashboard.html";
-    } else {
-        msg.textContent = data.error || "Invalid login";
+        const data = await res.json();
+
+        if (!data.success) {
+            showToast(data.error || "Invalid admin login");
+            return;
+        }
+
+        // IMPORTANT:
+        // server.js protects admin routes using ADMIN_SECRET
+        // So we save that token in localStorage and use it in AdminDashboard
+        localStorage.setItem("admin_token", data.adminSecret);
+
+        showToast("Login successful!");
+
+        setTimeout(() => {
+            window.location.href = "AdminDashboard.html";
+        }, 800);
+
+    } catch (err) {
+        console.error(err);
+        showToast("Server error");
     }
 };
 </script>

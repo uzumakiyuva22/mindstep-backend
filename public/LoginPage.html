@@ -265,75 +265,115 @@ h2{
 </div>
 
 <script>
+/* ================================
+   SWITCH LOGIN ↔ SIGNUP
+================================ */
+document.getElementById("showSignup").onclick =
+ () => document.getElementById("container").classList.add("active");
 
-/* Switch */
-document.getElementById("showSignup").onclick=
- ()=>document.getElementById("container").classList.add("active");
+document.getElementById("showLogin").onclick =
+ () => document.getElementById("container").classList.remove("active");
 
-document.getElementById("showLogin").onclick=
- ()=>document.getElementById("container").classList.remove("active");
 
-/* Profile Preview */
-document.getElementById("profileLabel").onclick=
- ()=>document.getElementById("signup-image").click();
+/* ================================
+   PROFILE IMAGE PREVIEW
+================================ */
+document.getElementById("profileLabel").onclick =
+ () => document.getElementById("signup-image").click();
 
-document.getElementById("signup-image").onchange = e=>{
-  const f=e.target.files[0];
-  if(!f) return;
-  const p=document.getElementById("signup-preview");
-  p.src=URL.createObjectURL(f);
-  p.style.display="block";
-  document.getElementById("profileLabel").style.display="none";
+document.getElementById("signup-image").onchange = e => {
+  const f = e.target.files[0];
+  if (!f) return;
+
+  const p = document.getElementById("signup-preview");
+  p.src = URL.createObjectURL(f);
+  p.style.display = "block";
+
+  document.getElementById("profileLabel").style.display = "none";
 };
 
-/* LOGIN */
-document.getElementById("loginBtn").onclick=async()=>{
-  const u=document.getElementById("login-username").value.trim();
-  const p=document.getElementById("login-password").value.trim();
-  if(!u||!p) return alert("Enter login details");
 
-  const r=await fetch("/api/login",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({usernameOrEmail:u,password:p})
-  });
+/* ================================
+   USER LOGIN
+================================ */
+document.getElementById("loginBtn").onclick = async () => {
+  const usernameOrEmail = document.getElementById("login-username").value.trim();
+  const password = document.getElementById("login-password").value.trim();
 
-  const d=await r.json();
-  if(d.success){
-    localStorage.setItem("ms_username",d.user.username);
-    localStorage.setItem("ms_image",d.user.image);
-    localStorage.setItem("ms_quote","Welcome back legend!");
-    location.href="MainPage.html";
-  } else alert("Invalid login");
+  if (!usernameOrEmail || !password)
+    return alert("Enter login details");
+
+  try {
+    const res = await fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ usernameOrEmail, password })
+    });
+
+    const data = await res.json();
+
+    if (!data.success) return alert("Invalid login");
+
+    const u = data.user;
+
+    /* SAVE USER DATA FOR MAINPAGE */
+    localStorage.setItem("userId", u._id);
+    localStorage.setItem("ms_username", u.username);
+    localStorage.setItem("ms_image", u.image || "");
+    localStorage.setItem("ms_quote", "Welcome back legend!");
+
+    /* REDIRECT */
+    location.href = "MainPage.html";
+
+  } catch (err) {
+    console.error(err);
+    alert("Server error");
+  }
 };
 
-/* SIGNUP */
-document.getElementById("signupBtn").onclick=async()=>{
-  const n=document.getElementById("signup-username").value.trim();
-  const e=document.getElementById("signup-email").value.trim();
-  const p=document.getElementById("signup-password").value.trim();
-  const c=document.getElementById("signup-confirm").value.trim();
-  const img=document.getElementById("signup-image").files[0];
 
-  if(!n||!e||!p||!c) return alert("Fill all fields");
-  if(p!==c) return alert("Passwords do not match");
+/* ================================
+   USER SIGNUP
+================================ */
+document.getElementById("signupBtn").onclick = async () => {
+  const username = document.getElementById("signup-username").value.trim();
+  const email = document.getElementById("signup-email").value.trim();
+  const password = document.getElementById("signup-password").value.trim();
+  const confirm = document.getElementById("signup-confirm").value.trim();
+  const image = document.getElementById("signup-image").files[0];
 
-  const fd=new FormData();
-  fd.append("username",n);
-  fd.append("email",e);
-  fd.append("password",p);
-  if(img) fd.append("image",img);
+  if (!username || !email || !password || !confirm)
+    return alert("Fill all fields");
 
-  const r=await fetch("/api/signup",{method:"POST",body:fd});
-  const d=await r.json();
+  if (password !== confirm)
+    return alert("Passwords do not match");
 
-  if(d.success){
-    alert("Signup successful!");
-    location.href="LoginPage.html";
-  } else alert("Signup failed");
+  const form = new FormData();
+  form.append("username", username);
+  form.append("email", email);
+  form.append("password", password);
+  if (image) form.append("image", image);
+
+  try {
+    const res = await fetch("/api/signup", {
+      method: "POST",
+      body: form
+    });
+
+    const data = await res.json();
+
+    if (!data.success)
+      return alert(data.error || "Signup failed");
+
+    alert("Signup successful! Please login.");
+    location.href = "LoginPage.html";
+
+  } catch (err) {
+    console.error(err);
+    alert("Signup failed — server error");
+  }
 };
 
 </script>
-
 </body>
 </html>
