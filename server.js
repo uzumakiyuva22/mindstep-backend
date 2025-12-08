@@ -14,6 +14,9 @@ const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
 const { v4: uuidv4 } = require("uuid");
 const cloudinary = require("cloudinary").v2;
+const util = require("util");
+const { execFile } = require("child_process");
+const execFileP = util.promisify(execFile);
 
 // ------------------ CONFIG ------------------
 
@@ -303,31 +306,101 @@ app.get("/api/get-user/:id", async (req, res) => {
 });
 
 // ------------------ RUN CODE ------------------
+// NOTE: The local `/run-code` handler (below) runs code on the server
+// directly (Java/Python/JS). A previous version proxied to the Piston
+// API — that duplicate route has been removed so the local runner is used.
 
 app.post("/run-code", async (req, res) => {
   try {
-    const { language, source } = req.body;
+    const { language, source } = req.body || {};
+    if (!language || !source) return res.status(400).json({ error: "Missing language/source" });
 
-    const engines = {
-      python: { language: "python", version: "3.10.0" },
-      javascript: { language: "javascript", version: "18.15.0" },
-      java: { language: "java", version: "17" }
-    };
+    console.log("/run-code request for", language);
 
-    const run = await fetch("https://emkc.org/api/v2/piston/execute", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...engines[language],
-        files: [{ name: "Main", content: source }]
-      })
-    });
+    // helpers
+    const isWin = process.platform === "win32";
+    const JAVA_HOME = process.env.JAVA_HOME || null;
+    function resolveJavaBin(binName) {
+      // prefer JAVA_HOME if set
+      if (JAVA_HOME) {
+        const candidate = path.join(JAVA_HOME, "bin", binName + (isWin ? ".exe" : ""));
+        if (fs.existsSync(candidate)) return candidate;
+      }
+      // prefer system command
+      return binName;
+    }
 
-  
-    const data = await run.json();
-    res.json({ output: data.run?.output || "No output" });
+    // ----- JAVA -----
+    if (language === "java") {
+      const javacCmd = resolveJavaBin("javac");
+      const javaCmd = resolveJavaBin("java");
+
+      // quick availability check (execFile will throw if not found)
+      try {
+        await execFileP(javacCmd, ["-version"]).catch(() => {});
+        await execFileP(javaCmd, ["-version"]).catch(() => {});
+      } catch (e) {
+        console.error("Java availability check failed:", e && e.message);
+        return res.status(500).json({ error: "Java not available on server. Ensure JDK is installed and JAVA_HOME/PATH configured." });
+      }
+
+      const javaFile = path.join(tempDir, "Main.java");
+      const classFile = path.join(tempDir, "Main.class");
+      try {
+        fs.writeFileSync(javaFile, source, "utf8");
+        // compile
+        await execFileP(javacCmd, [javaFile]);
+      } catch (compileErr) {
+        safeUnlink(javaFile); safeUnlink(classFile);
+        const msg = (compileErr.stderr || compileErr.message || String(compileErr)).toString();
+        console.error("Java compile error:", msg);
+        return res.json({ error: "Compilation failed: " + msg });
+      }
+
+      try {
+        const { stdout, stderr } = await execFileP(javaCmd, ["-cp", tempDir, "Main"]);
+        const out = (stdout || "") + (stderr || "");
+        return res.json({ output: out || "" });
+      } catch (runErr) {
+        const msg = (runErr.stderr || runErr.message || String(runErr)).toString();
+        console.error("Java runtime error:", msg);
+        return res.json({ error: "Runtime failed: " + msg });
+      } finally {
+        safeUnlink(javaFile); safeUnlink(classFile);
+      }
+    }
+
+    // ----- PYTHON -----
+    if (language === "python") {
+      const pyCmd = (process.env.PYTHON || "python");
+      const pyFile = path.join(tempDir, "script.py");
+      try {
+        fs.writeFileSync(pyFile, source, "utf8");
+        const { stdout, stderr } = await execFileP(pyCmd, [pyFile]);
+        return res.json({ output: (stdout || "") + (stderr || "") });
+      } catch (e) {
+        const msg = (e.stderr || e.message || String(e)).toString();
+        console.error("Python run error:", msg);
+        return res.json({ error: "Python run failed: " + msg });
+      } finally {
+        safeUnlink(path.join(tempDir, "script.py"));
+      }
+    }
+
+    // ----- JAVASCRIPT (server-side eval) -----
+    if (language === "javascript") {
+      try {
+        const result = eval(source);
+        return res.json({ output: String(result ?? "") });
+      } catch (err) {
+        return res.json({ error: "JS Error: " + err.message });
+      }
+    }
+
+    return res.status(400).json({ error: "Language not supported" });
   } catch (err) {
-    res.json({ output: "Error running code" });
+    console.error("run-code handler error:", err && err.stack ? err.stack : err);
+    return res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -339,6 +412,18 @@ app.get("/", (req, res) => {
 
 // ------------------ START ------------------
 
-app.listen(PORT, () =>
+const server = app.listen(PORT, () =>
   console.log(`🔥 SERVER RUNNING → http://localhost:${PORT}`)
 );
+
+server.on('error', (err) => {
+  if (err && err.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use. Another instance may be running.`);
+    console.error('To free the port on Windows run:');
+    console.error('  netstat -ano | findstr ":' + PORT + '"');
+    console.error('  taskkill /PID <pid> /F');
+    process.exit(1);
+  }
+  console.error('Server error:', err);
+  process.exit(1);
+});
