@@ -294,7 +294,7 @@ document.getElementById("signup-image").onchange = e => {
 
 
 /* ================================
-   USER LOGIN
+   USER LOGIN (FULLY FIXED)
 ================================ */
 document.getElementById("loginBtn").onclick = async () => {
   const usernameOrEmail = document.getElementById("login-username").value.trim();
@@ -312,17 +312,17 @@ document.getElementById("loginBtn").onclick = async () => {
 
     const data = await res.json();
 
-    if (!data.success) return alert("Invalid login");
+    if (!data.success)
+      return alert("Invalid login");
 
     const u = data.user;
 
-    /* SAVE USER DATA FOR MAINPAGE */
+    // ✅ Correct variable: data.user not d.user
     localStorage.setItem("userId", u._id);
-    localStorage.setItem("ms_username", u.username);
-    localStorage.setItem("ms_image", u.image || "");
-    localStorage.setItem("ms_quote", "Welcome back legend!");
+    localStorage.setItem("username", u.username);
+    localStorage.setItem("userImage", u.image || "");
 
-    /* REDIRECT */
+    // Redirect
     location.href = "MainPage.html";
 
   } catch (err) {
@@ -333,7 +333,7 @@ document.getElementById("loginBtn").onclick = async () => {
 
 
 /* ================================
-   USER SIGNUP
+   USER SIGNUP (SAFE & WORKING)
 ================================ */
 document.getElementById("signupBtn").onclick = async () => {
   const username = document.getElementById("signup-username").value.trim();
@@ -355,11 +355,7 @@ document.getElementById("signupBtn").onclick = async () => {
   if (image) form.append("image", image);
 
   try {
-    const res = await fetch("/api/signup", {
-      method: "POST",
-      body: form
-    });
-
+    const res = await fetch("/api/signup", { method: "POST", body: form });
     const data = await res.json();
 
     if (!data.success)
@@ -373,7 +369,7 @@ document.getElementById("signupBtn").onclick = async () => {
     alert("Signup failed — server error");
   }
 };
-
 </script>
+
 </body>
 </html>

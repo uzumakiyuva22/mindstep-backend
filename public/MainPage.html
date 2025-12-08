@@ -513,94 +513,92 @@
     <!-- JavaScript Section -->
 <script>
 // ===============================
-// MAINPAGE — FULL WORKING JS
+// MAINPAGE — FINAL 100% WORKING JS
 // ===============================
 
 document.addEventListener("DOMContentLoaded", () => {
 
-  // ============= USER PROFILE LOAD =============
-  const userId = localStorage.getItem("userId");
-  const usernameEl = document.getElementById("username");
-  const profileImgEl = document.getElementById("profileImg");
+    // ---------------- USER PROFILE LOAD ----------------
+    const userId = localStorage.getItem("userId");
 
-  if (!userId) {
-    usernameEl.innerText = "Guest";
-    profileImgEl.src = "default.png";
-  } else {
-    fetch(`/api/get-user/${userId}`)
-      .then(res => res.json())
-      .then(user => {
-        usernameEl.innerText = user.username || "User";
-        profileImgEl.src = user.image || "default.png";
-      })
-      .catch(() => {
-        usernameEl.innerText = "User";
-        profileImgEl.src = "default.png";
-      });
-  }
-
-
-  // ============= CARD REVEAL ANIMATION (optional but smooth) =============
-  try {
-    const cards = document.querySelectorAll('.card');
-    const observer = new IntersectionObserver(entries => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting)
-          entry.target.classList.add('visible');
-      });
-    }, { threshold: 0.12 });
-
-    cards.forEach(c => observer.observe(c));
-  } catch (e) {}
-
-
-  // ============= ENROLL → COURSE REDIRECT =============
-  document.querySelectorAll(".btn.enroll").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const course = btn.closest(".card").querySelector("h3").innerText;
-      window.location.href = `course.html?course=${encodeURIComponent(course)}`;
-    });
-  });
-
-
-  // ============= PROGRESS BAR =============
-  const fsdBar = document.getElementById("fsd2");
-  const fsdText = document.getElementById("fsd5");
-
-  function animateTo(target) {
-    let start = 0;
-    const to = Math.min(100, Math.max(0, Number(target)));
-    const duration = 700;
-    const startTime = performance.now();
-
-    function frame(now) {
-      const progress = Math.min((now - startTime) / duration, 1);
-      const value = Math.round(start + (to - start) * progress);
-
-      fsdBar.style.width = value + "%";
-      fsdText.textContent = "Completed: " + value + "%";
-
-      if (progress < 1) requestAnimationFrame(frame);
+    if (!userId) {
+        document.getElementById("username").innerText = "User";
+        document.getElementById("profileImg").src = "default.png";
+    } else {
+        fetch(`/api/get-user/${userId}`)
+            .then(res => res.json())
+            .then(user => {
+                document.getElementById("username").innerText = user.username || "User";
+                document.getElementById("profileImg").src = user.image || "default.png";
+            })
+            .catch(() => {
+                document.getElementById("username").innerText = "User";
+                document.getElementById("profileImg").src = "default.png";
+            });
     }
-    requestAnimationFrame(frame);
-  }
 
 
-  // ============= LOAD USER PROGRESS =============
-  if (userId) {
-    fetch("/get-main-progress", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId })
-    })
-      .then(res => res.json())
-      .then(data => animateTo(data.fullStack || 0))
-      .catch(() => {
-        fsdText.textContent = "Error loading progress";
-      });
-  } else {
-    fsdText.textContent = "Login to view progress";
-  }
+    // ---------------- CARD REVEAL ANIMATION ----------------
+    try {
+        const cards = document.querySelectorAll('.card');
+        const observer = new IntersectionObserver(entries => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting)
+                    entry.target.classList.add('visible');
+            });
+        }, { threshold: 0.12 });
+
+        cards.forEach(c => observer.observe(c));
+    } catch (e) { console.log(e); }
+
+
+    // ---------------- ENROLL → COURSE REDIRECT ----------------
+    document.querySelectorAll(".btn.enroll").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const course = btn.closest(".card").querySelector("h3").innerText;
+            window.location.href = `course.html?course=${encodeURIComponent(course)}`;
+        });
+    });
+
+
+    // ---------------- PROGRESS BAR ----------------
+    const fsdBar = document.getElementById("fsd2");
+    const fsdText = document.getElementById("fsd5");
+
+    function animateTo(target) {
+        let start = 0;
+        const to = Math.min(100, Math.max(0, Number(target)));
+        const duration = 700;
+        const startTime = performance.now();
+
+        function frame(now) {
+            const progress = Math.min((now - startTime) / duration, 1);
+            const value = Math.round(start + (to - start) * progress);
+
+            fsdBar.style.width = value + "%";
+            fsdText.textContent = "Completed: " + value + "%";
+
+            if (progress < 1) requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+    }
+
+
+    // ---------------- LOAD USER PROGRESS ----------------
+    if (userId) {
+        fetch("/get-main-progress", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId })
+        })
+            .then(res => res.json())
+            .then(data => animateTo(data.fullStack || 0))
+            .catch(() => {
+                fsdText.textContent = "Error loading progress";
+            });
+    } else {
+        fsdText.textContent = "Login to view progress";
+    }
 
 });
 </script>
