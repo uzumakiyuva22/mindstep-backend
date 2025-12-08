@@ -603,6 +603,15 @@ document.getElementById("userQuote").textContent = localStorage.getItem("ms_quot
   window.addEventListener("focus", loadMainProgress);
   window.addEventListener("storage", (e) => { if (e.key && e.key.startsWith("progress_")) loadMainProgress(); });
 });
+fetch("/user-info", {
+    headers: { "Authorization": "Bearer " + localStorage.getItem("token") }
+})
+.then(res => res.json())
+.then(user => {
+    document.getElementById("username").innerText = user.username;
+    document.getElementById("profileImg").src = user.image;
+});
+
 </script>
  </body>
   </html>
