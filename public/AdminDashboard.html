@@ -31,7 +31,7 @@ nav{width:100%;padding:16px 28px;display:flex;justify-content:space-between;alig
 .table-box{margin-top:30px;background:rgba(255,255,255,0.08);padding:20px;border-radius:14px;backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.15);box-shadow:0 0 20px rgba(0,0,0,0.35);}
 .table-box h3{font-family:Orbitron;font-size:20px;margin-bottom:12px;}
 table{width:100%;border-collapse:collapse;font-size:14px;}
-table th, table td{padding:10px;border-bottom:1px solid rgba(255,255,255,0.08);text-align:left;vertical-align:middle;}
+table th, table td{Padding:10px;border-bottom:1px solid rgba(255,255,255,0.08);text-align:left;vertical-align:middle;}
 table th{background:rgba(255,255,255,0.06);font-weight:700;}
 table img.user-thumb{width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.06);}
 .action-btn{padding:8px 10px;border-radius:8px;border:none;cursor:pointer;margin-right:6px;font-weight:700;}
@@ -178,38 +178,45 @@ function toast(msg){console.log("TOAST:", msg);}
 
 document.querySelectorAll(".widget").forEach((w,i)=>setTimeout(()=>w.classList.add("show"),200*i));
 
-if(localStorage.getItem("adminLogged") !== "true"){
+// Require admin token in localStorage
+const adminToken = localStorage.getItem("admin_token");
+if(!adminToken) {
+  // Not logged: redirect to AdminLogin page
   location.href = "AdminLogin.html";
 }
 
 el("logoutBtn").onclick = ()=> {
-  localStorage.removeItem("adminLogged");
+  localStorage.removeItem("admin_token");
   location.href = "AdminLogin.html";
 };
+
+const defaultHeaders = { "Authorization": "Bearer " + adminToken };
 
 // ---------------- OVERVIEW ----------------
 async function loadOverview(){
   try{
-    const r = await fetch("/api/admin/overview");
+    const r = await fetch("/api/admin/overview", { headers: defaultHeaders });
     const d = await r.json();
     if(d.success){
       el("uCount").textContent = d.totalUsers;
       el("cCount").textContent = d.activeCourses || 0;
       el("vCount").textContent = d.dailyVisits || 0;
       el("rCount").textContent = d.reports || 0;
+    } else {
+      console.error("Overview error:", d.error);
     }
-  }catch(e){}
+  }catch(e){ console.error(e); }
 }
 
 // ---------------- USERS TABLE ----------------
 async function loadUsers(){
   try{
-    const r = await fetch("/api/admin/users");
+    const r = await fetch("/api/admin/users", { headers: defaultHeaders });
     const d = await r.json();
-    if(!d.success) return;
+    if(!d.success) return console.error("users load failed", d.error);
 
     const rows = d.users.map(u=>{
-      const id = u._id;  // FIXED
+      const id = u._id;
       const thumb = u.image ? u.image : "/placeholder.png";
       return `
       <tr data-id="${id}" data-username="${u.username}">
@@ -230,10 +237,7 @@ async function loadUsers(){
 
     el("userRows").innerHTML = rows.join("");
     document.querySelectorAll('button[data-action]').forEach(b=> b.onclick = handleRowAction );
-
-  }catch(e){
-    console.log(e);
-  }
+  }catch(e){ console.error(e); }
 }
 
 // ---------------- ROW ACTION ----------------
@@ -247,8 +251,8 @@ async function handleRowAction(e){
   else if(action === "delete"){
     if(confirm("Delete this user permanently?")) {
       await deleteUser(id);
-      loadUsers();
-      loadOverview();
+      await loadUsers();
+      await loadOverview();
     }
   }
 }
@@ -256,9 +260,9 @@ async function handleRowAction(e){
 // ---------------- MODAL ----------------
 async function openUserModal(id, editable){
   try{
-    const res = await fetch(`/api/admin/user/${id}`);
+    const res = await fetch(`/api/admin/user/${id}`, { headers: defaultHeaders });
     const d = await res.json();
-    if(!d.success) return alert("Unable to fetch user");
+    if(!d.success) return alert("Unable to fetch user: " + (d.error || ""));
 
     const u = d.user;
 
@@ -279,8 +283,7 @@ async function openUserModal(id, editable){
     el("resetProgressBtn").setAttribute("data-id", id);
 
     el("userModal").style.display = "flex";
-
-  }catch(e){}
+  }catch(e){ console.error(e); }
 }
 
 el("saveUserBtn").onclick = async function(){
@@ -296,7 +299,7 @@ el("saveUserBtn").onclick = async function(){
 
   const res = await fetch(`/api/admin/user/${id}`, {
     method: "PUT",
-    headers: {"Content-Type":"application/json"},
+    headers: Object.assign({"Content-Type":"application/json"}, defaultHeaders),
     body: JSON.stringify(body)
   });
 
@@ -307,56 +310,38 @@ el("saveUserBtn").onclick = async function(){
     if(file){
       const fd = new FormData();
       fd.append("image", file);
-      await fetch(`/api/admin/user/${id}/image`, { method: "POST", body: fd });
+      await fetch(`/api/admin/user/${id}/image`, { method: "POST", headers: { "Authorization": "Bearer " + adminToken }, body: fd });
     }
 
     alert("Saved");
     el("userModal").style.display = "none";
-    loadUsers();
-    loadOverview();
+    await loadUsers();
+    await loadOverview();
 
   } else alert(d.error || "Save failed");
 };
-fetch("/all-users", {
-    headers: { "Authorization": "Bearer " + localStorage.getItem("admin_token") }
-})
-.then(res => res.json())
-.then(users => {
-    let table = document.getElementById("userTableBody");
-    table.innerHTML = "";
-
-    users.forEach(u => {
-        table.innerHTML += `
-            <tr>
-                <td>${u.id}</td>
-                <td>${u.username}</td>
-                <td>${u.email}</td>
-                <td>${u.percentage || 0}%</td>
-            </tr>`;
-    });
-});
 
 async function deleteUser(id){
   const r = await fetch(`/api/admin/user/${id}/purge`, {
     method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({force:true})
+    headers: defaultHeaders,
+    body: JSON.stringify({force:true})
   });
   const d = await r.json();
-  if(!d.success) alert(d.error);
+  if(!d.success) alert(d.error || "Delete failed");
 }
 
 el("resetProgressBtn").onclick = async function(){
   const id = this.getAttribute("data-id");
-  const r = await fetch(`/api/admin/user/${id}/reset`, { method:"POST" });
+  const r = await fetch(`/api/admin/user/${id}/reset`, { method:"POST", headers: defaultHeaders });
   const d = await r.json();
 
   if(d.success){
     alert("Progress reset");
     el("userModal").style.display = "none";
-    loadUsers();
-    loadOverview();
-  }
+    await loadUsers();
+    await loadOverview();
+  } else alert(d.error || "Reset failed");
 };
 
 document.getElementById("userModal").onclick = function(e){
@@ -369,10 +354,10 @@ async function fillLessonsCounts(){
   for(const row of rows){
     const id = row.getAttribute("data-id");
     try{
-      const res = await fetch(`/api/admin/user/${id}/lessons`);
+      const res = await fetch(`/api/admin/user/${id}/lessons`, { headers: defaultHeaders });
       const d = await res.json();
       if(d.success) el(`lessons-${id}`).textContent = d.count || 0;
-    }catch(e){}
+    }catch(e){ console.error(e); }
   }
 }
 
@@ -387,7 +372,7 @@ el("saveCourse").onclick = async function(){
 
   const r = await fetch("/api/admin/course", {
     method:"POST",
-    headers:{"Content-Type":"application/json"},
+    headers: Object.assign({"Content-Type":"application/json"}, defaultHeaders),
     body:JSON.stringify({ title, desc })
   });
 
@@ -395,8 +380,8 @@ el("saveCourse").onclick = async function(){
   if(d.success){
     alert("Course added");
     el("courseModal").style.display="none";
-    loadOverview();
-  }
+    await loadOverview();
+  } else alert(d.error || "Course add failed");
 };
 
 // INIT

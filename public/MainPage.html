@@ -514,97 +514,56 @@
 <script>
 // MainPage.js
 document.addEventListener("DOMContentLoaded", () => {
-  const username = localStorage.getItem("username");
+
+  // GET USER DATA FROM localStorage
+  const userId = localStorage.getItem("userId");
+
+  // ---- LOAD USER IMAGE & NAME ----
+  if (userId) {
+    fetch(`/user-info/${userId}`)
+    .then(res => res.json())
+    .then(user => {
+      if (user.username) {
+        document.getElementById("username").innerText = user.username;
+        document.getElementById("profileImg").src = user.image || "default.png";
+      }
+    })
+    .catch(err => console.error("User load error:", err));
+  }
+
+  // ---- PROGRESS BAR ----
   const fsdBar = document.getElementById("fsd2");
   const fsdText = document.getElementById("fsd5");
-  const lessonBox = document.getElementById("lesson-plans");
-  
-document.getElementById("userName").textContent = localStorage.getItem("ms_username");
-document.getElementById("userImg").src = localStorage.getItem("ms_image");
-document.getElementById("userQuote").textContent = localStorage.getItem("ms_quote");
-  // card appear animations
-  try {
-    const cards = document.querySelectorAll('.card');
-    const observer = new IntersectionObserver(entries => {
-      entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
-    }, { threshold: 0.12 });
-    cards.forEach(c => observer.observe(c));
-  } catch (e) {}
 
-  // enroll buttons -> show Start Learning button (no immediate redirect)
-  document.querySelectorAll('.btn.enroll').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const card = btn.closest('.card');
-      const courseName = (card && (card.querySelector('h3')?.innerText || card.dataset.course)) || "Full Stack Development";
-      if (!lessonBox) return;
-      lessonBox.innerHTML = `
-        <h2>Welcome to ${escapeHtml(courseName)}</h2>
-        <p>Start your journey in <b>${escapeHtml(courseName)}</b> now.</p>
-        <button id="start-btn" class="start">Start Learning</button>
-      `;
-      lessonBox.style.display = 'block';
-      lessonBox.scrollIntoView({ behavior: "smooth" });
-      document.getElementById("start-btn").addEventListener("click", () => {
-        window.location.href = `course.html?course=${encodeURIComponent(courseName)}`;
-      });
-    });
-  });
-
-  function escapeHtml(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-
-  // animate to target percent
   function animateTo(target) {
-    const start = Number((fsdBar && fsdBar.style.width && fsdBar.style.width.replace('%','')) || 0);
+    const start = 0;
     const to = Math.max(0, Math.min(100, Number(target) || 0));
     const dur = 700;
     const t0 = performance.now();
     function frame(t) {
       const p = Math.min(1, (t - t0) / dur);
       const v = Math.round(start + (to - start) * p);
-      if (fsdBar) fsdBar.style.width = v + "%";
-      if (fsdText) fsdText.textContent = "Completed: " + v + "%";
+      fsdBar.style.width = v + "%";
+      fsdText.textContent = "Completed: " + v + "%";
       if (p < 1) requestAnimationFrame(frame);
     }
     requestAnimationFrame(frame);
   }
 
-  async function loadMainProgress() {
-    if (!username) {
-      if (fsdBar) fsdBar.style.width = "0%";
-      if (fsdText) fsdText.textContent = "Login to view progress";
-      return;
-    }
-    try {
-      const res = await fetch("/get-main-progress", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username })
-      });
-      if (!res.ok) {
-        fsdText.textContent = "Error loading progress.";
-        return;
-      }
-      const json = await res.json();
-      animateTo(json.fullStack || 0);
-    } catch (e) {
-      console.error("main progress err", e);
-      if (fsdText) fsdText.textContent = "Error loading progress.";
-    }
+  // LOAD PROGRESS
+  if (userId) {
+    fetch("/get-main-progress", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId })
+    })
+    .then(res => res.json())
+    .then(data => animateTo(data.fullStack || 0))
+    .catch(() => fsdText.textContent = "Error loading progress");
   }
 
-  loadMainProgress();
-  window.addEventListener("focus", loadMainProgress);
-  window.addEventListener("storage", (e) => { if (e.key && e.key.startsWith("progress_")) loadMainProgress(); });
 });
-fetch("/user-info", {
-    headers: { "Authorization": "Bearer " + localStorage.getItem("token") }
-})
-.then(res => res.json())
-.then(user => {
-    document.getElementById("username").innerText = user.username;
-    document.getElementById("profileImg").src = user.image;
-});
-
 </script>
+
  </body>
   </html>
