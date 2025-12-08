@@ -250,6 +250,16 @@ app.get("/user-info", adminAuth, async (req, res) => {
         res.status(500).json({ error: "Server error" });
     }
 });
+app.get("/all-users", adminAuth, (req, res) => {
+    db.all(
+        "SELECT id, username, email, percentage FROM users",
+        [],
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: "DB error" });
+            res.json(rows);
+        }
+    );
+});
 
 // ---------- COMPLETE LESSON ----------
 app.post("/api/complete", async (req, res) => {
