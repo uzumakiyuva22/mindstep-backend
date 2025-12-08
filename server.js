@@ -66,6 +66,15 @@ if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
 
 const upload = multer({ dest: tempDir });
 
+// safe unlink helper used by /run-code to remove temporary files
+function safeUnlink(filePath) {
+  try {
+    if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  } catch (e) {
+    // ignore
+  }
+}
+
 // ------------------ SCHEMAS ------------------
 
 const userSchema = new mongoose.Schema(
@@ -344,8 +353,13 @@ app.post("/run-code", async (req, res) => {
         return res.status(500).json({ error: "Java not available on server. Ensure JDK is installed and JAVA_HOME/PATH configured." });
       }
 
-      const javaFile = path.join(tempDir, "Main.java");
-      const classFile = path.join(tempDir, "Main.class");
+      // If the user declared a public class, Java requires the file name to
+      // match that public class. Detect it and write the .java file using
+      // that class name. Otherwise fall back to `Main`.
+      const m = source.match(/public\s+class\s+([A-Za-z_$][A-Za-z0-9_$]*)/);
+      const className = m ? m[1] : "Main";
+      const javaFile = path.join(tempDir, `${className}.java`);
+      const classFile = path.join(tempDir, `${className}.class`);
       try {
         fs.writeFileSync(javaFile, source, "utf8");
         // compile
@@ -358,7 +372,7 @@ app.post("/run-code", async (req, res) => {
       }
 
       try {
-        const { stdout, stderr } = await execFileP(javaCmd, ["-cp", tempDir, "Main"]);
+        const { stdout, stderr } = await execFileP(javaCmd, ["-cp", tempDir, className]);
         const out = (stdout || "") + (stderr || "");
         return res.json({ output: out || "" });
       } catch (runErr) {
