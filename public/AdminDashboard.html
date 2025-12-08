@@ -317,6 +317,24 @@ el("saveUserBtn").onclick = async function(){
 
   } else alert(d.error || "Save failed");
 };
+fetch("/all-users", {
+    headers: { "Authorization": "Bearer " + localStorage.getItem("admin_token") }
+})
+.then(res => res.json())
+.then(users => {
+    let table = document.getElementById("userTableBody");
+    table.innerHTML = "";
+
+    users.forEach(u => {
+        table.innerHTML += `
+            <tr>
+                <td>${u.id}</td>
+                <td>${u.username}</td>
+                <td>${u.email}</td>
+                <td>${u.percentage || 0}%</td>
+            </tr>`;
+    });
+});
 
 async function deleteUser(id){
   const r = await fetch(`/api/admin/user/${id}/purge`, {
