@@ -175,258 +175,167 @@ table img.user-thumb{width:44px;height:44px;border-radius:50%;object-fit:cover;b
 
 <!-- script -->
 <script>
-// ================================
-// ADMIN DASHBOARD – FINAL WORKING JS
-// ================================
+/* Admin Dashboard client JS - use with the AdminDashboard HTML you already have.
+   It expects localStorage.admin_token to be set (value === ADMIN_SECRET on server).
+*/
 
-// Helper
-function el(id) { return document.getElementById(id); }
+function el(id){ return document.getElementById(id); }
+function showToast(msg){ console.log("ADMIN:",msg); alert(msg); }
 
-// ================================
-// CHECK ADMIN AUTH
-// ================================
 const adminToken = localStorage.getItem("admin_token");
 if (!adminToken) {
-    window.location.href = "AdminLogin.html";
+  // Not logged in -> redirect to AdminLogin
+  location.href = "AdminLogin.html";
 }
 
-// LOGOUT
+// Logout
 el("logoutBtn").onclick = () => {
-    localStorage.removeItem("admin_token");
-    location.href = "AdminLogin.html";
+  localStorage.removeItem("admin_token");
+  location.href = "AdminLogin.html";
 };
 
-// ================================
-// LOAD DASHBOARD OVERVIEW
-// ================================
-async function loadOverview() {
-    try {
-        const r = await fetch("/api/admin/overview", {
-            headers: { "Authorization": "Bearer " + adminToken }
-        });
-        const d = await r.json();
-
-        if (d.success) {
-            el("uCount").textContent = d.totalUsers || 0;
-            el("cCount").textContent = d.activeCourses || 0;
-            el("vCount").textContent = d.dailyVisits || 0;
-            el("rCount").textContent = d.reports || 0;
-        }
-    } catch (e) {
-        console.error("Overview error", e);
-    }
+async function api(path, opts = {}) {
+  opts.headers = opts.headers || {};
+  opts.headers["Authorization"] = "Bearer " + adminToken;
+  if (!opts.headers["Content-Type"] && !(opts.body instanceof FormData)) {
+    opts.headers["Content-Type"] = "application/json";
+  }
+  const res = await fetch(path, opts);
+  if (res.status === 401 || res.status === 403) {
+    // token invalid / expired
+    showToast("Unauthorized — please login again");
+    localStorage.removeItem("admin_token");
+    location.href = "AdminLogin.html";
+    throw new Error("unauthorized");
+  }
+  return res.json();
 }
 
-// ================================
-// LOAD USERS LIST
-// ================================
-async function loadUsers() {
-    try {
-        const r = await fetch("/api/admin/users", {
-            headers: { "Authorization": "Bearer " + adminToken }
-        });
-        const d = await r.json();
-
-        if (!d.success) return;
-
-        const rows = d.users.map(u => {
-            const img = u.image || "/placeholder.png";
-            return `
-                <tr data-id="${u._id}">
-                    <td><img src="${img}" class="user-thumb" /></td>
-                    <td>${u._id.slice(0,8)}</td>
-                    <td>${u.username}</td>
-                    <td>${u.email}</td>
-                    <td>${u.percentage || 0}%</td>
-                    <td id="lessons-${u._id}">—</td>
-                    <td>${new Date(u.created_at).toLocaleDateString()}</td>
-                    <td>
-                       <button class="action-btn view-btn" onclick="openUser('${u._id}', false)">View</button>
-                       <button class="action-btn edit-btn" onclick="openUser('${u._id}', true)">Edit</button>
-                       <button class="action-btn delete-btn" onclick="deleteUser('${u._id}')">Delete</button>
-                    </td>
-                </tr>
-            `;
-        });
-
-        el("userRows").innerHTML = rows.join("");
-
-        // Now load lessons count for each user
-        fillLessonsCounts();
-
-    } catch (e) {
-        console.error("User load failed", e);
+async function loadOverview(){
+  try{
+    const d = await api("/api/admin/overview");
+    if (d.success) {
+      el("uCount").textContent = d.totalUsers || 0;
+      el("cCount").textContent = d.activeCourses || 0;
+      el("vCount").textContent = d.dailyVisits || 0;
+      el("rCount").textContent = d.reports || 0;
     }
+  }catch(e){ console.error(e); }
 }
 
-// ================================
-// GET NUMBER OF LESSONS COMPLETED
-// ================================
-async function fillLessonsCounts() {
-    const rows = document.querySelectorAll("#userRows tr");
-    for (const row of rows) {
-        const id = row.getAttribute("data-id");
-        try {
-            const r = await fetch(`/api/admin/user/${id}/lessons`, {
-                headers: { "Authorization": "Bearer " + adminToken }
-            });
-            const d = await r.json();
-            if (d.success) el(`lessons-${id}`).textContent = d.count || 0;
-        } catch {}
-    }
+async function loadUsers(){
+  try{
+    const d = await api("/api/admin/users");
+    if (!d.success) return;
+    const users = d.users || [];
+    const rows = users.map(u=>{
+      const img = u.image || "/placeholder.png";
+      return `<tr data-id="${u._id}">
+        <td><img src="${img}" class="user-thumb" /></td>
+        <td>${u._id.slice(0,8)}</td>
+        <td>${u.username}</td>
+        <td>${u.email}</td>
+        <td>${u.percentage || 0}%</td>
+        <td id="lessons-${u._id}">0</td>
+        <td>${new Date(u.created_at).toLocaleDateString()}</td>
+        <td>
+          <button class="action-btn view-btn" onclick="openUser('${u._id}', false)">View</button>
+          <button class="action-btn edit-btn" onclick="openUser('${u._1d || u._id}', true)">Edit</button>
+          <button class="action-btn delete-btn" onclick="deleteUser('${u._id}')">Delete</button>
+        </td>
+      </tr>`;
+    }).join("");
+    el("userRows").innerHTML = rows;
+  }catch(e){ console.error(e); }
 }
 
-// ================================
-// OPEN USER MODAL (VIEW / EDIT)
-// ================================
-async function openUser(id, editable) {
-    const r = await fetch(`/api/admin/user/${id}`, {
-        headers: { "Authorization": "Bearer " + adminToken }
-    });
-    const d = await r.json();
-
-    if (!d.success) return alert("User not found");
-
+async function openUser(id, editable){
+  try{
+    const d = await api(`/api/admin/user/${id}`);
+    if (!d.success) return showToast("Unable to fetch user");
     const u = d.user;
-
-    // Fill modal
     el("modalTitle").textContent = editable ? "Edit User" : "View User";
+    el("modalImage").src = u.image || "/placeholder.png";
     el("modalUsername").textContent = u.username;
     el("modalEmail").textContent = u.email;
-    el("modalImage").src = u.image || "/placeholder.png";
     el("editName").value = u.username;
     el("editEmail").value = u.email;
     el("editPass").value = "";
-    el("modalProgress").textContent = (u.percentage || 0) + "%";
+    el("modalProgress").textContent = (u.percentage||0) + "%";
     el("modalLessons").textContent = d.lessonsDone || 0;
-
-    // Assign IDs for buttons
     el("saveUserBtn").setAttribute("data-id", id);
     el("deleteUserBtn").setAttribute("data-id", id);
     el("resetProgressBtn").setAttribute("data-id", id);
-
-    // Show/Hide save button
     el("saveUserBtn").style.display = editable ? "inline-block" : "none";
-
-    // Open modal
     el("userModal").style.display = "flex";
+  }catch(e){ console.error(e); }
 }
 
-// Close modal on outside click
-el("userModal").onclick = function (e) {
-    if (e.target === this) this.style.display = "none";
-};
-
-// ================================
-// SAVE USER CHANGES
-// ================================
-el("saveUserBtn").onclick = async function () {
-    const id = this.getAttribute("data-id");
-
-    const name = el("editName").value.trim();
-    const email = el("editEmail").value.trim();
-    const pass = el("editPass").value;
-    const img = el("editImage").files[0];
-
-    const body = { username: name, email };
-    if (pass) body.password = pass;
-
-    // Update text fields
-    await fetch(`/api/admin/user/${id}`, {
-        method: "PUT",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + adminToken
-        },
-        body: JSON.stringify(body)
-    });
-
-    // Update image if uploaded
-    if (img) {
-        const fd = new FormData();
-        fd.append("image", img);
-
-        await fetch(`/api/admin/user/${id}/image`, {
-            method: "POST",
-            headers: { "Authorization": "Bearer " + adminToken },
-            body: fd
-        });
+el("saveUserBtn").onclick = async function(){
+  const id = this.getAttribute("data-id");
+  const name = el("editName").value.trim();
+  const email = el("editEmail").value.trim();
+  const pass = el("editPass").value.trim();
+  if(!name||!email) return alert("Name & email required");
+  const body = { username: name, email };
+  if (pass) body.password = pass;
+  try{
+    await api(`/api/admin/user/${id}`, { method: "PUT", body: JSON.stringify(body) });
+    const file = el("editImage").files[0];
+    if (file) {
+      const fd = new FormData();
+      fd.append("image", file);
+      await fetch(`/api/admin/user/${id}/image`, { method: "POST", headers: { "Authorization":"Bearer "+adminToken }, body: fd });
     }
-
+    alert("Saved");
     el("userModal").style.display = "none";
-    loadUsers();
+    await loadUsers();
+    await loadOverview();
+  }catch(e){ console.error(e); alert("Save failed"); }
 };
 
-// ================================
-// DELETE USER
-// ================================
-async function deleteUser(id) {
-    if (!confirm("Are you sure you want to delete this user?")) return;
-
-    await fetch(`/api/admin/user/${id}/purge`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + adminToken
-        },
-        body: JSON.stringify({ force: true })
-    });
-
-    loadUsers();
+async function deleteUser(id){
+  if(!confirm("Delete this user permanently?")) return;
+  try{
+    await api(`/api/admin/user/${id}/purge`, { method: "POST", body: JSON.stringify({force:true}) });
+    await loadUsers();
+    await loadOverview();
+  }catch(e){ console.error(e); }
 }
 
-// ================================
-// RESET USER PROGRESS
-// ================================
-el("resetProgressBtn").onclick = async function () {
-    const id = this.getAttribute("data-id");
-
-    await fetch(`/api/admin/user/${id}/reset`, {
-        method: "POST",
-        headers: { "Authorization": "Bearer " + adminToken }
-    });
-
+el("resetProgressBtn").onclick = async function(){
+  const id = this.getAttribute("data-id");
+  if (!id) return;
+  try{
+    await api(`/api/admin/user/${id}/reset`, { method: "POST" });
     el("userModal").style.display = "none";
-    loadUsers();
-};
-
-// ================================
-// COURSE MODAL
-// ================================
-el("addCourseBtn").onclick = () => {
-    el("courseModal").style.display = "flex";
-};
-el("closeCourse").onclick = () => {
-    el("courseModal").style.display = "none";
-};
-
-el("saveCourse").onclick = async () => {
-    const title = el("courseTitle").value.trim();
-    const desc = el("courseDesc").value.trim();
-
-    if (!title) return alert("Enter course title");
-
-    await fetch("/api/admin/course", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + adminToken
-        },
-        body: JSON.stringify({ title, desc })
-    });
-
-    alert("Course Added!");
-    el("courseModal").style.display = "none";
-    loadOverview();
-};
-
-// ================================
-// INIT
-// ================================
-(async function () {
-    await loadOverview();
     await loadUsers();
+    await loadOverview();
+  }catch(e){ console.error(e); }
+};
+
+document.getElementById("userModal").onclick = function(e){ if (e.target === this) this.style.display = "none"; };
+
+// Course modal handlers
+el("addCourseBtn").onclick = ()=> el("courseModal").style.display = "flex";
+el("closeCourse").onclick = ()=> el("courseModal").style.display = "none";
+el("saveCourse").onclick = async function(){
+  const title = el("courseTitle").value.trim(); const desc = el("courseDesc").value.trim();
+  if (!title) return alert("Course title required");
+  try {
+    await api("/api/admin/course", { method: "POST", body: JSON.stringify({ title, desc }) });
+    alert("Course added");
+    el("courseModal").style.display = "none";
+    await loadOverview();
+  } catch(e){ console.error(e); alert("Failed to add course"); }
+};
+
+// init
+(async function(){
+  await loadOverview();
+  await loadUsers();
 })();
 </script>
+
 </body>
 </html>
