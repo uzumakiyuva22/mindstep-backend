@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MindStep Admin Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
 /* (exact same CSS as you provided earlier) */
+/* ... paste your full CSS here - unchanged ... */
 :root{--cyan:#00eaff;--blue:#4d7cff;--pink:#ff3ea5;--glass:rgba(255,255,255,0.08);--border:rgba(255,255,255,0.15);}
 *{margin:0;padding:0;box-sizing:border-box;font-family:Inter, sans-serif;}html{scroll-behavior:smooth}body{background:radial-gradient(circle at 20% 20%, rgba(0,150,255,0.22), transparent 60%),radial-gradient(circle at 80% 70%, rgba(255,0,140,0.22), transparent 60%),linear-gradient(135deg, #04040d, #090922 50%, #050515 100%);height:100vh;overflow-x:hidden;animation:bgMove 16s ease infinite;color:white;}
 @keyframes bgMove {0%{background-position:0% 0%;}50%{background-position:100% 80%;}100%{background-position:0% 0%;}}
@@ -108,7 +109,7 @@ table img.user-thumb{width:44px;height:44px;border-radius:50%;object-fit:cover;b
 
 <!-- VIEW / EDIT USER MODAL -->
 <div class="modal-overlay" id="userModal">
-  <div class="modal">
+  <div class="modal" role="dialog" aria-modal="true">
     <h3 id="modalTitle">View User</h3>
 
     <div style="display:flex;gap:14px;align-items:center">
@@ -137,7 +138,7 @@ table img.user-thumb{width:44px;height:44px;border-radius:50%;object-fit:cover;b
       </div>
       <div class="form-field">
         <label>Upload Image</label>
-        <input type="file" id="editImage">
+        <input type="file" id="editImage" accept="image/*">
       </div>
     </div>
 
@@ -173,167 +174,247 @@ table img.user-thumb{width:44px;height:44px;border-radius:50%;object-fit:cover;b
   </div>
 </div>
 
-<!-- script -->
 <script>
-/* Admin Dashboard client JS - use with the AdminDashboard HTML you already have.
-   It expects localStorage.admin_token to be set (value === ADMIN_SECRET on server).
+/*
+  AdminDashboard.js — fully working front-end for admin
+  - Requires: admin_token in localStorage (set after successful /api/admin-login)
+  - All API calls include Authorization: Bearer <admin_token>
+  - Graceful handling when backend is down
 */
 
-function el(id){ return document.getElementById(id); }
-function showToast(msg){ console.log("ADMIN:",msg); alert(msg); }
+(function(){
+  const adminToken = localStorage.getItem("admin_token");
+  const PLACEHOLDER = "/placeholder.png";
 
-const adminToken = localStorage.getItem("admin_token");
-if (!adminToken) {
-  // Not logged in -> redirect to AdminLogin
-  location.href = "AdminLogin.html";
-}
-
-// Logout
-el("logoutBtn").onclick = () => {
-  localStorage.removeItem("admin_token");
-  location.href = "AdminLogin.html";
-};
-
-async function api(path, opts = {}) {
-  opts.headers = opts.headers || {};
-  opts.headers["Authorization"] = "Bearer " + adminToken;
-  if (!opts.headers["Content-Type"] && !(opts.body instanceof FormData)) {
-    opts.headers["Content-Type"] = "application/json";
+  // If admin not logged, redirect to login
+  if (!adminToken) {
+    window.location.href = "AdminLogin.html";
+    return;
   }
-  const res = await fetch(path, opts);
-  if (res.status === 401 || res.status === 403) {
-    // token invalid / expired
-    showToast("Unauthorized — please login again");
+
+  // helpers
+  function el(id){ return document.getElementById(id); }
+  function api(path, opts={}) {
+    opts.headers = opts.headers || {};
+    // attach admin token
+    opts.headers['Authorization'] = 'Bearer ' + adminToken;
+    return fetch(path, opts)
+      .then(async r => {
+        const ct = r.headers.get('content-type') || '';
+        const isJson = ct.includes('application/json');
+        const data = isJson ? await r.json().catch(()=>({})) : null;
+        if (!r.ok) {
+          const msg = (data && data.error) ? data.error : `HTTP ${r.status}`;
+          throw new Error(msg);
+        }
+        return data || {};
+      });
+  }
+
+  // show widgets animation
+  document.querySelectorAll(".widget").forEach((w,i)=>setTimeout(()=>w.classList.add("show"),200*i));
+
+  // logout
+  el("logoutBtn").onclick = () => {
     localStorage.removeItem("admin_token");
-    location.href = "AdminLogin.html";
-    throw new Error("unauthorized");
+    window.location.href = "AdminLogin.html";
+  };
+
+  // add course modal
+  el("addCourseBtn").onclick = ()=> el("courseModal").style.display = "flex";
+  el("closeCourse").onclick = ()=> el("courseModal").style.display = "none";
+  el("saveCourse").onclick = async function(){
+    const title = el("courseTitle").value.trim();
+    const desc = el("courseDesc").value.trim();
+    if(!title) return alert("Course title required");
+    try {
+      await api("/api/admin/course", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ title, desc })
+      });
+      alert("Course created");
+      el("courseModal").style.display = "none";
+      loadOverview();
+    } catch(e){
+      alert("Create course failed: " + e.message);
+    }
+  };
+
+  // load overview
+  async function loadOverview(){
+    try {
+      const d = await api("/api/admin/overview");
+      el("uCount").textContent = d.totalUsers ?? 0;
+      el("cCount").textContent = d.activeCourses ?? 0;
+      el("vCount").textContent = d.dailyVisits ?? 0;
+      el("rCount").textContent = d.reports ?? 0;
+    } catch(e){
+      // backend down — show zeros but don't break
+      console.warn("Overview error:", e.message);
+      el("uCount").textContent = el("uCount").textContent || 0;
+    }
   }
-  return res.json();
-}
 
-async function loadOverview(){
-  try{
-    const d = await api("/api/admin/overview");
-    if (d.success) {
-      el("uCount").textContent = d.totalUsers || 0;
-      el("cCount").textContent = d.activeCourses || 0;
-      el("vCount").textContent = d.dailyVisits || 0;
-      el("rCount").textContent = d.reports || 0;
+  // load users
+  async function loadUsers(){
+    try {
+      const d = await api("/api/admin/users");
+      if(!Array.isArray(d.users)) return;
+      const rows = d.users.map(u=>{
+        const img = u.image || PLACEHOLDER;
+        const date = u.created_at ? new Date(u.created_at).toLocaleDateString() : "";
+        return `
+          <tr data-id="${u._id}">
+            <td><img src="${img}" onerror="this.src='${PLACEHOLDER}'" class="user-thumb"></td>
+            <td>${u._id.slice(0,8)}</td>
+            <td>${escapeHtml(u.username)}</td>
+            <td>${escapeHtml(u.email)}</td>
+            <td>${u.percentage ?? 0}%</td>
+            <td id="lessons-${u._id}">${u.lessonsDone ?? 0}</td>
+            <td>${date}</td>
+            <td>
+              <button class="action-btn view-btn" data-action="view" data-id="${u._id}">View</button>
+              <button class="action-btn edit-btn" data-action="edit" data-id="${u._id}">Edit</button>
+              <button class="action-btn delete-btn" data-action="delete" data-id="${u._id}">Delete</button>
+            </td>
+          </tr>
+        `;
+      });
+      el("userRows").innerHTML = rows.join("");
+      // attach handlers
+      document.querySelectorAll('button[data-action]').forEach(b=> b.addEventListener("click", handleRowAction));
+    } catch(e){
+      console.error("loadUsers error:", e.message);
+      el("userRows").innerHTML = `<tr><td colspan="8" style="opacity:.7">Unable to load users — backend unavailable.</td></tr>`;
     }
-  }catch(e){ console.error(e); }
-}
+  }
 
-async function loadUsers(){
-  try{
-    const d = await api("/api/admin/users");
-    if (!d.success) return;
-    const users = d.users || [];
-    const rows = users.map(u=>{
-      const img = u.image || "/placeholder.png";
-      return `<tr data-id="${u._id}">
-        <td><img src="${img}" class="user-thumb" /></td>
-        <td>${u._id.slice(0,8)}</td>
-        <td>${u.username}</td>
-        <td>${u.email}</td>
-        <td>${u.percentage || 0}%</td>
-        <td id="lessons-${u._id}">0</td>
-        <td>${new Date(u.created_at).toLocaleDateString()}</td>
-        <td>
-          <button class="action-btn view-btn" onclick="openUser('${u._id}', false)">View</button>
-          <button class="action-btn edit-btn" onclick="openUser('${u._1d || u._id}', true)">Edit</button>
-          <button class="action-btn delete-btn" onclick="deleteUser('${u._id}')">Delete</button>
-        </td>
-      </tr>`;
-    }).join("");
-    el("userRows").innerHTML = rows;
-  }catch(e){ console.error(e); }
-}
+  function escapeHtml(s){ if(!s) return ""; return String(s).replace(/[&<>"'`]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;' }[c])); }
 
-async function openUser(id, editable){
-  try{
-    const d = await api(`/api/admin/user/${id}`);
-    if (!d.success) return showToast("Unable to fetch user");
-    const u = d.user;
-    el("modalTitle").textContent = editable ? "Edit User" : "View User";
-    el("modalImage").src = u.image || "/placeholder.png";
-    el("modalUsername").textContent = u.username;
-    el("modalEmail").textContent = u.email;
-    el("editName").value = u.username;
-    el("editEmail").value = u.email;
-    el("editPass").value = "";
-    el("modalProgress").textContent = (u.percentage||0) + "%";
-    el("modalLessons").textContent = d.lessonsDone || 0;
-    el("saveUserBtn").setAttribute("data-id", id);
-    el("deleteUserBtn").setAttribute("data-id", id);
-    el("resetProgressBtn").setAttribute("data-id", id);
-    el("saveUserBtn").style.display = editable ? "inline-block" : "none";
-    el("userModal").style.display = "flex";
-  }catch(e){ console.error(e); }
-}
-
-el("saveUserBtn").onclick = async function(){
-  const id = this.getAttribute("data-id");
-  const name = el("editName").value.trim();
-  const email = el("editEmail").value.trim();
-  const pass = el("editPass").value.trim();
-  if(!name||!email) return alert("Name & email required");
-  const body = { username: name, email };
-  if (pass) body.password = pass;
-  try{
-    await api(`/api/admin/user/${id}`, { method: "PUT", body: JSON.stringify(body) });
-    const file = el("editImage").files[0];
-    if (file) {
-      const fd = new FormData();
-      fd.append("image", file);
-      await fetch(`/api/admin/user/${id}/image`, { method: "POST", headers: { "Authorization":"Bearer "+adminToken }, body: fd });
+  // row actions
+  async function handleRowAction(e){
+    const id = e.target.dataset.id;
+    const action = e.target.dataset.action;
+    if(action === "view" || action === "edit"){
+      openUserModal(id, action === "edit");
+    } else if(action === "delete"){
+      if(!confirm("Delete this user permanently?")) return;
+      try {
+        await api(`/api/admin/user/${id}/purge`, { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ force: true })});
+        alert("User deleted");
+        await loadUsers(); loadOverview();
+      } catch(err){ alert("Delete failed: "+err.message); }
     }
-    alert("Saved");
-    el("userModal").style.display = "none";
+  }
+
+  // open modal
+  async function openUserModal(id, editable=false){
+    try {
+      const d = await api(`/api/admin/user/${id}`);
+      const u = d.user;
+      el("modalTitle").textContent = editable ? "Edit User" : "View User";
+      el("modalImage").src = u.image || PLACEHOLDER;
+      el("modalImage").onerror = ()=> el("modalImage").src = PLACEHOLDER;
+      el("modalUsername").textContent = u.username || "";
+      el("modalEmail").textContent = u.email || "";
+      el("editName").value = u.username || "";
+      el("editEmail").value = u.email || "";
+      el("editPass").value = "";
+      el("modalProgress").textContent = (u.percentage ?? 0) + "%";
+      el("modalLessons").textContent = d.lessonsDone ?? 0;
+
+      el("saveUserBtn").dataset.id = id;
+      el("deleteUserBtn").dataset.id = id;
+      el("resetProgressBtn").dataset.id = id;
+
+      el("saveUserBtn").style.display = editable ? "inline-block" : "none";
+
+      // show
+      el("userModal").style.display = "flex";
+
+    } catch(e){
+      alert("Unable to fetch user: "+ e.message);
+    }
+  }
+
+  // save user
+  el("saveUserBtn").addEventListener("click", async function(){
+    const id = this.dataset.id;
+    const username = el("editName").value.trim();
+    const email = el("editEmail").value.trim();
+    const password = el("editPass").value.trim();
+
+    if(!username || !email) return alert("Name & email required");
+
+    try{
+      await api(`/api/admin/user/${id}`, {
+        method: "PUT",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ username, email, ...(password ? { password } : {}) })
+      });
+
+      // if image selected, upload
+      const file = el("editImage").files[0];
+      if(file){
+        const fd = new FormData();
+        fd.append("image", file);
+        await fetch(`/api/admin/user/${id}/image`, {
+          method: "POST",
+          headers: { "Authorization": "Bearer " + adminToken },
+          body: fd
+        }).then(r => r.json()).then(res => {
+          if(!res.success) throw new Error(res.error || "Image upload failed");
+        });
+      }
+
+      alert("Saved");
+      el("userModal").style.display = "none";
+      loadUsers(); loadOverview();
+    } catch(e){
+      alert("Save failed: " + e.message);
+    }
+  });
+
+  // delete from modal (same as row)
+  el("deleteUserBtn").addEventListener("click", async function(){
+    const id = this.dataset.id;
+    if(!confirm("Delete user permanently?")) return;
+    try {
+      await api(`/api/admin/user/${id}/purge`, { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ force: true })});
+      alert("Deleted");
+      el("userModal").style.display = "none";
+      loadUsers(); loadOverview();
+    } catch(e){
+      alert("Delete failed: "+ e.message);
+    }
+  });
+
+  // reset progress
+  el("resetProgressBtn").addEventListener("click", async function(){
+    const id = this.dataset.id;
+    if(!confirm("Reset progress for this user?")) return;
+    try {
+      await api(`/api/admin/user/${id}/reset`, { method: "POST" });
+      alert("Progress reset");
+      el("userModal").style.display = "none";
+      loadUsers(); loadOverview();
+    } catch(e){
+      alert("Reset failed: " + e.message);
+    }
+  });
+
+  // close modal on overlay click
+  document.getElementById("userModal").addEventListener("click", function(e){
+    if(e.target === this) this.style.display = "none";
+  });
+
+  // initial load
+  (async function init(){
+    await loadOverview();
     await loadUsers();
-    await loadOverview();
-  }catch(e){ console.error(e); alert("Save failed"); }
-};
+  })();
 
-async function deleteUser(id){
-  if(!confirm("Delete this user permanently?")) return;
-  try{
-    await api(`/api/admin/user/${id}/purge`, { method: "POST", body: JSON.stringify({force:true}) });
-    await loadUsers();
-    await loadOverview();
-  }catch(e){ console.error(e); }
-}
-
-el("resetProgressBtn").onclick = async function(){
-  const id = this.getAttribute("data-id");
-  if (!id) return;
-  try{
-    await api(`/api/admin/user/${id}/reset`, { method: "POST" });
-    el("userModal").style.display = "none";
-    await loadUsers();
-    await loadOverview();
-  }catch(e){ console.error(e); }
-};
-
-document.getElementById("userModal").onclick = function(e){ if (e.target === this) this.style.display = "none"; };
-
-// Course modal handlers
-el("addCourseBtn").onclick = ()=> el("courseModal").style.display = "flex";
-el("closeCourse").onclick = ()=> el("courseModal").style.display = "none";
-el("saveCourse").onclick = async function(){
-  const title = el("courseTitle").value.trim(); const desc = el("courseDesc").value.trim();
-  if (!title) return alert("Course title required");
-  try {
-    await api("/api/admin/course", { method: "POST", body: JSON.stringify({ title, desc }) });
-    alert("Course added");
-    el("courseModal").style.display = "none";
-    await loadOverview();
-  } catch(e){ console.error(e); alert("Failed to add course"); }
-};
-
-// init
-(async function(){
-  await loadOverview();
-  await loadUsers();
 })();
 </script>
 
