@@ -558,121 +558,100 @@
 
     <!-- JavaScript Section -->
 <script>
-// === MainPage.js (FINAL 100% working version) ===
+// === MainPage.js — FINAL 100% Working ===
 document.addEventListener("DOMContentLoaded", () => {
 
-  // ---------------------- USER CHECK ----------------------
-  const user = JSON.parse(localStorage.getItem("mindstep_user") || "null");
+  // ---------------------- USER LOADING ----------------------
+  // LoginPage stores:
+  // localStorage.userId
+  // localStorage.username
+  // localStorage.userImage
 
-  if (!user) {
+  const userId = localStorage.getItem("userId");
+  const username = localStorage.getItem("username");
+  const userImage = localStorage.getItem("userImage");
+
+  if (!userId) {
     alert("Please login first!");
     window.location.href = "LoginPage.html";
     return;
   }
 
-  const userId = user._id;
+  // ---------------------- USER PROFILE SET ----------------------
+  document.getElementById("username").textContent = username;
+  document.getElementById("profileImg").src = userImage || "https://via.placeholder.com/60";
 
-  // ---------------------- USER PROFILE --------------------
-  document.getElementById("username").textContent = user.username;
-  document.getElementById("profileImg").src = user.image || "https://via.placeholder.com/60";
 
-  // ---------------------- COURSE AREA ---------------------
-  const courseListContainer = document.getElementById("courses");   // FIXED ✔
+  // ---------------------- LOAD COURSES ----------------------
+  const courseList = document.getElementById("courses");
+  courseList.innerHTML = ""; // Clear static cards
 
-  // Replace old static cards
-  courseListContainer.innerHTML = "";
-
-  // ---------------------- LOAD COURSES --------------------
   async function loadCourses() {
     try {
       const res = await fetch("/api/public/courses");
       const data = await res.json();
 
       if (!data.success) {
-        console.error("Failed to load courses:", data);
+        console.error("Course fetch failed");
         return;
       }
 
-      // Loop all courses from backend
       for (const entry of data.results) {
         const { course, lessonCount, totalTasks } = entry;
 
-        // Load user progress
+        // Fetch user progress for this course
         let percent = 0;
         try {
           const pRes = await fetch(`/api/course/${course.slug}/progress/${userId}`);
           const pJson = await pRes.json();
           percent = pJson.percent || 0;
-        } catch {}
+        } catch (e) {}
 
-        // Create card
-        const div = document.createElement("div");
-        div.className = "card reveal";
-
-        div.innerHTML = `
+        // Create course card
+        const card = document.createElement("div");
+        card.className = "card reveal";
+        card.innerHTML = `
           <h3>${course.title} <span class="badge">${lessonCount} Lessons</span></h3>
           <p>${course.description || ""}</p>
-          
+
           <div class="progress-container">
             <div class="progress-bar" style="width:${percent}%"></div>
           </div>
+
           <div class="progress-text">${percent}% Completed</div>
 
           <button class="btn enroll">Start</button>
         `;
 
-        div.querySelector(".enroll").onclick = () => {
+        // On click → go to course page
+        card.querySelector(".enroll").onclick = () => {
           window.location.href = `course.html?course=${course.slug}`;
         };
 
-        courseListContainer.appendChild(div);
+        courseList.appendChild(card);
       }
 
     } catch (err) {
-      console.error("Course load error:", err);
+      console.error("loadCourses ERROR:", err);
     }
   }
 
   loadCourses();
 
 
-  // ---------------------- FULL-STACK PROGRESS ----------------------
-  async function loadFSProgress() {
-    try {
-      const res = await fetch(`/api/course/fullstack/progress/${userId}`);
-      const data = await res.json();
-
-      const bar = document.getElementById("fsd2");
-      const text = document.getElementById("fsd5");
-
-      if (data.success) {
-        bar.style.width = data.percent + "%";
-        text.textContent = "Completed: " + data.percent + "%";
-      }
-
-    } catch {}
-  }
-
-  // If you don’t have fullstack course, ignore silently
-  loadFSProgress();
-
-
-  // ---------------------- EXIT LOGIC ----------------------
+  // ---------------------- EXIT BUTTON ----------------------
   const exitLink = document.getElementById("exit-link");
   const modal = document.getElementById("exit-modal");
 
-  exitLink.onclick = () => {
-    modal.classList.add("active");
-  };
+  exitLink.onclick = () => modal.classList.add("active");
 
   document.getElementById("confirm-exit").onclick = () => {
-    localStorage.removeItem("mindstep_user");
+    localStorage.clear();
     window.location.href = "LoginPage.html";
   };
 
-  document.getElementById("cancel-exit").onclick = () => {
+  document.getElementById("cancel-exit").onclick = () =>
     modal.classList.remove("active");
-  };
 
 });
 </script>
