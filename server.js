@@ -399,13 +399,17 @@ app.post("/run-code", async (req, res) => {
     if (!language || !source) return res.status(400).json({ error: "Missing language or source" });
 
     if (language === "java") {
-      // always run on remote Piston Java 21
       const m = source.match(/public\s+class\s+([A-Za-z_$][A-Za-z0-9_$]*)/);
       const className = m ? m[1] : "Main";
-      const remote = await runOnPiston("java", "17.0.6", [{ name: `${className}.java`, content: source }]);
+
+      const remote = await runOnPiston("java", "21.0.2", [
+        { name: `${className}.java`, content: source }
+      ]);
+
       if (remote.output) return res.json({ output: remote.output });
-      if (remote.error) return res.status(500).json({ error: "Remote Java execution failed: " + remote.error });
-      return res.status(500).json({ error: "Unknown Java remote error" });
+      return res.status(500).json({
+        error: "Remote Java execution failed: " + (remote.error || "Unknown")
+      });
     }
 
     if (language === "python") {
