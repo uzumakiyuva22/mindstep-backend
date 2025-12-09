@@ -458,22 +458,28 @@ app.post("/run-code", async (req, res) => {
     }
 
     // ----- JAVASCRIPT (eval) -----
-    if (language === "javascript") {
-      try {
-        // sandbox note: this is not a secure sandbox — keep usage controlled
-        const result = eval(source);
-        return res.json({ output: String(result ?? "") });
-      } catch (err) {
-        return res.json({ error: "JS Error: " + (err && err.message ? err.message : String(err)) });
-      }
-    }
+ // ----- JAVA (always run on Piston because Render has no javac) -----
+if (language === "java") {
+    try {
+        // Detect public class name
+        const match = source.match(/public\s+class\s+([A-Za-z_][A-Za-z0-9_]*)/);
+        const className = match ? match[1] : "Main";
 
-    return res.status(400).json({ error: "Language not supported" });
-  } catch (err) {
-    console.error("run-code handler error:", err && err.stack ? err.stack : err);
-    return res.status(500).json({ error: "Server error" });
-  }
-});
+        // Remote runner - 100% works
+        const remote = await runOnPiston("java", "21", [
+            { name: `${className}.java`, content: source }
+        ]);
+
+        if (remote.output) return res.json({ output: remote.output });
+        if (remote.error) return res.json({ error: remote.error });
+
+        return res.json({ error: "Unknown remote execution failure." });
+
+    } catch (e) {
+        return res.json({ error: "Java execution failed: " + e.message });
+    }
+}
+
 
 // ------------------ ROOT ------------------
 app.get("/", (req, res) => {
