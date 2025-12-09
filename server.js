@@ -75,6 +75,23 @@ function safeUnlink(filePath) {
   }
 }
 
+// remote runner (Piston) fallback for environments without JDK
+async function runOnPiston(language, version, files) {
+  try {
+    const resp = await fetch("https://emkc.org/api/v2/piston/execute", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ language, version, files })
+    });
+    const data = await resp.json();
+    // Piston responses vary; prefer run.stdout / run.output / run.stderr
+    const out = data.run?.stdout || data.run?.output || data.run?.stderr || JSON.stringify(data);
+    return { output: out };
+  } catch (e) {
+    return { error: (e && e.message) || String(e) };
+  }
+}
+
 // ------------------ SCHEMAS ------------------
 
 const userSchema = new mongoose.Schema(
@@ -350,6 +367,9 @@ app.post("/run-code", async (req, res) => {
         await execFileP(javaCmd, ["-version"]).catch(() => {});
       } catch (e) {
         console.error("Java availability check failed:", e && e.message);
+        // fall back to remote runner if available
+        const remote = await runOnPiston("java", "17", [{ name: `Main.java`, content: source }]);
+        if (remote.output) return res.json({ output: remote.output });
         return res.status(500).json({ error: "Java not available on server. Ensure JDK is installed and JAVA_HOME/PATH configured." });
       }
 
@@ -368,6 +388,13 @@ app.post("/run-code", async (req, res) => {
         safeUnlink(javaFile); safeUnlink(classFile);
         const msg = (compileErr.stderr || compileErr.message || String(compileErr)).toString();
         console.error("Java compile error:", msg);
+        // If javac isn't present, fall back to remote execution
+        if (compileErr && (compileErr.code === 'ENOENT' || /ENOENT/.test(msg))) {
+          console.info('javac not found locally — falling back to Piston remote execution');
+          const remote = await runOnPiston('java', '17', [{ name: `${className}.java`, content: source }]);
+          if (remote.output) return res.json({ output: remote.output });
+          if (remote.error) return res.json({ error: 'Remote execution failed: ' + remote.error });
+        }
         return res.json({ error: "Compilation failed: " + msg });
       }
 
@@ -378,6 +405,13 @@ app.post("/run-code", async (req, res) => {
       } catch (runErr) {
         const msg = (runErr.stderr || runErr.message || String(runErr)).toString();
         console.error("Java runtime error:", msg);
+        // If java binary isn't present, fall back to remote execution
+        if (runErr && (runErr.code === 'ENOENT' || /ENOENT/.test(msg))) {
+          console.info('java not found locally — falling back to Piston remote execution');
+          const remote = await runOnPiston('java', '17', [{ name: `${className}.java`, content: source }]);
+          if (remote.output) return res.json({ output: remote.output });
+          if (remote.error) return res.json({ error: 'Remote execution failed: ' + remote.error });
+        }
         return res.json({ error: "Runtime failed: " + msg });
       } finally {
         safeUnlink(javaFile); safeUnlink(classFile);
@@ -422,6 +456,17 @@ app.post("/run-code", async (req, res) => {
 
 app.get("/", (req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, "LoginPage.html"));
+});
+
+// Health endpoint — reports whether Java compiler is available
+app.get('/health', async (req, res) => {
+  try {
+    const javac = resolveJavaBin ? resolveJavaBin('javac') : 'javac';
+    await execFileP(javac, ['-version']).catch(()=>{});
+    return res.json({ status: 'ok', javac: true });
+  } catch (e) {
+    return res.json({ status: 'ok', javac: false });
+  }
 });
 
 // ------------------ START ------------------
