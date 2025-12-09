@@ -1,27 +1,4 @@
-/**
- * server.js — MindStep backend (UPGRADED, Option B)
- * - API shape matched to frontend:
- *    GET  /api/course/:slug/lessons
- *    GET  /api/lesson/:id/details
- *    POST /api/task/run        -> run code (JDoodle preferred, piston fallback)
- *    POST /api/task/submit     -> record completion (upsert)
- *    GET  /api/course/:slug/progress/:userId
- *    GET  /api/public/courses
- *    POST /api/signup
- *    POST /api/login
- *    Admin routes: /api/admin/*
- *
- * Required env:
- *   MONGO_URI
- *   CLOUDINARY_URL  OR (CLOUDINARY_CLOUD_NAME + CLOUDINARY_API_KEY + CLOUDINARY_API_SECRET)
- * Optional:
- *   ADMIN_SECRET
- *   JDOODLE_CLIENT_ID
- *   JDOODLE_CLIENT_SECRET
- *
- * Node 18+ recommended
- */
-
+// server.js — Part 1 of 3
 require("dotenv").config();
 const express = require("express");
 const path = require("path");
@@ -32,15 +9,25 @@ const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
 const { v4: uuidv4 } = require("uuid");
 const cloudinary = require("cloudinary").v2;
-const fetch = global.fetch || require("node-fetch");
 
-// --------- CONFIG ----------
+// fetch: Node 18+ has global fetch. If not, fallback:
+let fetchFn = global.fetch;
+try {
+  if (!fetchFn) {
+    fetchFn = require("node-fetch");
+  }
+} catch (e) {
+  fetchFn = global.fetch;
+}
+const fetch = fetchFn;
+
+// ---------- CONFIG ----------
 const PORT = process.env.PORT || 10000;
 const PUBLIC_DIR = path.join(__dirname, "public");
 const TEMP_DIR = path.join(__dirname, "temp");
 if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR, { recursive: true });
 
-// --------- ENV checks ----------
+// ---------- ENV checks ----------
 if (!process.env.MONGO_URI) {
   console.error("❌ ERROR: MONGO_URI missing.");
   process.exit(1);
@@ -79,7 +66,7 @@ const JD_ID = process.env.JDOODLE_CLIENT_ID || null;
 const JD_SECRET = process.env.JDOODLE_CLIENT_SECRET || null;
 const JD_JAVA_VERSION_INDEX = process.env.JDOODLE_JAVA_VERSION_INDEX || "0";
 
-// --------- MONGODB ----------
+// ---------- MONGODB ----------
 mongoose.set("strictQuery", false);
 mongoose
   .connect(process.env.MONGO_URI)
@@ -89,7 +76,7 @@ mongoose
     process.exit(1);
   });
 
-// --------- EXPRESS ----------
+// ---------- EXPRESS ----------
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: "25mb" }));
@@ -97,17 +84,21 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(PUBLIC_DIR));
 const upload = multer({ dest: TEMP_DIR, limits: { fileSize: 12 * 1024 * 1024 } });
 
-// --------- HELPERS ----------
+// ---------- HELPERS ----------
 const safeUnlink = (fp) => { try { if (fp && fs.existsSync(fp)) fs.unlinkSync(fp); } catch {} };
 
 /**
  * runCodeRemote(language, script)
- * language: "python" | "javascript" | "java"
- * returns trimmed output string (or throws)
+ * returns trimmed output string or throws
  */
 async function runCodeRemote(language, script) {
   // Normalize language for JDoodle and Piston
-  const jdLang = language === "python" ? "python3" : (language === "javascript" ? "nodejs" : (language === "java" ? "java" : language));
+  const jdLang =
+    language === "python" ? "python3"
+    : language === "javascript" ? "nodejs"
+    : language === "java" ? "java"
+    : language;
+
   // Try JDoodle if configured
   if (JD_ID && JD_SECRET) {
     try {
@@ -127,7 +118,6 @@ async function runCodeRemote(language, script) {
       if (j && (j.output || j.result)) {
         return String(j.output || j.result).trim();
       }
-      // If JDoodle returns an error field, continue to fallback
       if (j && j.error) {
         console.warn("JDoodle returned error:", j.error);
       }
@@ -136,10 +126,9 @@ async function runCodeRemote(language, script) {
     }
   }
 
-  // Piston fallback
+  // Piston fallback (public API)
   try {
     const files = [{ name: language === "java" ? "Main.java" : (language === "python" ? "script.py" : "script.js"), content: script }];
-    // Use public piston endpoint
     const resp = await fetch("https://emkc.org/api/v2/piston/execute", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -154,7 +143,7 @@ async function runCodeRemote(language, script) {
   }
 }
 
-// --------- SCHEMAS & MODELS ----------
+// ---------- SCHEMAS ----------
 const userSchema = new mongoose.Schema({
   _id: { type: String, default: uuidv4 },
   username: { type: String, required: true, unique: true },
@@ -183,7 +172,7 @@ const lessonSchema = new mongoose.Schema({
   _id: { type: String, default: uuidv4 },
   course_id: { type: String, required: true },
   title: { type: String, required: true },
-  section: { type: String, required: true }, // Introduction | Basic | Practice | Project
+  section: { type: String, required: true },
   order: { type: Number, default: 0 },
   content: { type: String, default: "" }
 }, { versionKey: false });
@@ -196,8 +185,8 @@ const taskSchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: { type: String, default: "" },
   starterCode: { type: String, default: "" },
-  language: { type: String, default: "javascript" }, // html/css/javascript/python/java
-  expectedOutput: { type: String, default: "" } // trimmed expected output
+  language: { type: String, default: "javascript" },
+  expectedOutput: { type: String, default: "" }
 }, { versionKey: false });
 const Task = mongoose.model("Task", taskSchema);
 
@@ -211,7 +200,7 @@ const completionSchema = new mongoose.Schema({
 completionSchema.index({ user_id: 1, task_id: 1 }, { unique: true });
 const Completion = mongoose.model("Completion", completionSchema);
 
-// --------- DEFAULT ADMIN ----------
+// ---------- DEFAULT ADMIN ----------
 (async () => {
   try {
     const def = "Uzumaki_Yuva";
@@ -228,8 +217,9 @@ const Completion = mongoose.model("Completion", completionSchema);
 })();
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET || "mindstep_admin_secret";
+// server.js — Part 2 of 3 (append after Part 1)
 
-// --------- MIDDLEWARE ----------
+// ---------- MIDDLEWARE ----------
 function requireAdmin(req, res, next) {
   const header = req.headers.authorization || "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : header;
@@ -237,7 +227,7 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-// --------- AUTH ROUTES ----------
+// ---------- AUTH ROUTES ----------
 app.post("/api/signup", upload.single("image"), async (req, res) => {
   try {
     const { username, email, password } = req.body;
@@ -279,7 +269,7 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
-// --------- ADMIN ROUTES (manage content) ----------
+// ---------- ADMIN: create course/lesson/task ----------
 app.post("/api/admin/course", requireAdmin, async (req, res) => {
   try {
     const { slug, title, description } = req.body;
@@ -319,7 +309,7 @@ app.post("/api/admin/task/:lessonId/:courseId", requireAdmin, async (req, res) =
   } catch (e) { console.error(e); res.status(500).json({ success: false, error: "Server error" }); }
 });
 
-// --------- PUBLIC: courses summary ----------
+// ---------- PUBLIC: courses summary ----------
 app.get("/api/public/courses", async (req, res) => {
   try {
     const courses = await Course.find({}).lean();
@@ -333,7 +323,7 @@ app.get("/api/public/courses", async (req, res) => {
   } catch (e) { console.error(e); res.status(500).json({ success: false, error: "Server error" }); }
 });
 
-// --------- PUBLIC: lessons for course (grouped) ----------
+// ---------- PUBLIC: lessons for course (grouped) ----------
 app.get("/api/course/:slug/lessons", async (req, res) => {
   try {
     const slug = req.params.slug;
@@ -343,13 +333,12 @@ app.get("/api/course/:slug/lessons", async (req, res) => {
     const lessons = await Lesson.find({ course_id: course._id }).sort({ order: 1 }).lean();
     const tasks = await Task.find({ course_id: course._id }).lean();
 
-    // attach tasks to lessons
     const grouped = lessons.map(l => ({ ...l, tasks: tasks.filter(t => t.lesson_id === l._id) }));
     res.json({ success: true, course, lessons: grouped });
   } catch (e) { console.error(e); res.status(500).json({ success: false, error: "Server error" }); }
 });
 
-// --------- GET lesson details (single) ----------
+// ---------- GET lesson details (single) ----------
 app.get("/api/lesson/:id/details", async (req, res) => {
   try {
     const lesson = await Lesson.findById(req.params.id).lean();
@@ -359,19 +348,16 @@ app.get("/api/lesson/:id/details", async (req, res) => {
   } catch (e) { console.error(e); res.status(500).json({ success: false, error: "Server error" }); }
 });
 
-// --------- TASK RUN (execute code, return output) ----------
+// ---------- TASK RUN (execute code, return output) ----------
 app.post("/api/task/run", async (req, res) => {
   try {
     const { language, code } = req.body;
     if (!language || typeof code !== "string") return res.status(400).json({ success: false, error: "Missing fields" });
 
-    // For HTML/CSS, we just return the code for client to render in iframe
     if (language === "html" || language === "css") {
-      // For CSS we might wrap with a basic HTML if requested by client
       return res.json({ success: true, output: code });
     }
 
-    // For JS/Python/Java run remote
     const out = await runCodeRemote(language, code);
     res.json({ success: true, output: out });
   } catch (e) {
@@ -379,30 +365,24 @@ app.post("/api/task/run", async (req, res) => {
     res.status(500).json({ success: false, error: "Runner error" });
   }
 });
+// server.js — Part 3 of 3 (append after Part 2)
 
-// --------- TASK SUBMIT (check expectedOutput and record completion) ----------
+// ---------- TASK SUBMIT (check expectedOutput and record completion) ----------
 app.post("/api/task/submit", async (req, res) => {
   try {
-    const { userId, taskId, lessonId, courseSlug } = req.body;
+    const { userId, taskId, lessonId, courseSlug, output } = req.body;
     if (!userId || !taskId) return res.status(400).json({ success: false, error: "Missing fields" });
 
     const task = await Task.findById(taskId).lean();
     if (!task) return res.status(404).json({ success: false, error: "Task not found" });
 
-    // If task.expectedOutput is empty, we accept submission (manual grading) — still mark completion
     const expected = String(task.expectedOutput || "").trim();
-
-    // We'll consider that frontend already ran the code and passed; but to be safe, if expected exists and client didn't provide output,
-    // we won't run code here (to avoid duplicate remote runs). The frontend is expected to call /api/task/run then /api/task/submit.
-    // For robust behaviour: if req.body.output is provided, we compare it here; otherwise mark completion.
     let passed = true;
-    if (expected.length > 0 && typeof req.body.output === "string") {
-      passed = String(req.body.output || "").trim() === expected;
-    }
-
-    if (expected.length > 0 && typeof req.body.output !== "string") {
-      // If there is expected but no output provided, don't auto-pass — return instruction to frontend to run and supply output.
-      return res.status(400).json({ success: false, error: "Provide runtime output for checking" });
+    if (expected.length > 0) {
+      if (typeof output !== "string") {
+        return res.status(400).json({ success: false, error: "Provide runtime output for checking" });
+      }
+      passed = String(output || "").trim() === expected;
     }
 
     if (passed) {
@@ -420,7 +400,7 @@ app.post("/api/task/submit", async (req, res) => {
   }
 });
 
-// --------- USER COURSE PROGRESS ----------
+// ---------- USER COURSE PROGRESS ----------
 app.get("/api/course/:slug/progress/:userId", async (req, res) => {
   try {
     const { slug, userId } = req.params;
@@ -435,7 +415,7 @@ app.get("/api/course/:slug/progress/:userId", async (req, res) => {
   } catch (e) { console.error(e); res.status(500).json({ success: false, error: "Server error" }); }
 });
 
-// --------- Seed default courses/lessons/tasks (if missing) ----------
+// ---------- SEED DEFAULT COURSES / LESSONS / TASKS ----------
 async function seedCoursesIfMissing() {
   try {
     const existing = await Course.countDocuments({});
@@ -467,24 +447,17 @@ async function seedCoursesIfMissing() {
       console.log(`Seeded course: ${title}`);
     }
 
-    // HTML
+    // templates (same as earlier examples)
     await createCourseWithContent("html", "HTML Basics", "Learn semantic HTML and elements", {
       tasksPerSection: 3,
       taskFactory: (section, idx) => {
-        if (section === "Introduction") {
-          return { title: `HTML Intro ${idx}`, description: "Create an H1", starterCode: `<h1>Hello HTML</h1>`, language: "html", expectedOutput: "<h1>Hello HTML</h1>" };
-        }
-        if (section === "Basic") {
-          return { title: `HTML Basic ${idx}`, description: "Paragraph", starterCode: `<p>Paragraph</p>`, language: "html", expectedOutput: "<p>Paragraph</p>" };
-        }
-        if (section === "Practice") {
-          return { title: `HTML Practice ${idx}`, description: "Anchor", starterCode: `<a href='#'>Link</a>`, language: "html", expectedOutput: `<a href="#">Link</a>` };
-        }
+        if (section === "Introduction") return { title: `HTML Intro ${idx}`, description: "Create an H1", starterCode: `<h1>Hello HTML</h1>`, language: "html", expectedOutput: "<h1>Hello HTML</h1>" };
+        if (section === "Basic") return { title: `HTML Basic ${idx}`, description: "Paragraph", starterCode: `<p>Paragraph</p>`, language: "html", expectedOutput: "<p>Paragraph</p>" };
+        if (section === "Practice") return { title: `HTML Practice ${idx}`, description: "Anchor", starterCode: `<a href='#'>Link</a>`, language: "html", expectedOutput: `<a href="#">Link</a>` };
         return { title: `HTML Project ${idx}`, description: "Small page", starterCode: `<!doctype html><html><body><h1>Hi</h1></body></html>`, language: "html", expectedOutput: "<h1>Hi</h1>" };
       }
     });
 
-    // CSS
     await createCourseWithContent("css", "CSS Styling", "Learn CSS basics & animations", {
       tasksPerSection: 3,
       taskFactory: (section, idx) => {
@@ -495,7 +468,6 @@ async function seedCoursesIfMissing() {
       }
     });
 
-    // JavaScript
     await createCourseWithContent("javascript", "JavaScript Essentials", "Learn JS basics and DOM", {
       tasksPerSection: 3,
       taskFactory: (section, idx) => {
@@ -506,7 +478,6 @@ async function seedCoursesIfMissing() {
       }
     });
 
-    // Java
     await createCourseWithContent("java", "Java Basics", "Core Java basics", {
       tasksPerSection: 3,
       taskFactory: (section, idx) => {
@@ -517,7 +488,6 @@ async function seedCoursesIfMissing() {
       }
     });
 
-    // Python
     await createCourseWithContent("python", "Python Programming", "Beginner → Project Python", {
       tasksPerSection: 3,
       taskFactory: (section, idx) => {
@@ -537,7 +507,7 @@ async function seedCoursesIfMissing() {
 // seed at startup (non-blocking)
 seedCoursesIfMissing().catch(e => console.error("seed failed:", e));
 
-// --------- ROOT / HEALTH ----------
+// ---------- ROOT / HEALTH ----------
 app.get("/health", (req, res) => res.json({ ok: true, ts: Date.now() }));
 app.get("/", (req, res) => {
   const file = path.join(PUBLIC_DIR, "LoginPage.html");
@@ -545,5 +515,5 @@ app.get("/", (req, res) => {
   res.send("<h3>MindStep backend</h3><p>Place frontend files in /public</p>");
 });
 
-// --------- START SERVER ----------
+// ---------- START SERVER ----------
 app.listen(PORT, () => console.log(`🔥 Server listening on http://localhost:${PORT}`));
