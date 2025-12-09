@@ -558,94 +558,102 @@
 
     <!-- JavaScript Section -->
 <script>
-// ===============================
-// MAINPAGE — FINAL 100% WORKING JS
-// ===============================
-
+// === MainPage.js (fully working with backend Option 2) ===
 document.addEventListener("DOMContentLoaded", () => {
 
-    // ---------------- USER PROFILE LOAD ----------------
-    const userId = localStorage.getItem("userId");
+  const user = JSON.parse(localStorage.getItem("mindstep_user") || "null");
+  const userId = user?._id;
 
-    if (!userId) {
-        document.getElementById("username").innerText = "User";
-        document.getElementById("profileImg").src = "default.png";
-    } else {
-        fetch(`/api/get-user/${userId}`)
-            .then(res => res.json())
-            .then(user => {
-                document.getElementById("username").innerText = user.username || "User";
-                document.getElementById("profileImg").src = user.image || "default.png";
-            })
-            .catch(() => {
-                document.getElementById("username").innerText = "User";
-                document.getElementById("profileImg").src = "default.png";
-            });
-    }
+  const courseListContainer = document.getElementById("courseList") || document.body;
 
-
-    // ---------------- CARD REVEAL ANIMATION ----------------
+  // ---------------------------------------------------------
+  // Load all courses
+  // ---------------------------------------------------------
+  async function loadCourses() {
     try {
-        const cards = document.querySelectorAll('.card');
-        const observer = new IntersectionObserver(entries => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting)
-                    entry.target.classList.add('visible');
-            });
-        }, { threshold: 0.12 });
+      const res = await fetch("/api/public/courses");
+      const data = await res.json();
 
-        cards.forEach(c => observer.observe(c));
-    } catch (e) { console.log(e); }
+      if (!data.success) {
+        console.error("Failed to load courses", data);
+        return;
+      }
 
+      courseListContainer.innerHTML = ""; // clear
 
-    // ---------------- ENROLL → COURSE REDIRECT ----------------
-    document.querySelectorAll(".btn.enroll").forEach(btn => {
-        btn.addEventListener("click", () => {
-            const course = btn.closest(".card").querySelector("h3").innerText;
-            window.location.href = `course.html?course=${encodeURIComponent(course)}`;
-        });
-    });
+      data.results.forEach(async (entry) => {
+        const { course, lessonCount, totalTasks } = entry;
 
+        // Get user progress per course
+        let percent = 0;
 
-    // ---------------- PROGRESS BAR ----------------
-    const fsdBar = document.getElementById("fsd2");
-    const fsdText = document.getElementById("fsd5");
-
-    function animateTo(target) {
-        let start = 0;
-        const to = Math.min(100, Math.max(0, Number(target)));
-        const duration = 700;
-        const startTime = performance.now();
-
-        function frame(now) {
-            const progress = Math.min((now - startTime) / duration, 1);
-            const value = Math.round(start + (to - start) * progress);
-
-            fsdBar.style.width = value + "%";
-            fsdText.textContent = "Completed: " + value + "%";
-
-            if (progress < 1) requestAnimationFrame(frame);
+        if (userId) {
+          try {
+            const pRes = await fetch(`/api/course/${course.slug}/progress/${userId}`);
+            const pJson = await pRes.json();
+            percent = pJson.percent || 0;
+          } catch (e) {
+            console.warn("Progress fetch failed", e);
+          }
         }
-        requestAnimationFrame(frame);
+
+        // Create course card element
+        const card = document.createElement("div");
+        card.style = `
+          padding: 18px;
+          background: rgba(255,255,255,0.04);
+          border-radius: 12px;
+          margin-bottom: 16px;
+          cursor: pointer;
+          box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+          transition: transform .2s;
+        `;
+        card.onmouseover = () => card.style.transform = "scale(1.02)";
+        card.onmouseout  = () => card.style.transform = "scale(1)";
+
+        card.innerHTML = `
+          <h2 style="font-family:Orbitron;">${course.title}</h2>
+          <p style="opacity:0.85; margin-top:4px;">${course.description || ""}</p>
+
+          <div style="margin-top:10px; opacity:0.85;">
+            Lessons: <b>${lessonCount}</b> | Tasks: <b>${totalTasks}</b>
+          </div>
+
+          <div style="margin-top:12px;">
+            <div style="background:#111; height:10px; width:100%; border-radius:8px; overflow:hidden;">
+              <div style="height:10px; background:linear-gradient(90deg,#ff2d55,#0066ff); width:${percent}%"></div>
+            </div>
+            <div style="margin-top:6px; font-weight:700; color:#00e5ff;">
+              ${percent}% Completed
+            </div>
+          </div>
+        `;
+
+        card.addEventListener("click", () => {
+          window.location.href = `course.html?course=${course.slug}`;
+        });
+
+        courseListContainer.appendChild(card);
+      });
+
+    } catch (err) {
+      console.error("Course load error:", err);
     }
+  }
 
+  // ---------------------------------------------------------
+  // Back to Login if no user
+  // ---------------------------------------------------------
+  if (!userId) {
+    alert("Please login first!");
+    window.location.href = "LoginPage.html";
+    return;
+  }
 
-    // ---------------- LOAD USER PROGRESS ----------------
-    if (userId) {
-        fetch("/get-main-progress", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userId })
-        })
-            .then(res => res.json())
-            .then(data => animateTo(data.fullStack || 0))
-            .catch(() => {
-                fsdText.textContent = "Error loading progress";
-            });
-    } else {
-        fsdText.textContent = "Login to view progress";
-    }
-
+  // ---------------------------------------------------------
+  // Load Courses
+  // ---------------------------------------------------------
+  loadCourses();
 });
 </script>
  </body>

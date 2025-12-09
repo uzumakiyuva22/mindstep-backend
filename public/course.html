@@ -356,121 +356,152 @@
       </div>
     </div>
   </div>
-<script>
-// course.js
+  <script>
+  // === course.js (Fully fixed for backend Option 2) ===
 document.addEventListener("DOMContentLoaded", () => {
-  const params = new URLSearchParams(window.location.search);
-  const course = decodeURIComponent(params.get("course") || "Full Stack Development");
-  const username = localStorage.getItem("username");
-  const TOTAL_LESSONS = Math.max(1, document.querySelectorAll(".lessons .play").length || 4);
 
+  // ---------- GET COURSE SLUG ----------
+  const params = new URLSearchParams(window.location.search);
+  const courseSlug = params.get("course") || "python";
+
+  // ---------- USER INFO ----------
+  const user = JSON.parse(localStorage.getItem("mindstep_user") || "null");
+  const userId = user?._id;
+
+  // ---------- UI ELEMENTS ----------
   const courseTitle = document.getElementById("courseTitle");
   const courseSubtitle = document.getElementById("courseSubtitle");
-  const moduleHeading = document.getElementById("moduleHeading");
-  const moduleDesc = document.getElementById("moduleDesc");
-  const introScreen = document.getElementById("introScreen");
-  const startGameBtn = document.getElementById("startGameBtn");
-  const ringAnim = document.querySelector(".ring-anim");
+  const lessonsContainer = document.querySelector(".lessons");
   const stepper = document.getElementById("stepper");
-  const stepEls = Array.from(document.querySelectorAll(".step"));
-  const connectorFills = Array.from(document.querySelectorAll(".connector-fill"));
-  const progressArc = document.getElementById("progressArc");
-  const progressPercent = document.getElementById("progressPercent");
-  const lessonButtons = Array.from(document.querySelectorAll(".lessons .play"));
-  const finishBtn = document.getElementById("finishBtn") || document.getElementById("nextStep") || document.getElementById("completeBtn");
-  
-  if (courseTitle) courseTitle.textContent = course;
-  if (courseSubtitle) courseSubtitle.textContent = `Structured lesson plans and interactive modules for ${course}.`;
-  if (moduleHeading) moduleHeading.textContent = `${course} Starter Module`;
-  if (moduleDesc) moduleDesc.textContent = `This module introduces the core ideas of ${course} with hands-on exercises.`;
+  const introScreen = document.getElementById("introScreen");
+  const progressCircle = document.getElementById("progressArc");
+  const progressText = document.getElementById("progressText");
 
-  // circle geometry
+  // Setup circular progress
   const R = 28;
   const C = 2 * Math.PI * R;
-  if (progressArc) { progressArc.style.strokeDasharray = C.toFixed(2); progressArc.style.strokeDashoffset = C.toFixed(2); }
+  progressCircle.style.strokeDasharray = C;
+  progressCircle.style.strokeDashoffset = C;
 
-  function setVisual(pct, lessonsDone) {
-    const p = Math.max(0, Math.min(100, Number(pct) || 0));
-    if (progressArc) try { progressArc.style.strokeDashoffset = (C * (1 - p / 100)).toFixed(2); } catch (e) {}
-    if (progressPercent) progressPercent.textContent = p + "%";
-    stepEls.forEach((s, i) => s.classList.toggle("step-active", i < lessonsDone));
-    connectorFills.forEach((c, i) => c.style.width = (i < Math.max(0, lessonsDone - 1) ? "100%" : "0%"));
-  }
+  // -------------------------------------------------------
+  // LOAD COURSE + LESSONS
+  // -------------------------------------------------------
+  async function loadCourse() {
+    try {
+      const res = await fetch(`/api/course/${courseSlug}/lessons`);
+      const data = await res.json();
+      if (!data.success) {
+        console.error("Course load failed:", data);
+        return;
+      }
 
-  function animateTo(target) {
-    const cur = parseInt((progressPercent && progressPercent.textContent) || "0".replace("%","")) || 0;
-    const from = cur, to = Math.max(0, Math.min(100, Number(target) || 0));
-    const dur = 700; const t0 = performance.now();
-    function frame(t) {
-      const p = Math.min(1, (t - t0) / dur);
-      const v = Math.round(from + (to - from) * p);
-      if (progressPercent) progressPercent.textContent = v + "%";
-      if (progressArc) try { progressArc.style.strokeDashoffset = (C * (1 - v/100)).toFixed(2); } catch (e) {}
-      if (p < 1) requestAnimationFrame(frame);
+      const course = data.course;
+      const lessons = data.lessons;
+
+      // Update title
+      courseTitle.textContent = course.title;
+      courseSubtitle.textContent = course.description || "";
+
+      // Clear default lessons
+      lessonsContainer.innerHTML = `<h3 style="font-family:Orbitron;margin-bottom:8px;">Lesson Plan</h3>`;
+
+      // Render lessons grouped (intro/basic/practice/project)
+      lessons.sort((a,b)=>a.order - b.order).forEach((lesson, idx) => {
+        const div = document.createElement("div");
+        div.className = "lesson";
+        div.innerHTML = `
+          <div>${idx+1}. ${lesson.title}</div>
+          <button class="play" data-id="${lesson._id}">Start Lesson</button>
+        `;
+        lessonsContainer.appendChild(div);
+      });
+
+      // Attach click handler
+      lessonsContainer.addEventListener("click", e => {
+        const btn = e.target.closest(".play");
+        if (!btn) return;
+        const lessonId = btn.dataset.id;
+        window.location.href = `lesson.html?course=${courseSlug}&lessonId=${lessonId}`;
+      });
+
+    } catch (err) {
+      console.error("LOAD COURSE ERROR:", err);
     }
-    requestAnimationFrame(frame);
   }
 
+  // -------------------------------------------------------
+  // LOAD USER PROGRESS
+  // -------------------------------------------------------
   async function loadProgress() {
-    setVisual(0, 0);
-    if (!username) {
-      const localPct = Number(localStorage.getItem(`progress_${course}`) || 0);
-      const lessons = Math.round((localPct/100) * TOTAL_LESSONS);
-      setVisual(localPct, lessons);
+    if (!userId) {
+      // Not logged in, show 0 progress
+      updateProgress(0);
       return;
     }
+
     try {
-      const res = await fetch("/get-progress", { method: "POST", headers: { "Content-Type":"application/json" }, body: JSON.stringify({ username, course }) });
-      if (!res.ok) { console.warn("get-progress failed", await res.text()); return; }
-      const json = await res.json();
-      const pct = Number(json.percentage || 0);
-      const lessons = Number(json.lessonsCompleted || Math.round((pct/100) * TOTAL_LESSONS));
-      animateTo(pct);
-      setVisual(pct, lessons);
-      if (pct === 0) { if (introScreen) introScreen.style.display = "block"; if (stepper) stepper.style.display = "none"; }
-      else { if (introScreen) introScreen.style.display = "none"; if (stepper) stepper.style.display = "block"; }
-    } catch (e) { console.error("load progress err", e); }
+      const res = await fetch(`/api/course/${courseSlug}/progress/${userId}`);
+      const data = await res.json();
+
+      if (!data.success) {
+        console.warn("Failed progress:", data);
+        updateProgress(0);
+        return;
+      }
+
+      updateProgress(data.percent);
+    } catch (err) {
+      console.error("PROGRESS ERROR:", err);
+      updateProgress(0);
+    }
   }
 
-  startGameBtn?.addEventListener("click", () => {
-    try { if (ringAnim) { ringAnim.style.transition = "stroke-dashoffset 1.2s ease, transform 1.2s ease"; ringAnim.style.strokeDashoffset = "0"; ringAnim.style.transform = "rotate(360deg)"; } } catch(e){}
-    setTimeout(()=> { if (introScreen) introScreen.style.display = "none"; if (stepper) stepper.style.display = "block"; }, 900);
-  });
+  function updateProgress(percent) {
+    percent = Math.max(0, Math.min(percent, 100));
+    progressCircle.style.strokeDashoffset = C * (1 - percent/100);
+    progressText.textContent = percent + "%";
 
-  lessonButtons.forEach((btn, i) => {
-    btn.addEventListener("click", () => {
-      const n = i + 1;
-      window.location.href = `lesson.html?course=${encodeURIComponent(course)}&lesson=${n}`;
-    });
-  });
-fetch("/progress")
-  .then(res => res.json())
-  .then(data => {
-    document.getElementById("progressText").innerText = data.percentage + "%";
-
-    // If intro lesson completed
-    if (data.completed >= 1) {
-      document.getElementById("introStatus").innerText = "Completed ✔";
-      document.getElementById("introStatus").style.color = "lime";
+    // Show intro screen only before 1% progress
+    if (percent <= 0) {
+      introScreen.style.display = "flex";
+      stepper.style.display = "none";
+    } else {
+      introScreen.style.display = "none";
+      stepper.style.display = "block";
     }
-  });
-  finishBtn?.addEventListener("click", async () => {
-    if (!username) { alert("Please login to finish the course."); return; }
+  }
+
+  // -------------------------------------------------------
+  // Intro → Stepper Transition
+  // -------------------------------------------------------
+  const startGameBtn = document.getElementById("startGameBtn");
+  const ringAnim = document.querySelector(".ring-anim");
+
+  startGameBtn?.addEventListener("click", () => {
     try {
-      await fetch("/save-progress", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ username, course, percentage:100, lessons_completed: TOTAL_LESSONS })});
-      await fetch("/update-main-progress", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ username })});
-      const box = document.createElement("div");
-      box.style = "position:fixed;left:50%;top:20%;transform:translateX(-50%);background:#082031;color:#9ff;padding:14px 20px;border-radius:10px;z-index:9999;";
-      box.textContent = `🎉 ${course} completed. Redirecting to dashboard...`;
-      document.body.appendChild(box);
-      setTimeout(()=> { box.remove(); window.location.href = "MainPage.html"; }, 1300);
-    } catch (e) { console.error("finish err", e); alert("Failed to complete course."); }
+      ringAnim.style.strokeDashoffset = "0";
+      ringAnim.style.transform = "rotate(360deg)";
+    } catch {}
+
+    setTimeout(() => {
+      introScreen.style.display = "none";
+      stepper.style.display = "block";
+    }, 900);
   });
 
-  window.addEventListener("focus", loadProgress);
-  window.addEventListener("storage", (e) => { if (e.key && e.key.startsWith("progress_")) loadProgress(); });
+  // -------------------------------------------------------
+  // Back button
+  // -------------------------------------------------------
+  document.getElementById("backBtn").onclick = () => {
+    window.location.href = "MainPage.html";
+  };
 
+  // -------------------------------------------------------
+  // INIT CALLS
+  // -------------------------------------------------------
+  loadCourse();
   loadProgress();
+
 });
 </script>
 </body>

@@ -101,158 +101,182 @@
   </div>
 
   <script>
-    // Read course & lesson
-    const q = new URLSearchParams(window.location.search);
-    const course = q.get('course') || 'FullStack Development';
-    const lesson = Number(q.get('lesson')) || 1;
+   // === lesson.js (Fully working with advanced backend) ===
+document.addEventListener("DOMContentLoaded", () => {
 
-    document.getElementById('lessonTitle').textContent = `${course} — Lesson ${lesson}`;
-    document.getElementById('lessonDesc').textContent = `Learn practical coding for ${course}!`;
+  // ------------------------ PARAMS ------------------------
+  const params = new URLSearchParams(window.location.search);
+  const lessonId = params.get("lessonId");
+  const courseSlug = params.get("course") || "python";
 
-    const langSelect = document.getElementById('lang');
-    const langSelectArea = document.getElementById('langSelectArea');
-    const codeArea = document.getElementById('code');
-    const output = document.getElementById('output');
-    const preview = document.getElementById('preview');
-
-    // Default code templates
-    const templates = {
-      java: `public class HelloWorld {
-  public static void main(String[] args) {
-    System.out.println("Hello, Yuva!");
+  // ------------------------ USER --------------------------
+  const user = JSON.parse(localStorage.getItem("mindstep_user") || "null");
+  if (!user) {
+    alert("Please login!");
+    window.location.href = "LoginPage.html";
+    return;
   }
-}`,
-      python: `print("Hello from Python, Yuva!")`,
-      javascript: `console.log("JavaScript says hi, Yuva!");`,
-      html: `<!DOCTYPE html>
-<html>
-  <body>
-    <h1 style="color:blue;">Hello Yuva!</h1>
-  </body>
-</html>`,
-      css: `body {
-  background-color: lightblue;
-  text-align: center;
-}`
-    };
+  const userId = user._id;
 
-    // Auto-select template based on course
-    function setCourseLanguages() {
-      if (course.toLowerCase().includes("html")) {
-        langSelectArea.style.display = "none";
-        codeArea.value = templates.html;
-        langSelect.value = "html";
-      } else if (course.toLowerCase() === "java" || course.toLowerCase().includes("core java")){
-        langSelectArea.style.display = "none";
-        codeArea.value = templates.java;
-        langSelect.value = "java";
-      } else if (course.toLowerCase().includes("python")) {
-        langSelectArea.style.display = "none";
-        codeArea.value = templates.python;
-        langSelect.value = "python";
-      } else if (course.toLowerCase().includes("javascript")) {
-        langSelectArea.style.display = "none";
-        codeArea.value = templates.javascript;
-        langSelect.value = "javascript";
-      } else if (course.toLowerCase().includes("css")) {
-        langSelectArea.style.display = "none";
-        codeArea.value = templates.css;
-        langSelect.value = "css";
-      } else {
-        codeArea.value = templates.java;
-        langSelect.value = "java";
-      }
-    }
-    setCourseLanguages();
+  // ------------------------ UI ELEMENTS --------------------
+  const titleEl = document.getElementById("lessonTitle");
+  const descEl  = document.getElementById("lessonDesc");
+  const taskContainer = document.getElementById("tasks") || document.body;
 
-    // Change template when language changed
-    langSelect.addEventListener('change', () => {
-      codeArea.value = templates[langSelect.value];
-      output.textContent = "Ready.";
-      preview.style.display = "none";
-    });
+  const progressCircle = document.getElementById("progressArc");
+  const progressText   = document.getElementById("progressText");
 
-    // Run code
-    document.getElementById('runBtn').addEventListener('click', async () => {
-      const lang = langSelect.value;
-      const code = codeArea.value.trim();
-      output.textContent = "Running...";
-      preview.style.display = "none";
+  // Setup progress ring
+  const R = 28;
+  const C = 2 * Math.PI * R;
+  if (progressCircle) {
+    progressCircle.style.strokeDasharray = C;
+    progressCircle.style.strokeDashoffset = C;
+  }
 
-      if (lang === "html" || lang === "css" || lang === "javascript") {
-        if (lang === "html") {
-          preview.style.display = "block";
-          preview.srcdoc = code;
-        } else if (lang === "css") {
-          preview.style.display = "block";
-          preview.srcdoc = `<style>${code}</style><h1>CSS Applied!</h1>`;
-        } else {
-          const log = [];
-          const old = console.log;
-          console.log = (...args) => log.push(args.join(" "));
-          try { eval(code); output.textContent = log.join("\n") || "(no output)"; }
-          catch (err) { output.textContent = "Error: " + err.message; }
-          finally { console.log = old; }
-        }
+  // ---------------------------------------------------------
+  // LOAD LESSON + TASKS
+  // ---------------------------------------------------------
+  async function loadLesson() {
+    try {
+      const res = await fetch(`/api/lesson/${lessonId}`);
+      const data = await res.json();
+
+      if (!data.success) {
+        console.error("Lesson load failed:", data);
         return;
       }
 
-      // Server execution for Java/Python
+      const lesson = data.lesson;
+      const tasks  = data.tasks;
+
+      // Set lesson title/desc
+      titleEl.textContent = lesson.title;
+      descEl.textContent  = lesson.content || "Learn and complete the tasks below.";
+
+      // Clear task container
+      taskContainer.innerHTML = "";
+
+      // Show each task
+      tasks.forEach((task, index) => {
+        const card = document.createElement("div");
+        card.style = `
+          margin-bottom:18px;
+          padding:16px;
+          border-radius:12px;
+          background:rgba(255,255,255,0.04);
+        `;
+
+        card.innerHTML = `
+          <h3 style="font-family:Orbitron;">Task ${index+1}: ${task.title}</h3>
+          <p style="opacity:0.85;">${task.description || ""}</p>
+
+          <textarea id="code_${task._id}" 
+            style="width:100%;height:140px;margin-top:8px;background:#0a0f18;color:#eaf6ff;border-radius:10px;padding:10px;font-family:monospace;">
+${task.starterCode || ""}
+          </textarea>
+
+          <button data-task="${task._id}" class="runBtn" 
+            style="margin-top:10px;padding:10px 18px;border:none;border-radius:10px;font-weight:700;
+                   background:linear-gradient(90deg,#ff2d55,#0066ff);color:white;cursor:pointer;">
+            ▶ Run & Check
+          </button>
+
+          <pre id="out_${task._id}" 
+            style="margin-top:8px;background:#000;color:#00ffb7;padding:12px;border-radius:10px;white-space:pre-wrap;">
+          </pre>
+        `;
+
+        taskContainer.appendChild(card);
+      });
+
+      attachTaskEvents(tasks);
+
+      loadProgress();
+
+    } catch (err) {
+      console.error("Error loading lesson: ", err);
+    }
+  }
+
+  // ---------------------------------------------------------
+  // RUN & CHECK TASK
+  // ---------------------------------------------------------
+  function attachTaskEvents(tasks) {
+    taskContainer.addEventListener("click", async (e) => {
+      const btn = e.target.closest(".runBtn");
+      if (!btn) return;
+
+      const taskId = btn.dataset.task;
+      const task = tasks.find(t => t._id === taskId);
+      const outBox = document.getElementById(`out_${taskId}`);
+      const codeBox = document.getElementById(`code_${taskId}`);
+
+      const code = codeBox.value;
+
+      // Send to backend
+      outBox.textContent = "Running...";
+
       try {
-        const res = await fetch("/run-code", {
+        const res = await fetch("/api/task/check", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ language: lang, source: code })
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({
+            userId,
+            courseId: task.course_id,
+            lessonId,
+            taskId,
+            language: task.language,
+            code
+          })
         });
 
         const data = await res.json();
-        const result = data.run?.output || data.output || JSON.stringify(data);
-        output.textContent = result.trim();
+        let status = data.passed ? "✔ Correct" : "❌ Wrong";
+
+        outBox.textContent = 
+          `Output:\n${data.output}\n\nResult: ${status}`;
+
+        if (data.passed) {
+          loadProgress();
+        }
+
       } catch (err) {
-        output.textContent = "⚠️ Error: " + err.message;
+        outBox.textContent = "Error: " + err.message;
       }
     });
+  }
 
-    // Progress storage
-    const STORAGE_COMPLETED = "FullStackCompleted";
-    const STORAGE_PROGRESS = "FullStackProgress";
-    const TOTAL_LESSONS = 4;
+  // ---------------------------------------------------------
+  // UPDATE PROGRESS
+  // ---------------------------------------------------------
+  async function loadProgress() {
+    try {
+      const res = await fetch(`/api/course/${courseSlug}/progress/${userId}`);
+      const data = await res.json();
 
-    function loadCompleted() {
-      try {
-        return new Set(JSON.parse(localStorage.getItem(STORAGE_COMPLETED)) || []);
-      } catch { return new Set(); }
-    }
-    function saveCompleted(set) {
-      localStorage.setItem(STORAGE_COMPLETED, JSON.stringify([...set]));
-    }
-    function computeProgress(set) {
-      const pct = Math.round((set.size / TOTAL_LESSONS) * 100);
-      localStorage.setItem(STORAGE_PROGRESS, pct);
-      return pct;
-    }
+      if (!data.success) return;
 
-    // Mark Complete button
-    document.getElementById("completeBtn").addEventListener("click", () => {
-      const completed = loadCompleted();
-      completed.add(lesson);
-      saveCompleted(completed);
+      const pct = Number(data.percent || 0);
 
-      const pct = computeProgress(completed);
-
-      if (completed.size >= TOTAL_LESSONS) {
-        document.getElementById("popupBox").style.display = "flex";
-      } else {
-        window.location.href = `course.html?course=${encodeURIComponent(course)}&progress=${pct}&step=${completed.size}`;
+      // Animate circle
+      if (progressCircle) {
+        progressCircle.style.strokeDashoffset = C * (1 - pct/100);
       }
-    });
+      if (progressText) {
+        progressText.textContent = pct + "%";
+      }
 
-    // Final popup close → go to course page
-    document.getElementById("closePopup").addEventListener("click", () => {
-      localStorage.setItem(STORAGE_PROGRESS, "100");
-      window.location.href = `course.html?course=${encodeURIComponent(course)}&progress=100&step=4`;
-    });
+    } catch (err) {
+      console.error("Progress error:", err);
+    }
+  }
 
+  // ---------------------------------------------------------
+  // INIT
+  // ---------------------------------------------------------
+  loadLesson();
+});
   </script>
 </body>
 </html>
