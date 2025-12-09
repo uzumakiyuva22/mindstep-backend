@@ -562,11 +562,6 @@
 document.addEventListener("DOMContentLoaded", () => {
 
   // ---------------------- USER LOADING ----------------------
-  // LoginPage stores:
-  // localStorage.userId
-  // localStorage.username
-  // localStorage.userImage
-
   const userId = localStorage.getItem("userId");
   const username = localStorage.getItem("username");
   const userImage = localStorage.getItem("userImage");
@@ -583,8 +578,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
   // ---------------------- LOAD COURSES ----------------------
-  const courseList = document.getElementById("courses");
-  courseList.innerHTML = ""; // Clear static cards
+  const courseSection = document.getElementById("courses");
 
   async function loadCourses() {
     try {
@@ -596,40 +590,51 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      for (const entry of data.results) {
-        const { course, lessonCount, totalTasks } = entry;
+      // If no courses found → show message
+      if (data.results.length === 0) {
+        courseSection.innerHTML = `
+          <h2 style="text-align:center; width:100%; color:#ff7070;">
+            ⚠ No Courses Found in Database <br> (Seed not executed)
+          </h2>
+        `;
+        return;
+      }
 
-        // Fetch user progress for this course
+      // Clear static cards
+      courseSection.innerHTML = "";
+
+      // Create dynamic course cards
+      data.results.forEach(async entry => {
+        const { course, lessonCount } = entry;
+
         let percent = 0;
         try {
           const pRes = await fetch(`/api/course/${course.slug}/progress/${userId}`);
           const pJson = await pRes.json();
           percent = pJson.percent || 0;
-        } catch (e) {}
+        } catch {}
 
-        // Create course card
         const card = document.createElement("div");
-        card.className = "card reveal";
+        card.className = "card visible";
+
         card.innerHTML = `
           <h3>${course.title} <span class="badge">${lessonCount} Lessons</span></h3>
-          <p>${course.description || ""}</p>
+          <p>${course.description}</p>
 
           <div class="progress-container">
             <div class="progress-bar" style="width:${percent}%"></div>
           </div>
-
           <div class="progress-text">${percent}% Completed</div>
 
           <button class="btn enroll">Start</button>
         `;
 
-        // On click → go to course page
         card.querySelector(".enroll").onclick = () => {
           window.location.href = `course.html?course=${course.slug}`;
         };
 
-        courseList.appendChild(card);
-      }
+        courseSection.appendChild(card);
+      });
 
     } catch (err) {
       console.error("loadCourses ERROR:", err);
@@ -654,7 +659,6 @@ document.addEventListener("DOMContentLoaded", () => {
     modal.classList.remove("active");
 
 });
-
 </script>
  </body>
   </html>
