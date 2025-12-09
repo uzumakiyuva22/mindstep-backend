@@ -558,102 +558,122 @@
 
     <!-- JavaScript Section -->
 <script>
-// === MainPage.js (fully working with backend Option 2) ===
+// === MainPage.js (FINAL 100% working version) ===
 document.addEventListener("DOMContentLoaded", () => {
 
+  // ---------------------- USER CHECK ----------------------
   const user = JSON.parse(localStorage.getItem("mindstep_user") || "null");
-  const userId = user?._id;
 
-  const courseListContainer = document.getElementById("courseList") || document.body;
+  if (!user) {
+    alert("Please login first!");
+    window.location.href = "LoginPage.html";
+    return;
+  }
 
-  // ---------------------------------------------------------
-  // Load all courses
-  // ---------------------------------------------------------
+  const userId = user._id;
+
+  // ---------------------- USER PROFILE --------------------
+  document.getElementById("username").textContent = user.username;
+  document.getElementById("profileImg").src = user.image || "https://via.placeholder.com/60";
+
+  // ---------------------- COURSE AREA ---------------------
+  const courseListContainer = document.getElementById("courses");   // FIXED ✔
+
+  // Replace old static cards
+  courseListContainer.innerHTML = "";
+
+  // ---------------------- LOAD COURSES --------------------
   async function loadCourses() {
     try {
       const res = await fetch("/api/public/courses");
       const data = await res.json();
 
       if (!data.success) {
-        console.error("Failed to load courses", data);
+        console.error("Failed to load courses:", data);
         return;
       }
 
-      courseListContainer.innerHTML = ""; // clear
-
-      data.results.forEach(async (entry) => {
+      // Loop all courses from backend
+      for (const entry of data.results) {
         const { course, lessonCount, totalTasks } = entry;
 
-        // Get user progress per course
+        // Load user progress
         let percent = 0;
+        try {
+          const pRes = await fetch(`/api/course/${course.slug}/progress/${userId}`);
+          const pJson = await pRes.json();
+          percent = pJson.percent || 0;
+        } catch {}
 
-        if (userId) {
-          try {
-            const pRes = await fetch(`/api/course/${course.slug}/progress/${userId}`);
-            const pJson = await pRes.json();
-            percent = pJson.percent || 0;
-          } catch (e) {
-            console.warn("Progress fetch failed", e);
-          }
-        }
+        // Create card
+        const div = document.createElement("div");
+        div.className = "card reveal";
 
-        // Create course card element
-        const card = document.createElement("div");
-        card.style = `
-          padding: 18px;
-          background: rgba(255,255,255,0.04);
-          border-radius: 12px;
-          margin-bottom: 16px;
-          cursor: pointer;
-          box-shadow: 0 8px 24px rgba(0,0,0,0.45);
-          transition: transform .2s;
-        `;
-        card.onmouseover = () => card.style.transform = "scale(1.02)";
-        card.onmouseout  = () => card.style.transform = "scale(1)";
-
-        card.innerHTML = `
-          <h2 style="font-family:Orbitron;">${course.title}</h2>
-          <p style="opacity:0.85; margin-top:4px;">${course.description || ""}</p>
-
-          <div style="margin-top:10px; opacity:0.85;">
-            Lessons: <b>${lessonCount}</b> | Tasks: <b>${totalTasks}</b>
+        div.innerHTML = `
+          <h3>${course.title} <span class="badge">${lessonCount} Lessons</span></h3>
+          <p>${course.description || ""}</p>
+          
+          <div class="progress-container">
+            <div class="progress-bar" style="width:${percent}%"></div>
           </div>
+          <div class="progress-text">${percent}% Completed</div>
 
-          <div style="margin-top:12px;">
-            <div style="background:#111; height:10px; width:100%; border-radius:8px; overflow:hidden;">
-              <div style="height:10px; background:linear-gradient(90deg,#ff2d55,#0066ff); width:${percent}%"></div>
-            </div>
-            <div style="margin-top:6px; font-weight:700; color:#00e5ff;">
-              ${percent}% Completed
-            </div>
-          </div>
+          <button class="btn enroll">Start</button>
         `;
 
-        card.addEventListener("click", () => {
+        div.querySelector(".enroll").onclick = () => {
           window.location.href = `course.html?course=${course.slug}`;
-        });
+        };
 
-        courseListContainer.appendChild(card);
-      });
+        courseListContainer.appendChild(div);
+      }
 
     } catch (err) {
       console.error("Course load error:", err);
     }
   }
 
-  // ---------------------------------------------------------
-  // Back to Login if no user
-  // ---------------------------------------------------------
-  if (!userId) {
-    alert("Please login first!");
-    window.location.href = "LoginPage.html";
-    return;
+  loadCourses();
+
+
+  // ---------------------- FULL-STACK PROGRESS ----------------------
+  async function loadFSProgress() {
+    try {
+      const res = await fetch(`/api/course/fullstack/progress/${userId}`);
+      const data = await res.json();
+
+      const bar = document.getElementById("fsd2");
+      const text = document.getElementById("fsd5");
+
+      if (data.success) {
+        bar.style.width = data.percent + "%";
+        text.textContent = "Completed: " + data.percent + "%";
+      }
+
+    } catch {}
   }
 
-  // ---------------------------------------------------------
-  // Load Courses
-  // ---------------------------------------------------------
-  loadCourses();
+  // If you don’t have fullstack course, ignore silently
+  loadFSProgress();
+
+
+  // ---------------------- EXIT LOGIC ----------------------
+  const exitLink = document.getElementById("exit-link");
+  const modal = document.getElementById("exit-modal");
+
+  exitLink.onclick = () => {
+    modal.classList.add("active");
+  };
+
+  document.getElementById("confirm-exit").onclick = () => {
+    localStorage.removeItem("mindstep_user");
+    window.location.href = "LoginPage.html";
+  };
+
+  document.getElementById("cancel-exit").onclick = () => {
+    modal.classList.remove("active");
+  };
+
 });
 </script>
  </body>

@@ -357,23 +357,36 @@
     </div>
   </div>
   <script>
-  // === course.js (Fully fixed for backend Option 2) ===
+// === course.js (FINAL FIXED 100% WORKING WITH ADVANCED BACKEND) ===
 document.addEventListener("DOMContentLoaded", () => {
 
   // ---------- GET COURSE SLUG ----------
   const params = new URLSearchParams(window.location.search);
-  const courseSlug = params.get("course") || "python";
+  let courseSlug = params.get("course");
+
+  // If opened without slug → block and return
+  if (!courseSlug) {
+    alert("Invalid course! Please open from MainPage.");
+    window.location.href = "MainPage.html";
+    return;
+  }
 
   // ---------- USER INFO ----------
   const user = JSON.parse(localStorage.getItem("mindstep_user") || "null");
-  const userId = user?._id;
+  if (!user) {
+    alert("Please login first!");
+    window.location.href = "LoginPage.html";
+    return;
+  }
+
+  const userId = user._id;
 
   // ---------- UI ELEMENTS ----------
   const courseTitle = document.getElementById("courseTitle");
   const courseSubtitle = document.getElementById("courseSubtitle");
   const lessonsContainer = document.querySelector(".lessons");
-  const stepper = document.getElementById("stepper");
   const introScreen = document.getElementById("introScreen");
+  const stepper = document.getElementById("stepper");
   const progressCircle = document.getElementById("progressArc");
   const progressText = document.getElementById("progressText");
 
@@ -390,6 +403,7 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const res = await fetch(`/api/course/${courseSlug}/lessons`);
       const data = await res.json();
+
       if (!data.success) {
         console.error("Course load failed:", data);
         return;
@@ -402,30 +416,30 @@ document.addEventListener("DOMContentLoaded", () => {
       courseTitle.textContent = course.title;
       courseSubtitle.textContent = course.description || "";
 
-      // Clear default lessons
+      // Remove default static lessons
       lessonsContainer.innerHTML = `<h3 style="font-family:Orbitron;margin-bottom:8px;">Lesson Plan</h3>`;
 
-      // Render lessons grouped (intro/basic/practice/project)
-      lessons.sort((a,b)=>a.order - b.order).forEach((lesson, idx) => {
-        const div = document.createElement("div");
-        div.className = "lesson";
-        div.innerHTML = `
-          <div>${idx+1}. ${lesson.title}</div>
+      // Build lessons dynamically
+      lessons.sort((a, b) => a.order - b.order);
+      lessons.forEach((lesson, index) => {
+        const row = document.createElement("div");
+        row.className = "lesson";
+
+        row.innerHTML = `
+          <div>${index + 1}. ${lesson.title}</div>
           <button class="play" data-id="${lesson._id}">Start Lesson</button>
         `;
-        lessonsContainer.appendChild(div);
-      });
 
-      // Attach click handler
-      lessonsContainer.addEventListener("click", e => {
-        const btn = e.target.closest(".play");
-        if (!btn) return;
-        const lessonId = btn.dataset.id;
-        window.location.href = `lesson.html?course=${courseSlug}&lessonId=${lessonId}`;
+        // Button → Go to lesson page
+        row.querySelector("button").onclick = () => {
+          window.location.href = `lesson.html?course=${courseSlug}&lessonId=${lesson._id}`;
+        };
+
+        lessonsContainer.appendChild(row);
       });
 
     } catch (err) {
-      console.error("LOAD COURSE ERROR:", err);
+      console.error("Error loading course:", err);
     }
   }
 
@@ -433,36 +447,30 @@ document.addEventListener("DOMContentLoaded", () => {
   // LOAD USER PROGRESS
   // -------------------------------------------------------
   async function loadProgress() {
-    if (!userId) {
-      // Not logged in, show 0 progress
-      updateProgress(0);
-      return;
-    }
-
     try {
       const res = await fetch(`/api/course/${courseSlug}/progress/${userId}`);
       const data = await res.json();
 
       if (!data.success) {
-        console.warn("Failed progress:", data);
         updateProgress(0);
         return;
       }
 
       updateProgress(data.percent);
+
     } catch (err) {
-      console.error("PROGRESS ERROR:", err);
+      console.error("Progress error:", err);
       updateProgress(0);
     }
   }
 
   function updateProgress(percent) {
     percent = Math.max(0, Math.min(percent, 100));
-    progressCircle.style.strokeDashoffset = C * (1 - percent/100);
+    progressCircle.style.strokeDashoffset = C * (1 - percent / 100);
     progressText.textContent = percent + "%";
 
-    // Show intro screen only before 1% progress
-    if (percent <= 0) {
+    // Show intro screen only at 0%
+    if (percent === 0) {
       introScreen.style.display = "flex";
       stepper.style.display = "none";
     } else {
@@ -472,12 +480,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // -------------------------------------------------------
-  // Intro → Stepper Transition
+  // INTRO → STEPPER TRANSITION
   // -------------------------------------------------------
   const startGameBtn = document.getElementById("startGameBtn");
   const ringAnim = document.querySelector(".ring-anim");
 
-  startGameBtn?.addEventListener("click", () => {
+  startGameBtn.onclick = () => {
     try {
       ringAnim.style.strokeDashoffset = "0";
       ringAnim.style.transform = "rotate(360deg)";
@@ -487,17 +495,17 @@ document.addEventListener("DOMContentLoaded", () => {
       introScreen.style.display = "none";
       stepper.style.display = "block";
     }, 900);
-  });
+  };
 
   // -------------------------------------------------------
-  // Back button
+  // Back Button
   // -------------------------------------------------------
   document.getElementById("backBtn").onclick = () => {
     window.location.href = "MainPage.html";
   };
 
   // -------------------------------------------------------
-  // INIT CALLS
+  // INIT LOAD
   // -------------------------------------------------------
   loadCourse();
   loadProgress();

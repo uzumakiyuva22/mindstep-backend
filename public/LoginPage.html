@@ -294,7 +294,7 @@ document.getElementById("signup-image").onchange = e => {
 
 
 /* ================================
-   USER LOGIN (FULLY FIXED)
+   USER LOGIN (100% FIXED)
 ================================ */
 document.getElementById("loginBtn").onclick = async () => {
   const usernameOrEmail = document.getElementById("login-username").value.trim();
@@ -315,19 +315,18 @@ document.getElementById("loginBtn").onclick = async () => {
     if (!data.success)
       return alert("Invalid login");
 
-    const u = data.user;
+    // ✔ Backend returns: data.user
+    const user = data.user;
 
-    // ✅ Correct variable: data.user not d.user
-    localStorage.setItem("userId", u._id);
-    localStorage.setItem("username", u.username);
-    localStorage.setItem("userImage", u.image || "");
+    // ✔ Correct storage (so all pages read it properly)
+    localStorage.setItem("mindstep_user", JSON.stringify(user));
 
     // Redirect
     location.href = "MainPage.html";
 
   } catch (err) {
     console.error(err);
-    alert("Server error");
+    alert("Server error during login");
   }
 };
 
@@ -369,7 +368,7 @@ document.getElementById("signupBtn").onclick = async () => {
     alert("Signup failed — server error");
   }
 };
-</script>
 
+</script>
 </body>
 </html>
