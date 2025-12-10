@@ -503,6 +503,28 @@ async function seedCoursesIfMissing() {
     console.error("Seeding error:", e && e.message ? e.message : e);
   }
 }
+// multipart upload for project submissions
+app.post("/api/task/upload", upload.single("file"), async (req, res) => {
+  try {
+    const { userId, taskId } = req.body;
+    if (!req.file) return res.status(400).json({ success: false, error: "No file" });
+
+    // upload to cloudinary
+    const uploaded = await cloudinary.uploader.upload(req.file.path, {
+      folder: `mindstep_projects/${taskId}`
+    });
+    safeUnlink(req.file.path);
+
+    const fileUrl = uploaded.secure_url || uploaded.url;
+    // optionally you can save fileUrl to a new collection linking user-task-file
+    // For now just return
+    res.json({ success: true, fileUrl });
+  } catch (e) {
+    console.error("upload error:", e);
+    res.status(500).json({ success: false, error: "Upload failed" });
+  }
+});
+
 
 // seed at startup (non-blocking)
 seedCoursesIfMissing().catch(e => console.error("seed failed:", e));
@@ -514,6 +536,26 @@ app.get("/", (req, res) => {
   if (fs.existsSync(file)) return res.sendFile(file);
   res.send("<h3>MindStep backend</h3><p>Place frontend files in /public</p>");
 });
+
+// ---------- ROUTES ----------
+const authRoutes = require("./routes/auth");
+const courseRoutes = require("./routes/courses");
+const lessonRoutes = require("./routes/lessons");
+const taskRoutes = require("./routes/task");
+const progressRoutes = require("./routes/progress");
+const publicRoutes = require("./routes/public");
+const adminRoutes = require("./routes/admin");
+
+// Use Routes
+app.use("/api/auth", authRoutes);
+app.use("/api/courses", courseRoutes);
+app.use("/api/lessons", lessonRoutes);
+app.use("/api/tasks", taskRoutes);
+app.use("/api/progress", progressRoutes);
+app.use("/api/public", publicRoutes);
+app.use("/api/admin", adminRoutes);
+
+app.use("/api/ai", require("./routes/ai"));
 
 // ---------- START SERVER ----------
 app.listen(PORT, () => console.log(`🔥 Server listening on http://localhost:${PORT}`));
