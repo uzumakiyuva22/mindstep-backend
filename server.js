@@ -484,6 +484,39 @@ app.get("/api/public/courses", async (req, res) => {
   }
 });
 
+  // Get course + lessons (and tasks) by slug
+  app.get('/api/course/:slug/lessons', async (req, res) => {
+    try {
+      const { slug } = req.params;
+      const Course = require('./models/Course');
+      const Lesson = require('./models/Lesson');
+      const Task = require('./models/Task');
+
+      const course = await Course.findOne({ slug });
+      if (!course) return res.status(404).json({ success: false, error: 'Course not found' });
+
+      const lessons = await Lesson.find({ course_id: course._id }).sort({ order: 1 });
+
+      // Attach tasks for each lesson (lightweight)
+      const lessonIds = lessons.map(l => l._id);
+      const tasks = await Task.find({ lesson_id: { $in: lessonIds } });
+
+      const lessonsWithTasks = lessons.map(l => ({
+        _id: l._id,
+        title: l.title,
+        section: l.section,
+        order: l.order,
+        content: l.content,
+        tasks: tasks.filter(t => String(t.lesson_id) === String(l._id)).map(t => ({ _id: t._id, title: t.title, language: t.language }))
+      }));
+
+      res.json({ success: true, course, lessons: lessonsWithTasks });
+    } catch (err) {
+      console.error('Course lessons error:', err);
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
 // Get course progress for user
 app.get("/api/course/:slug/progress/:userId", async (req, res) => {
   try {
