@@ -395,8 +395,10 @@ document.addEventListener("DOMContentLoaded", () => {
       const res = await fetch(`/api/course/${courseSlug}/lessons`);
       const data = await res.json();
 
-      if (!data.success) {
-        lessonsBox.innerHTML = "<p>Failed to load course</p>";
+      if (!data || !data.success) {
+        const msg = data && data.error ? data.error : 'Failed to load course (no details)';
+        lessonsBox.innerHTML = `<p style="color:#ff9b9b">Error loading course: ${msg}</p>`;
+        console.error('Course load failed:', data);
         return;
       }
 
