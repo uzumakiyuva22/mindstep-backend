@@ -1,13 +1,27 @@
-// ===============================
-//  MindStep - FINAL SERVER.JS
-//  Cloudinary_URL + MongoDB + Admin + Piston
-//  100% Error-Free Version
-// ===============================
+
+/**
+ * server.js — Final MindStep backend (CLOUDINARY + MONGODB + PISTON remote Java21)
+ * Node 18+ (global fetch available)
+ *
+ * Features:
+ *  - Cloudinary image uploads (CLOUDINARY_URL or CLOUDINARY_CLOUD_NAME/API_KEY/SECRET)
+ *  - MongoDB via MONGO_URI
+ *  - Signup / Login (bcrypt)
+ *  - Admin endpoints protected by ADMIN_SECRET (set in env)
+ *  - Run code endpoint using remote Piston (Java 21, Python, JS)
+ *  - Clean temp file handling
+ *  - Clear error reporting for missing envs
+ *
+ * Deploy notes:
+ *  - Set MONGO_URI and either CLOUDINARY_URL or CLOUDINARY_CLOUD_NAME + CLOUDINARY_API_KEY + CLOUDINARY_API_SECRET
+ *  - (Optional) set ADMIN_SECRET
+ *  - No local Java/javac required: Java code executes remotely via Piston API (emkc.org)
+ */
 
 require("dotenv").config();
-const express = require("express");
 const path = require("path");
 const fs = require("fs");
+const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
 const bcrypt = require("bcryptjs");
@@ -18,64 +32,71 @@ const util = require("util");
 const { execFile } = require("child_process");
 const execFileP = util.promisify(execFile);
 
-// ------------------ CONFIG ------------------
-
+// ---------- CONFIG ----------
 const PORT = process.env.PORT || 10000;
 const PUBLIC_DIR = path.join(__dirname, "public");
+const TEMP_DIR = path.join(__dirname, "temp");
 
-// Cloudinary URL
-if (!process.env.CLOUDINARY_URL) {
-  console.error("❌ CLOUDINARY_URL missing!");
-  process.exit(1);
-}
+// ensure temp directory
+if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR, { recursive: true });
 
-cloudinary.config({
-  cloudinary_url: process.env.CLOUDINARY_URL,
-  secure: true
-});
-
-// MongoDB
+// ---------- ENV CHECK ----------
 if (!process.env.MONGO_URI) {
-  console.error("❌ MONGO_URI missing!");
+  console.error("❌ ERROR: MONGO_URI is required in environment.");
+  process.exit(1);
+}
+if (
+  !process.env.CLOUDINARY_URL &&
+  !(
+    process.env.CLOUDINARY_CLOUD_NAME &&
+    process.env.CLOUDINARY_API_KEY &&
+    process.env.CLOUDINARY_API_SECRET
+  )
+) {
+  console.error(
+    "❌ ERROR: Cloudinary credentials missing. Provide CLOUDINARY_URL or CLOUDINARY_CLOUD_NAME + CLOUDINARY_API_KEY + CLOUDINARY_API_SECRET"
+  );
   process.exit(1);
 }
 
+// CLOUDINARY CONFIG
+try {
+  if (process.env.CLOUDINARY_URL) {
+    cloudinary.config({ cloudinary_url: process.env.CLOUDINARY_URL, secure: true });
+  } else {
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+      secure: true,
+    });
+  }
+} catch (e) {
+  console.error("❌ Cloudinary config error:", e && e.message ? e.message : e);
+  process.exit(1);
+}
+
+// ---------- MONGODB ----------
 mongoose.set("strictQuery", false);
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(async () => {
-    console.log("✔ MongoDB Connected");
-    // Seed courses on startup
-    try {
-      const seed = require("./seeds/seed.js");
-      await seed();
-    } catch (e) {
-      console.warn("Seed warning:", e.message);
-    }
-  })
+  .then(() => console.log("✔ MongoDB connected"))
   .catch((err) => {
-    console.error("❌ MongoDB Error:", err);
+    console.error("❌ MongoDB connection failed:", err && err.message ? err.message : err);
     process.exit(1);
   });
 
-// Admin Secret
-const ADMIN_SECRET = process.env.ADMIN_SECRET || null;
-
-// ------------------ APP SETUP ------------------
-
+// ---------- EXPRESS SETUP ----------
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(PUBLIC_DIR));
 
-// Multer (temp uploads)
-const tempDir = path.join(__dirname, "temp");
-if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
+// MULTER for uploads
+const upload = multer({ dest: TEMP_DIR, limits: { fileSize: 10 * 1024 * 1024 } });
 
-const upload = multer({ dest: tempDir });
-
-// safe unlink helper used by /run-code to remove temporary files
+// ---------- HELPERS ----------
 function safeUnlink(filePath) {
   try {
     if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
@@ -84,48 +105,32 @@ function safeUnlink(filePath) {
   }
 }
 
-// resolve Java binary command considering JAVA_HOME and platform
-function resolveJavaBin(binName) {
-  const isWin = process.platform === "win32";
-  const JAVA_HOME = process.env.JAVA_HOME || null;
-  // prefer JAVA_HOME if set
-  if (JAVA_HOME) {
-    const candidate = path.join(JAVA_HOME, "bin", binName + (isWin ? ".exe" : ""));
-    if (fs.existsSync(candidate)) return candidate;
-  }
-  // prefer system command
-  return binName;
-}
-
-// remote runner (Piston) fallback for environments without JDK
+// Remote Piston runner (public endpoint)
 async function runOnPiston(language, version, files) {
-  try {
-    const resp = await fetch("https://emkc.org/api/v2/piston/execute", {
+  const resp = await fetch("https://emkc.org/api/v2/piston/execute", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ language, version, files })
-    });
-    const data = await resp.json();
-    // Piston responses vary; prefer run.stdout / run.output / run.stderr
-    const out = data.run?.stdout || data.run?.output || data.run?.stderr || JSON.stringify(data);
-    return { output: out };
-  } catch (e) {
-    return { error: (e && e.message) || String(e) };
-  }
+      body: JSON.stringify({ language, version, files }),
+  });
+
+  const data = await resp.json();
+  return {
+      output: data.run?.stdout || data.run?.output || data.run?.stderr || ""
+  };
 }
 
-// ------------------ SCHEMAS ------------------
 
+// ---------- DB SCHEMAS ----------
 const userSchema = new mongoose.Schema(
   {
     _id: { type: String, default: uuidv4 },
-    username: String,
-    email: String,
-    password: String,
-    image: String,
+    username: { type: String, required: true, unique: true },
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    image: { type: String, default: null },
     percentage: { type: Number, default: 0 },
     deleted: { type: Boolean, default: false },
-    created_at: { type: Date, default: Date.now }
+    created_at: { type: Date, default: Date.now },
   },
   { versionKey: false }
 );
@@ -133,9 +138,9 @@ const userSchema = new mongoose.Schema(
 const adminSchema = new mongoose.Schema(
   {
     _id: { type: String, default: uuidv4 },
-    username: String,
-    password: String,
-    created_at: { type: Date, default: Date.now }
+    username: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    created_at: { type: Date, default: Date.now },
   },
   { versionKey: false }
 );
@@ -143,462 +148,354 @@ const adminSchema = new mongoose.Schema(
 const completionSchema = new mongoose.Schema(
   {
     _id: { type: String, default: uuidv4 },
-    user_id: String,
-    lesson_id: String
+    user_id: { type: String, required: true },
+    lesson_id: { type: String, required: true },
   },
   { versionKey: false }
 );
-
 completionSchema.index({ user_id: 1, lesson_id: 1 }, { unique: true });
 
 const User = mongoose.model("User", userSchema);
 const Admin = mongoose.model("Admin", adminSchema);
 const Completion = mongoose.model("Completion", completionSchema);
 
-// ------------------ DEFAULT ADMIN ------------------
+// Import external models
+const Course = require("./models/Course");
+const Lesson = require("./models/Lesson");
 
+// ---------- DEFAULT ADMIN (create if missing) ----------
 (async () => {
-  const defaultAdmin = await Admin.findOne({ username: "Uzumaki_Yuva" });
-  if (!defaultAdmin) {
-    await Admin.create({
-      username: "Uzumaki_Yuva",
-      password: bcrypt.hashSync("yuva22", 10)
-    });
-    console.log("✔ Default admin created");
+  try {
+    const defaultAdmin = "Uzumaki_Yuva";
+    const a = await Admin.findOne({ username: defaultAdmin }).lean();
+    if (!a) {
+      await Admin.create({
+        username: defaultAdmin,
+        password: bcrypt.hashSync("yuva22", 10),
+      });
+      console.log("✔ Default admin created (Uzumaki_Yuva)");
+    } else {
+      console.log("✔ Default admin exists");
+    }
+  } catch (e) {
+    console.error("Admin init error:", e && e.message ? e.message : e);
   }
 })();
 
-// ------------------ MIDDLEWARE ------------------
-
+// ---------- ADMIN AUTH ----------
+const ADMIN_SECRET = process.env.ADMIN_SECRET || null;
 function adminAuth(req, res, next) {
+  if (!ADMIN_SECRET) return res.status(403).json({ error: "Admin routes disabled (ADMIN_SECRET missing)" });
   const header = req.headers.authorization || "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : "";
-  if (!token || token !== ADMIN_SECRET)
-    return res.status(401).json({ error: "Unauthorized" });
+  if (!token || token !== ADMIN_SECRET) return res.status(401).json({ error: "Unauthorized" });
   next();
 }
 
-// ------------------ USER SIGNUP ------------------
+// ---------- ROUTES ----------
 
+// Health
+app.get("/health", async (req, res) => {
+  res.json({ ok: true, timestamp: Date.now() });
+});
+
+// Signup (image -> Cloudinary)
 app.post("/api/signup", upload.single("image"), async (req, res) => {
   try {
     const { username, email, password } = req.body;
+    if (!username || !email || !password) return res.status(400).json({ success: false, error: "Missing fields" });
 
-    const exists = await User.findOne({ $or: [{ username }, { email }] });
-    if (exists) return res.json({ success: false, error: "User already exists" });
+    const exists = await User.findOne({ $or: [{ username }, { email }] }).lean();
+    if (exists) return res.status(409).json({ success: false, error: "User already exists" });
 
-    // Upload image
     let imageUrl = null;
     if (req.file) {
-      const uploaded = await cloudinary.uploader.upload(req.file.path, {
-        folder: "mindstep_users"
-      });
-      imageUrl = uploaded.secure_url;
-      fs.unlinkSync(req.file.path);
+      try {
+        const uploaded = await cloudinary.uploader.upload(req.file.path, { folder: "mindstep_users" });
+        imageUrl = uploaded.secure_url || uploaded.url || null;
+      } catch (e) {
+        console.error("Cloudinary upload error (signup):", e && e.message ? e.message : e);
+      } finally {
+        safeUnlink(req.file.path);
+      }
     }
 
     const user = await User.create({
       username,
       email,
       password: bcrypt.hashSync(password, 10),
-      image: imageUrl
+      image: imageUrl,
     });
 
-    res.json({
-      success: true,
-      user: {
-        _id: user._id,
-        username: user.username,
-        email: user.email,
-        image: user.image
-      }
-    });
+    const out = { _id: user._id, username: user.username, email: user.email, image: user.image };
+    res.json({ success: true, user: out });
   } catch (err) {
-    console.error("Signup error:", err);
-    res.json({ success: false, error: "Signup failed" });
+    console.error("Signup error:", err && err.message ? err.message : err);
+    res.status(500).json({ success: false, error: "Server error" });
   }
 });
 
-// ------------------ USER LOGIN ------------------
-
+// Login
 app.post("/api/login", async (req, res) => {
   try {
     const { usernameOrEmail, password } = req.body;
-    const user = await User.findOne({
-      $or: [{ username: usernameOrEmail }, { email: usernameOrEmail }]
-    });
+    if (!usernameOrEmail || !password) return res.status(400).json({ success: false, error: "Missing fields" });
 
-    if (!user) return res.json({ success: false, error: "Invalid login" });
-    if (!bcrypt.compareSync(password, user.password))
-      return res.json({ success: false, error: "Invalid login" });
+    const user = await User.findOne({ $or: [{ username: usernameOrEmail }, { email: usernameOrEmail }], deleted: false });
+    if (!user) return res.status(401).json({ success: false, error: "Invalid credentials" });
+    if (!bcrypt.compareSync(password, user.password)) return res.status(401).json({ success: false, error: "Invalid credentials" });
 
-    res.json({
-      success: true,
-      user: {
-        _id: user._id,
-        username: user.username,
-        email: user.email,
-        image: user.image,
-        percentage: user.percentage
-      }
-    });
+    const out = { _id: user._id, username: user.username, email: user.email, image: user.image, percentage: user.percentage };
+    res.json({ success: true, user: out });
   } catch (e) {
-    res.json({ success: false, error: "Server error" });
+    console.error("Login error:", e && e.message ? e.message : e);
+    res.status(500).json({ success: false, error: "Server error" });
   }
 });
 
-// ------------------ ADMIN LOGIN ------------------
-
+// Admin login (returns adminSecret so frontend can store admin_token)
 app.post("/api/admin-login", async (req, res) => {
-  const { username, password } = req.body;
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) return res.status(400).json({ success: false, error: "Missing fields" });
 
-  const admin = await Admin.findOne({ username });
-  if (!admin) return res.json({ success: false, error: "Admin not found" });
+    const admin = await Admin.findOne({ username });
+    if (!admin) return res.status(404).json({ success: false, error: "Admin not found" });
+    if (!bcrypt.compareSync(password, admin.password)) return res.status(401).json({ success: false, error: "Wrong password" });
 
-  const ok = bcrypt.compareSync(password, admin.password);
-  if (!ok) return res.json({ success: false, error: "Wrong password" });
-
-  res.json({ success: true, adminSecret: ADMIN_SECRET });
-});
-
-// ------------------ ADMIN ROUTES ------------------
-
-app.get("/api/admin/overview", adminAuth, async (req, res) => {
-  const totalUsers = await User.countDocuments({});
-  res.json({
-    success: true,
-    totalUsers,
-    activeCourses: 5,
-    dailyVisits: 224,
-    reports: 3
-  });
-});
-
-app.get("/api/admin/users", adminAuth, async (req, res) => {
-  const users = await User.find({}, "-password").lean();
-  res.json({ success: true, users });
-});
-
-app.get("/api/admin/user/:id", adminAuth, async (req, res) => {
-  const user = await User.findById(req.params.id).select("-password").lean();
-  const lessonsDone = await Completion.countDocuments({ user_id: user._id });
-  res.json({ success: true, user, lessonsDone });
-});
-
-app.put("/api/admin/user/:id", adminAuth, async (req, res) => {
-  const update = {};
-  if (req.body.username) update.username = req.body.username;
-  if (req.body.email) update.email = req.body.email;
-  if (req.body.password)
-    update.password = bcrypt.hashSync(req.body.password, 10);
-
-  await User.findByIdAndUpdate(req.params.id, update);
-  res.json({ success: true });
-});
-
-app.post(
-  "/api/admin/user/:id/image",
-  adminAuth,
-  upload.single("image"),
-  async (req, res) => {
-    if (!req.file) return res.json({ success: false, error: "No file" });
-
-    const uploaded = await cloudinary.uploader.upload(req.file.path, {
-      folder: "mindstep_users"
-    });
-
-    await User.findByIdAndUpdate(req.params.id, { image: uploaded.secure_url });
-    fs.unlinkSync(req.file.path);
-
-    res.json({ success: true, image: uploaded.secure_url });
+    res.json({ success: true, admin: { id: admin._id, username: admin.username }, adminSecret: ADMIN_SECRET || null });
+  } catch (e) {
+    console.error("Admin login error:", e && e.message ? e.message : e);
+    res.status(500).json({ success: false, error: "Server error" });
   }
-);
+});
 
+// Admin overview
+app.get("/api/admin/overview", adminAuth, async (req, res) => {
+  try {
+    const totalUsers = await User.countDocuments({});
+    res.json({ success: true, totalUsers, activeCourses: 5, dailyVisits: 224, reports: 3 });
+  } catch (e) {
+    console.error("/api/admin/overview error:", e && e.message ? e.message : e);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+// List users
+app.get("/api/admin/users", adminAuth, async (req, res) => {
+  try {
+    const users = await User.find({}, "-password").sort({ created_at: -1 }).lean();
+    res.json({ success: true, users });
+  } catch (e) {
+    console.error("/api/admin/users error:", e && e.message ? e.message : e);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+// Get single user
+app.get("/api/admin/user/:id", adminAuth, async (req, res) => {
+  try {
+    const u = await User.findById(req.params.id).select("-password").lean();
+    if (!u) return res.status(404).json({ success: false, error: "User not found" });
+    const lessonsDone = await Completion.countDocuments({ user_id: u._id });
+    res.json({ success: true, user: u, lessonsDone });
+  } catch (e) {
+    console.error("/api/admin/user/:id error:", e && e.message ? e.message : e);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+// Edit user
+app.put("/api/admin/user/:id", adminAuth, async (req, res) => {
+  try {
+    const update = {};
+    if (req.body.username) update.username = req.body.username;
+    if (req.body.email) update.email = req.body.email;
+    if (req.body.password) update.password = bcrypt.hashSync(req.body.password, 10);
+    await User.findByIdAndUpdate(req.params.id, update);
+    res.json({ success: true });
+  } catch (e) {
+    console.error("PUT /api/admin/user/:id error:", e && e.message ? e.message : e);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+// Admin upload user image
+app.post("/api/admin/user/:id/image", adminAuth, upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, error: "No file" });
+    const uploaded = await cloudinary.uploader.upload(req.file.path, { folder: "mindstep_users" });
+    const url = uploaded.secure_url || uploaded.url || null;
+    await User.findByIdAndUpdate(req.params.id, { image: url });
+    safeUnlink(req.file.path);
+    res.json({ success: true, image: url });
+  } catch (e) {
+    console.error("admin image upload error:", e && e.message ? e.message : e);
+    safeUnlink(req.file && req.file.path);
+    res.status(500).json({ success: false, error: "Upload failed" });
+  }
+});
+
+// Purge user
 app.post("/api/admin/user/:id/purge", adminAuth, async (req, res) => {
-  await User.findByIdAndDelete(req.params.id);
-  await Completion.deleteMany({ user_id: req.params.id });
-  res.json({ success: true });
+  try {
+    await User.findByIdAndDelete(req.params.id);
+    await Completion.deleteMany({ user_id: req.params.id });
+    res.json({ success: true });
+  } catch (e) {
+    console.error("Purge error:", e && e.message ? e.message : e);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
 });
 
+// Reset progress
 app.post("/api/admin/user/:id/reset", adminAuth, async (req, res) => {
-  await Completion.deleteMany({ user_id: req.params.id });
-  await User.findByIdAndUpdate(req.params.id, { percentage: 0 });
-  res.json({ success: true });
+  try {
+    await Completion.deleteMany({ user_id: req.params.id });
+    await User.findByIdAndUpdate(req.params.id, { percentage: 0 });
+    res.json({ success: true });
+  } catch (e) {
+    console.error("Reset error:", e && e.message ? e.message : e);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
 });
 
-// ------------------ PROGRESS ------------------
-
+// Complete lesson (user)
 app.post("/api/complete", async (req, res) => {
-  const { userId, lessonId } = req.body;
+  try {
+    const { userId, lessonId } = req.body;
+    if (!userId || !lessonId) return res.status(400).json({ success: false, error: "Missing fields" });
 
-  await Completion.updateOne(
-    { user_id: userId, lesson_id: lessonId },
-    { $setOnInsert: { _id: uuidv4(), user_id: userId, lesson_id: lessonId } },
-    { upsert: true }
-  );
+    await Completion.updateOne(
+      { user_id: userId, lesson_id: String(lessonId) },
+      { $setOnInsert: { _id: uuidv4(), user_id: userId, lesson_id: String(lessonId) } },
+      { upsert: true }
+    );
 
-  const total = 4;
-  const done = await Completion.countDocuments({ user_id: userId });
-  const percent = Math.round((done / total) * 100);
+    const totalLessons = 4;
+    const done = await Completion.countDocuments({ user_id: userId });
+    const percent = Math.round((done / totalLessons) * 100);
+    await User.findByIdAndUpdate(userId, { percentage: percent });
 
-  await User.findByIdAndUpdate(userId, { percentage: percent });
-
-  res.json({ success: true, percentage: percent });
+    res.json({ success: true, percentage: percent });
+  } catch (e) {
+    console.error("Complete error:", e && e.message ? e.message : e);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
 });
 
-// ------------------ GET USER ------------------
-
+// Get user (public)
 app.get("/api/get-user/:id", async (req, res) => {
-  const user = await User.findById(req.params.id).select("-password").lean();
-  res.json(user);
+  try {
+    const u = await User.findById(req.params.id).select("-password").lean();
+    if (!u) return res.status(404).json({ error: "User not found" });
+    res.json(u);
+  } catch (e) {
+    console.error("/api/get-user error:", e && e.message ? e.message : e);
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
-// ------------------ RUN CODE ------------------
-// NOTE: The local `/run-code` handler (below) runs code on the server
-// directly (Java/Python/JS). A previous version proxied to the Piston
-// API — that duplicate route has been removed so the local runner is used.
-
+// ---------- RUN CODE (REMOTE PISTON) ----------
+// This implementation always uses the Piston remote engine (no local javac/java required).
 app.post("/run-code", async (req, res) => {
   try {
     const { language, source } = req.body || {};
-    if (!language || !source) return res.status(400).json({ error: "Missing language/source" });
+    if (!language || !source) return res.status(400).json({ error: "Missing language or source" });
 
-    console.log("/run-code request for", language);
-
-    // ----- JAVA -----
     if (language === "java") {
-      const javacCmd = resolveJavaBin("javac");
-      const javaCmd = resolveJavaBin("java");
-
-      // quick availability check (execFile will throw if not found)
-      try {
-        await execFileP(javacCmd, ["-version"]).catch(() => {});
-        await execFileP(javaCmd, ["-version"]).catch(() => {});
-      } catch (e) {
-        console.error("Java availability check failed:", e && e.message);
-        // fall back to remote runner if available
-        const remote = await runOnPiston("java", "17", [{ name: `Main.java`, content: source }]);
-        if (remote.output) return res.json({ output: remote.output });
-        return res.status(500).json({ error: "Java not available on server. Ensure JDK is installed and JAVA_HOME/PATH configured." });
-      }
-
-      // If the user declared a public class, Java requires the file name to
-      // match that public class. Detect it and write the .java file using
-      // that class name. Otherwise fall back to `Main`.
+      // always run on remote Piston Java 21
       const m = source.match(/public\s+class\s+([A-Za-z_$][A-Za-z0-9_$]*)/);
       const className = m ? m[1] : "Main";
-      const javaFile = path.join(tempDir, `${className}.java`);
-      const classFile = path.join(tempDir, `${className}.class`);
-      try {
-        fs.writeFileSync(javaFile, source, "utf8");
-        // compile
-        await execFileP(javacCmd, [javaFile]);
-      } catch (compileErr) {
-        safeUnlink(javaFile); safeUnlink(classFile);
-        const msg = (compileErr.stderr || compileErr.message || String(compileErr)).toString();
-        console.error("Java compile error:", msg);
-        // If javac isn't present, fall back to remote execution
-        if (compileErr && (compileErr.code === 'ENOENT' || /ENOENT/.test(msg))) {
-          console.info('javac not found locally — falling back to Piston remote execution');
-          const remote = await runOnPiston('java', '17', [{ name: `${className}.java`, content: source }]);
-          if (remote.output) return res.json({ output: remote.output });
-          if (remote.error) return res.json({ error: 'Remote execution failed: ' + remote.error });
-        }
-        return res.json({ error: "Compilation failed: " + msg });
-      }
 
-      try {
-        const { stdout, stderr } = await execFileP(javaCmd, ["-cp", tempDir, className]);
-        const out = (stdout || "") + (stderr || "");
-        return res.json({ output: out || "" });
-      } catch (runErr) {
-        const msg = (runErr.stderr || runErr.message || String(runErr)).toString();
-        console.error("Java runtime error:", msg);
-        // If java binary isn't present, fall back to remote execution
-        if (runErr && (runErr.code === 'ENOENT' || /ENOENT/.test(msg))) {
-          console.info('java not found locally — falling back to Piston remote execution');
-          const remote = await runOnPiston('java', '17', [{ name: `${className}.java`, content: source }]);
-          if (remote.output) return res.json({ output: remote.output });
-          if (remote.error) return res.json({ error: 'Remote execution failed: ' + remote.error });
-        }
-        return res.json({ error: "Runtime failed: " + msg });
-      } finally {
-        safeUnlink(javaFile); safeUnlink(classFile);
-      }
+      const remote = await runOnPiston("java", "21.0.2", [
+        { name: `${className}.java`, content: source }
+      ]);
+
+      if (remote.output) return res.json({ output: remote.output });
+      if (remote.error) return res.status(500).json({ error: "Remote Java execution failed: " + remote.error });
+      return res.status(500).json({ error: "Unknown Java remote error" });
+      return res.status(500).json({
+        error: "Remote Java execution failed: " + (remote.error || "Unknown")
+      });
     }
 
-    // ----- PYTHON -----
     if (language === "python") {
-      const pyCmd = (process.env.PYTHON || "python");
-      const pyFile = path.join(tempDir, "script.py");
-      try {
-        fs.writeFileSync(pyFile, source, "utf8");
-        const { stdout, stderr } = await execFileP(pyCmd, [pyFile]);
-        return res.json({ output: (stdout || "") + (stderr || "") });
-      } catch (e) {
-        const msg = (e.stderr || e.message || String(e)).toString();
-        console.error("Python run error:", msg);
-        return res.json({ error: "Python run failed: " + msg });
-      } finally {
-        safeUnlink(path.join(tempDir, "script.py"));
-      }
+      const remote = await runOnPiston("python", "3.10.0", [{ name: "script.py", content: source }]);
+      if (remote.output) return res.json({ output: remote.output });
+      if (remote.error) return res.status(500).json({ error: "Remote Python execution failed: " + remote.error });
+      return res.status(500).json({ error: "Unknown Python remote error" });
     }
 
-    // ----- JAVASCRIPT (server-side eval) -----
     if (language === "javascript") {
       try {
-        const result = eval(source);
-        return res.json({ output: String(result ?? "") });
-      } catch (err) {
-        return res.json({ error: "JS Error: " + err.message });
+        // For JS we can run remotely as well, but quick local eval (not secure) or remote fallback.
+        // We'll run remote to keep behaviour consistent and sandboxed.
+        const remote = await runOnPiston("javascript", "18.15.0", [{ name: "script.js", content: source }]);
+        if (remote.output) return res.json({ output: remote.output });
+        if (remote.error) return res.status(500).json({ error: "Remote JS execution failed: " + remote.error });
+        return res.status(500).json({ error: "Unknown JS remote error" });
+      } catch (e) {
+        console.error("JS remote error:", e && e.message ? e.message : e);
+        return res.status(500).json({ error: "Server error running JS" });
       }
     }
 
     return res.status(400).json({ error: "Language not supported" });
   } catch (err) {
-    console.error("run-code handler error:", err && err.stack ? err.stack : err);
-    return res.status(500).json({ error: "Server error" });
+    console.error("run-code handler failed:", err && err.stack ? err.stack : err);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
-// ========== COURSE ENDPOINTS ==========
+// Root serve public LoginPage.html if available
 
-// Get all courses with lesson count
-app.get("/api/public/courses", async (req, res) => {
+// Get course and its lessons by slug
+app.get("/api/course/:slug/lessons", async (req, res) => {
   try {
-    const Course = require("./models/Course");
-    const Lesson = require("./models/Lesson");
+    const { slug } = req.params;
+    const course = await Course.findOne({ slug }).lean();
+    if (!course) return res.status(404).json({ success: false, error: "Course not found" });
 
-    const courses = await Course.find({});
-    const results = [];
-
-    for (const course of courses) {
-      const lessonCount = await Lesson.countDocuments({ course_id: course._id });
-      results.push({ course, lessonCount });
-    }
-
-    res.json({ success: true, results });
-  } catch (err) {
-    console.error("Course fetch error:", err);
-    res.status(500).json({ success: false, error: err.message });
+    const lessons = await Lesson.find({ course_id: course._id }).sort({ order: 1 }).lean();
+    res.json({ success: true, course, lessons });
+  } catch (e) {
+    console.error("/api/course/:slug/lessons error:", e && e.message ? e.message : e);
+    res.status(500).json({ success: false, error: "Server error" });
   }
 });
 
-  // Get course + lessons (and tasks) by slug
-  app.get('/api/course/:slug/lessons', async (req, res) => {
-    try {
-      const { slug } = req.params;
-      const Course = require('./models/Course');
-      const Lesson = require('./models/Lesson');
-      const Task = require('./models/Task');
-
-      const course = await Course.findOne({ slug });
-      if (!course) return res.status(404).json({ success: false, error: 'Course not found' });
-
-      const lessons = await Lesson.find({ course_id: course._id }).sort({ order: 1 });
-
-      // Attach tasks for each lesson (lightweight)
-      const lessonIds = lessons.map(l => l._id);
-      const tasks = await Task.find({ lesson_id: { $in: lessonIds } });
-
-      const lessonsWithTasks = lessons.map(l => ({
-        _id: l._id,
-        title: l.title,
-        section: l.section,
-        order: l.order,
-        content: l.content,
-        tasks: tasks.filter(t => String(t.lesson_id) === String(l._id)).map(t => ({ _id: t._id, title: t.title, language: t.language }))
-      }));
-
-      res.json({ success: true, course, lessons: lessonsWithTasks });
-    } catch (err) {
-      console.error('Course lessons error:', err);
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-// Get course progress for user
+// Get user progress for a course
 app.get("/api/course/:slug/progress/:userId", async (req, res) => {
   try {
     const { slug, userId } = req.params;
-    const Course = require("./models/Course");
-    const Lesson = require("./models/Lesson");
+    const course = await Course.findOne({ slug }).lean();
+    if (!course) return res.status(404).json({ success: false, error: "Course not found" });
 
-    const course = await Course.findOne({ slug });
-    if (!course) return res.json({ percent: 0 });
+    const completions = await Completion.countDocuments({ user_id: userId, course_id: course._id }).lean();
+    const totalLessons = await Lesson.countDocuments({ course_id: course._id });
+    const percent = totalLessons > 0 ? Math.round((completions / totalLessons) * 100) : 0;
 
-    const lessons = await Lesson.find({ course_id: course._id });
-    if (lessons.length === 0) return res.json({ percent: 0 });
-
-    const completed = await Completion.countDocuments({
-      user_id: userId,
-      lesson_id: { $in: lessons.map(l => l._id) }
-    });
-
-    const percent = Math.round((completed / lessons.length) * 100);
-    res.json({ percent });
-  } catch (err) {
-    console.error("Progress fetch error:", err);
-    res.json({ percent: 0 });
+    res.json({ success: true, percent, completions, totalLessons });
+  } catch (e) {
+    console.error("/api/course/:slug/progress/:userId error:", e && e.message ? e.message : e);
+    res.status(500).json({ success: false, error: "Server error" });
   }
 });
-
-// Reseed courses (dev endpoint)
-app.post("/api/admin/reseed", async (req, res) => {
-  try {
-    const Course = require("./models/Course");
-    const Lesson = require("./models/Lesson");
-    const Task = require("./models/Task");
-
-    // Clear old data
-    await Course.deleteMany({});
-    await Lesson.deleteMany({});
-    await Task.deleteMany({});
-
-    // Run seed
-    const seed = require("./seeds/seed");
-    await seed();
-
-    res.json({ success: true, message: "Courses reseeded successfully" });
-  } catch (err) {
-    console.error("Reseed error:", err);
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// ========== END COURSE ENDPOINTS ==========
-
-// ------------------ ROOT ------------------
 
 app.get("/", (req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, "LoginPage.html"));
+  const file = path.join(PUBLIC_DIR, "LoginPage.html");
+  if (fs.existsSync(file)) return res.sendFile(file);
+  return res.send("<h3>MindStep backend running</h3><p>Place your frontend files in /public</p>");
 });
 
-// Health endpoint — reports whether Java compiler is available
-app.get('/health', async (req, res) => {
-  try {
-    const javac = resolveJavaBin('javac');
-    await execFileP(javac, ['-version']).catch(()=>{});
-    return res.json({ status: 'ok', javac: true });
-  } catch (e) {
-    return res.json({ status: 'ok', javac: false });
-  }
-});
-
-// ------------------ START ------------------
-
-const server = app.listen(PORT, () =>
-  console.log(`🔥 SERVER RUNNING → http://localhost:${PORT}`)
-);
-
-server.on('error', (err) => {
-  if (err && err.code === 'EADDRINUSE') {
-    console.error(`Port ${PORT} is already in use. Another instance may be running.`);
-    console.error('To free the port on Windows run:');
-    console.error('  netstat -ano | findstr ":' + PORT + '"');
-    console.error('  taskkill /PID <pid> /F');
+// ---------- START SERVER ----------
+const server = app.listen(PORT, () => console.log(`🔥 Server running on http://localhost:${PORT}`));
+server.on("error", (err) => {
+  if (err && err.code === "EADDRINUSE") {
+    console.error(`Port ${PORT} already in use.`);
     process.exit(1);
   }
-  console.error('Server error:', err);
+  console.error("Server error:", err && err.message ? err.message : err);
   process.exit(1);
 });
