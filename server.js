@@ -78,6 +78,13 @@ try {
 
 // ---------- MONGODB ----------
 mongoose.set("strictQuery", false);
+// Global error handlers to aid debugging of silent exits
+process.on('unhandledRejection', (reason, p) => {
+  console.error('Unhandled Rejection at:', p, reason && reason.stack ? reason.stack : reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err && err.stack ? err.stack : err);
+});
 mongoose
   .connect(process.env.MONGO_URI)
   .then(async () => {
