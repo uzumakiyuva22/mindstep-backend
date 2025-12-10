@@ -43,7 +43,16 @@ if (!process.env.MONGO_URI) {
 mongoose.set("strictQuery", false);
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(() => console.log("✔ MongoDB Connected"))
+  .then(async () => {
+    console.log("✔ MongoDB Connected");
+    // Seed courses on startup
+    try {
+      const seed = require("./seeds/seed.js");
+      await seed();
+    } catch (e) {
+      console.warn("Seed warning:", e.message);
+    }
+  })
   .catch((err) => {
     console.error("❌ MongoDB Error:", err);
     process.exit(1);
