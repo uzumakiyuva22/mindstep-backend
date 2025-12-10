@@ -483,7 +483,26 @@ app.get("/api/course/:slug/lessons", async (req, res) => {
     const course = await Course.findOne({ slug }).lean();
     if (!course) return res.status(404).json({ success: false, error: "Course not found" });
 
-    const lessons = await Lesson.find({ course_id: course._id }).sort({ order: 1 }).lean();
+    // Lesson.course_id may be stored as ObjectId or as a string (legacy UUIDs).
+    // Try ObjectId query first if valid; otherwise fall back to string match.
+    let lessons = [];
+    try {
+      if (mongoose.Types.ObjectId.isValid(course._id)) {
+        lessons = await Lesson.find({ course_id: mongoose.Types.ObjectId(course._id) }).sort({ order: 1 }).lean();
+      } else {
+        lessons = await Lesson.find({ course_id: String(course._id) }).sort({ order: 1 }).lean();
+      }
+    } catch (findErr) {
+      console.warn('/api/course/:slug/lessons - fallback query due to', findErr && findErr.message ? findErr.message : findErr);
+      // Final fallback: attempt a permissive OR query to match either form
+      try {
+        lessons = await Lesson.find({ $or: [{ course_id: course._id }, { course_id: String(course._id) }] }).sort({ order: 1 }).lean();
+      } catch (finalErr) {
+        console.error('/api/course/:slug/lessons final query error:', finalErr && finalErr.message ? finalErr.message : finalErr);
+        return res.status(500).json({ success: false, error: 'Server error' });
+      }
+    }
+
     res.json({ success: true, course, lessons });
   } catch (e) {
     console.error("/api/course/:slug/lessons error:", e && e.message ? e.message : e);
