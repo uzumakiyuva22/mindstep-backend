@@ -4,8 +4,15 @@ const Task = require('../models/Task');
 
 async function seedCoursesIfMissing(){
   const existing = await Course.countDocuments({});
-  if (existing > 0) {
-    console.log('Courses exist — skipping seeding');
+  const requiredCourses = ['html', 'css', 'javascript', 'java', 'python'];
+  const existingCourses = await Course.find({}, { slug: 1 });
+  const existingSlugs = existingCourses.map(c => c.slug);
+  
+  // Check if all required courses exist
+  const allCoursesExist = requiredCourses.every(slug => existingSlugs.includes(slug));
+  
+  if (allCoursesExist && existing >= 5) {
+    console.log('All 5 courses exist — skipping seeding');
     return;
   }
 

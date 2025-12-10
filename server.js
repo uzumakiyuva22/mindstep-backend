@@ -461,6 +461,80 @@ app.post("/run-code", async (req, res) => {
   }
 });
 
+// ========== COURSE ENDPOINTS ==========
+
+// Get all courses with lesson count
+app.get("/api/public/courses", async (req, res) => {
+  try {
+    const Course = require("./models/Course");
+    const Lesson = require("./models/Lesson");
+
+    const courses = await Course.find({});
+    const results = [];
+
+    for (const course of courses) {
+      const lessonCount = await Lesson.countDocuments({ course_id: course._id });
+      results.push({ course, lessonCount });
+    }
+
+    res.json({ success: true, results });
+  } catch (err) {
+    console.error("Course fetch error:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Get course progress for user
+app.get("/api/course/:slug/progress/:userId", async (req, res) => {
+  try {
+    const { slug, userId } = req.params;
+    const Course = require("./models/Course");
+    const Lesson = require("./models/Lesson");
+
+    const course = await Course.findOne({ slug });
+    if (!course) return res.json({ percent: 0 });
+
+    const lessons = await Lesson.find({ course_id: course._id });
+    if (lessons.length === 0) return res.json({ percent: 0 });
+
+    const completed = await Completion.countDocuments({
+      user_id: userId,
+      lesson_id: { $in: lessons.map(l => l._id) }
+    });
+
+    const percent = Math.round((completed / lessons.length) * 100);
+    res.json({ percent });
+  } catch (err) {
+    console.error("Progress fetch error:", err);
+    res.json({ percent: 0 });
+  }
+});
+
+// Reseed courses (dev endpoint)
+app.post("/api/admin/reseed", async (req, res) => {
+  try {
+    const Course = require("./models/Course");
+    const Lesson = require("./models/Lesson");
+    const Task = require("./models/Task");
+
+    // Clear old data
+    await Course.deleteMany({});
+    await Lesson.deleteMany({});
+    await Task.deleteMany({});
+
+    // Run seed
+    const seed = require("./seeds/seed");
+    await seed();
+
+    res.json({ success: true, message: "Courses reseeded successfully" });
+  } catch (err) {
+    console.error("Reseed error:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ========== END COURSE ENDPOINTS ==========
+
 // ------------------ ROOT ------------------
 
 app.get("/", (req, res) => {
