@@ -101,67 +101,48 @@
   </div>
 
   <script>
-  // === lesson.js (FINAL 100% FIXED VERSION FOR ADVANCED BACKEND) ===
+// === MindStep Lesson.js — FINAL 100% WORKING VERSION ===
 document.addEventListener("DOMContentLoaded", () => {
 
-  // ----------------------------------------------------
-  // PARAMS
-  // ----------------------------------------------------
-  const params = new URLSearchParams(window.location.search);
+  // ---------------- URL PARAMS ----------------
+  const params = new URLSearchParams(location.search);
   const lessonId = params.get("lessonId");
   const courseSlug = params.get("course");
 
   if (!lessonId || !courseSlug) {
     alert("Invalid lesson link!");
-    return;
+    return location.href = "MainPage.html";
   }
 
-  // ----------------------------------------------------
-  // USER
-  // ----------------------------------------------------
+  // ---------------- USER CHECK ----------------
   const user = JSON.parse(localStorage.getItem("mindstep_user") || "null");
   if (!user) {
     alert("Please login!");
-    location.href = "LoginPage.html";
-    return;
+    return location.href = "LoginPage.html";
   }
   const userId = user._id;
 
-  // ----------------------------------------------------
-  // UI ELEMENTS
-  // ----------------------------------------------------
+  // ---------------- UI ELEMENTS ----------------
   const titleEl = document.getElementById("lessonTitle");
   const descEl  = document.getElementById("lessonDesc");
+  const popup = document.getElementById("popupBox");
+  const closePopup = document.getElementById("closePopup");
 
-  // If #tasks does not exist → create it inside container
   let taskContainer = document.getElementById("tasks");
   if (!taskContainer) {
     taskContainer = document.createElement("div");
     taskContainer.id = "tasks";
-    taskContainer.style.marginTop = "20px";
     document.querySelector(".container").appendChild(taskContainer);
   }
 
-  const runBtnGlobal = document.getElementById("runBtn");
-  const codeBoxGlobal = document.getElementById("code");
-  const languageSelect = document.getElementById("lang");
-  const outputBox = document.getElementById("output");
-  const previewFrame = document.getElementById("preview");
-  const completeBtn = document.getElementById("completeBtn");
-
-  const popup = document.getElementById("popupBox");
-  const closePopup = document.getElementById("closePopup");
-
-  // ----------------------------------------------------
-  // LOAD LESSON DETAILS
-  // ----------------------------------------------------
+  // ---------------- LOAD LESSON DETAILS ----------------
   async function loadLesson() {
     try {
       const res = await fetch(`/api/lesson/${lessonId}/details`);
       const data = await res.json();
 
       if (!data.success) {
-        console.error("Lesson load failed", data);
+        titleEl.textContent = "Failed to load lesson";
         return;
       }
 
@@ -169,149 +150,156 @@ document.addEventListener("DOMContentLoaded", () => {
       const tasks = data.tasks;
 
       titleEl.textContent = lesson.title;
-      descEl.textContent = lesson.description || "";
+      descEl.textContent = lesson.content || "";
 
-      // Render tasks
-      taskContainer.innerHTML = "";
-
-      tasks.forEach((task, idx) => {
-        const block = document.createElement("div");
-        block.style = `
-          padding:16px;
-          background:rgba(255,255,255,0.05);
-          border-radius:12px;
-          margin-bottom:18px;
-        `;
-
-        block.innerHTML = `
-          <h3 style="font-family:Orbitron;">Task ${idx + 1}: ${task.title}</h3>
-          <p style="opacity:.85;">${task.description}</p>
-
-          <textarea id="task_code_${task._id}" 
-            style="width:100%;height:140px;background:#05070f;color:#eaf6ff;border-radius:10px;padding:10px;margin-top:8px;font-family:monospace;">${task.starterCode || ""}</textarea>
-
-          <button data-id="${task._id}" class="runTaskBtn"
-            style="margin-top:12px;padding:10px 18px;border:none;border-radius:10px;font-weight:700;
-            background:linear-gradient(90deg,#ff2d55,#0066ff);cursor:pointer;color:white;">
-            ▶ Run & Check
-          </button>
-
-          <pre id="task_out_${task._id}" 
-            style="background:#000;padding:12px;margin-top:10px;border-radius:10px;color:#00ffb7;">Output will appear here...</pre>
-        `;
-
-        taskContainer.appendChild(block);
-      });
-
-      attachTaskRunner(tasks);
-      loadProgress();
+      renderTasks(tasks);
+      updateProgress();
 
     } catch (err) {
       console.error("Lesson load error:", err);
     }
   }
 
-  // ----------------------------------------------------
-  // TASK RUNNER
-  // ----------------------------------------------------
-  function attachTaskRunner(tasks) {
+  // ---------------- RENDER TASKS ----------------
+  function renderTasks(tasks) {
+    taskContainer.innerHTML = "";
 
+    tasks.forEach((task, index) => {
+      const block = document.createElement("div");
+      block.style = `
+        padding:16px;
+        margin-top:20px;
+        background:rgba(255,255,255,0.05);
+        border-radius:12px;
+      `;
+
+      block.innerHTML = `
+        <h3 style="font-family:Orbitron;">Task ${index + 1}: ${task.title}</h3>
+        <p style="opacity:.85;">${task.description || ""}</p>
+
+        <textarea id="code_${task._id}"
+          style="width:100%;height:140px;padding:10px;margin-top:8px;
+          background:#05070f;color:#eaf6ff;border-radius:10px;">
+${task.starterCode || ""}
+        </textarea>
+
+        <button class="runTaskBtn" data-id="${task._id}"
+          style="margin-top:12px;padding:10px 18px;border:none;border-radius:10px;
+          background:linear-gradient(90deg,#ff2d55,#0066ff);color:white;cursor:pointer;">
+          ▶ Run Task
+        </button>
+
+        <pre id="out_${task._id}"
+          style="margin-top:10px;background:#000;padding:12px;border-radius:10px;
+          color:#00ffb7;">Output will appear here...</pre>
+      `;
+
+      taskContainer.appendChild(block);
+    });
+
+    attachTaskLogic(tasks);
+  }
+
+  // ---------------- ATTACH LOGIC ====================
+  function attachTaskLogic(tasks) {
     taskContainer.addEventListener("click", async (e) => {
       const btn = e.target.closest(".runTaskBtn");
       if (!btn) return;
 
       const taskId = btn.dataset.id;
       const task = tasks.find(t => t._id === taskId);
+      const code = document.getElementById(`code_${taskId}`).value;
+      const outBox = document.getElementById(`out_${taskId}`);
 
-      const codeBox = document.getElementById(`task_code_${taskId}`);
-      const outBox = document.getElementById(`task_out_${taskId}`);
-
-      const code = codeBox.value;
-      outBox.textContent = "Running...";
-
-      // HTML / CSS PREVIEW (NO RUNNER)
+      // ---------------- HTML / CSS preview ----------------
       if (task.language === "html" || task.language === "css") {
-        previewFrame.style.display = "block";
-        previewFrame.srcdoc = code;
+        const iframe = document.getElementById("preview");
+        iframe.style.display = "block";
+        iframe.srcdoc = code;
         outBox.textContent = "Preview updated ✔";
+        await submitCompletion(taskId, "preview");
+        updateProgress();
         return;
       }
 
-      // Send to backend code runner
+      // ---------------- RUN CODE BACKEND ----------------
+      outBox.textContent = "Running...";
+
+      let output = "";
       try {
         const res = await fetch("/api/task/run", {
           method: "POST",
-          headers: {"Content-Type": "application/json"},
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            userId,
-            taskId,
-            lessonId,
-            courseSlug,
             language: task.language,
-            code
+            code: code
           })
         });
 
-        const data = await res.json();
-
-        outBox.textContent = `Output:\n${data.output}\n\nResult: ${data.passed ? "✔ Correct" : "❌ Incorrect"}`;
-
-        // If correct → save completion
-        if (data.passed) {
-          await saveTaskCompletion(taskId);
-          loadProgress();
-        }
-
+        const json = await res.json();
+        output = json.output || "";
+        outBox.textContent = `Output:\n${output}`;
       } catch (err) {
-        outBox.textContent = "Error: " + err.message;
+        outBox.textContent = "Runner Error: " + err.message;
+        return;
       }
+
+      // ---------------- CHECK ANSWER ----------------
+      const passed = await submitCompletion(taskId, output);
+
+      outBox.textContent += `\n\nResult: ${passed ? "✔ Correct" : "❌ Incorrect"}`;
+
+      if (passed) updateProgress();
     });
   }
 
-  // ----------------------------------------------------
-  // SAVE TASK COMPLETION
-  // ----------------------------------------------------
-  async function saveTaskCompletion(taskId) {
-    await fetch("/api/task/submit", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({ userId, taskId, lessonId, courseSlug })
-    });
+  // ---------------- SUBMIT COMPLETION (RUN + CHECK) ----------------
+  async function submitCompletion(taskId, output) {
+    try {
+      const res = await fetch("/api/task/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          taskId,
+          lessonId,
+          courseSlug,
+          output
+        })
+      });
+
+      const data = await res.json();
+      return data.passed || false;
+    } catch (err) {
+      console.error("Submit error:", err);
+      return false;
+    }
   }
 
-  // ----------------------------------------------------
-  // LOAD PROGRESS + COURSE COMPLETION
-  // ----------------------------------------------------
-  async function loadProgress() {
+  // ---------------- UPDATE PROGRESS ----------------
+  async function updateProgress() {
     try {
       const res = await fetch(`/api/course/${courseSlug}/progress/${userId}`);
       const data = await res.json();
-      if (!data.success) return;
 
-      const pct = data.percent;
-
-      // Auto-complete popup
-      if (pct === 100) {
+      if (data.percent === 100) {
         popup.style.display = "flex";
       }
 
     } catch (err) {
-      console.error("Progress error:", err);
+      console.warn("Progress error:", err);
     }
   }
 
-  // Close popup
   closePopup.onclick = () => {
     popup.style.display = "none";
     location.href = "MainPage.html";
   };
 
-  // ----------------------------------------------------
-  // INIT
-  // ----------------------------------------------------
+  // ---------------- INIT ----------------
   loadLesson();
-
 });
+
   </script>
 </body>
 </html>

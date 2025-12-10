@@ -357,119 +357,165 @@
     </div>
   </div>
   <script>
-// course.js — connect to upgraded backend
+// === MindStep Course.js — FINAL 100% WORKING VERSION ===
+
 document.addEventListener("DOMContentLoaded", () => {
-  // user must be logged in — stored as mindstep_user
-  const user = JSON.parse(localStorage.getItem("mindstep_user") || "null");
-  if (!user) {
+
+  // ---------------- USER CHECK ----------------
+  const saved = localStorage.getItem("mindstep_user");
+  if (!saved) {
     alert("Please login!");
-    window.location.href = "LoginPage.html";
-    return;
+    return location.href = "LoginPage.html";
   }
+  const user = JSON.parse(saved);
   const userId = user._id;
 
-  // get course slug from query (course.html?course=python)
-  const params = new URLSearchParams(window.location.search);
-  const courseSlug = params.get("course") || "python";
 
-  // UI refs (assumes your HTML has these ids/classes)
-  const courseTitleEl = document.getElementById("courseTitle"); // optional
-  const lessonsWrap = document.getElementById("lessonsWrap") || document.getElementById("lessons") || document.querySelector(".lessons");
-  const progressBar = document.getElementById("courseProgressBar"); // optional element id for top progress
-  const progressText = document.getElementById("courseProgressText");
+  // ---------------- GET COURSE SLUG ----------------
+  const params = new URLSearchParams(location.search);
+  const courseSlug = params.get("course");
 
-  // fallback create UI area if not present
-  let lessonsContainer = lessonsWrap;
-  if (!lessonsContainer) {
-    lessonsContainer = document.createElement("div");
-    lessonsContainer.id = "lessonsWrap";
-    document.body.appendChild(lessonsContainer);
+  if (!courseSlug) {
+    alert("Invalid course!");
+    return;
   }
 
-  async function loadCourseAndLessons() {
+
+  // ---------------- UI ELEMENTS ----------------
+  const courseTitleEl = document.getElementById("courseTitle");
+  const courseSubtitleEl = document.getElementById("courseSubtitle");
+  const lessonsBox = document.querySelector(".lessons");   // your real lessons container
+  const moduleHeading = document.getElementById("moduleHeading");
+  const moduleDesc = document.getElementById("moduleDesc");
+
+
+  // ---------------- LOAD COURSE + LESSONS ----------------
+  async function loadCourse() {
     try {
       const res = await fetch(`/api/course/${courseSlug}/lessons`);
-      const json = await res.json();
-      if (!json.success) {
-        console.error("Course load failed", json);
-        lessonsContainer.textContent = "Failed to load course.";
+      const data = await res.json();
+
+      if (!data.success) {
+        lessonsBox.innerHTML = "<p>Failed to load course</p>";
         return;
       }
 
-      const course = json.course;
-      const lessons = json.lessons; // array of lessons each contains tasks
+      const course = data.course;
+      const lessons = data.lessons;
 
-      if (courseTitleEl) courseTitleEl.textContent = course.title || course.slug;
+      // Set title
+      courseTitleEl.textContent = course.title;
+      courseSubtitleEl.textContent = course.description || "";
 
-      // Render lessons grouped by section: Introduction/Basic/Practice/Project
-      lessonsContainer.innerHTML = "";
+      // Update module card text
+      moduleHeading.textContent = course.title;
+      moduleDesc.textContent = `This course has ${lessons.length} lessons. Continue your learning flow below.`;
 
-      // create a section card for each lesson
-      lessons.forEach(lesson => {
-        const card = document.createElement("div");
-        card.className = "lesson-card";
-        card.style = "margin:12px 0;padding:12px;background:rgba(255,255,255,0.03);border-radius:10px;";
 
-        const heading = document.createElement("h3");
-        heading.textContent = lesson.title;
-        heading.style = "font-family:Orbitron;margin-bottom:6px;";
+      // ---------------- DISPLAY LESSONS ----------------
+      lessonsBox.innerHTML = ""; // clear old static lessons
 
-        const desc = document.createElement("p");
-        desc.textContent = lesson.content || "";
+      lessons.forEach((lesson, index) => {
+        const div = document.createElement("div");
+        div.className = "lesson";
+        div.innerHTML = `
+            <div>Lesson ${index + 1}: ${lesson.title}</div>
+            <button class="play">Start Lesson</button>
+        `;
 
-        const btn = document.createElement("button");
-        btn.textContent = "Open Lesson";
-        btn.className = "cta";
-        btn.style.marginTop = "10px";
-        btn.onclick = () => {
-          // go to lesson page
-          window.location.href = `lesson.html?course=${courseSlug}&lessonId=${lesson._id}`;
+        div.querySelector(".play").onclick = () => {
+          location.href = `lesson.html?course=${courseSlug}&lessonId=${lesson._id}`;
         };
 
-        // task count badge
-        const tcount = (lesson.tasks && lesson.tasks.length) || 0;
-        const badge = document.createElement("span");
-        badge.textContent = `${tcount} tasks`;
-        badge.style = "margin-left:12px;padding:6px;border-radius:999px;background:rgba(255,255,255,0.03);font-weight:700;";
-
-        card.appendChild(heading);
-        card.appendChild(desc);
-        card.appendChild(btn);
-        card.appendChild(badge);
-
-        lessonsContainer.appendChild(card);
+        lessonsBox.appendChild(div);
       });
 
-      // load progress
       updateProgress();
 
     } catch (err) {
-      console.error("Error loading course", err);
-      lessonsContainer.textContent = "Error loading course.";
+      console.error(err);
+      lessonsBox.innerHTML = "<p>Error loading course</p>";
     }
   }
 
+
+  // ---------------- COURSE PROGRESS ----------------
   async function updateProgress() {
     try {
       const res = await fetch(`/api/course/${courseSlug}/progress/${userId}`);
-      const json = await res.json();
-      if (!json.success) return;
-      const pct = json.percent || 0;
-      // animate progress bar if present
-      if (progressBar) {
-        progressBar.style.width = pct + "%";
-      }
-      if (progressText) progressText.textContent = `${pct}% Completed`;
-    } catch (e) {
-      console.warn("Progress error", e);
+      const data = await res.json();
+      const percent = data.percent || 0;
+
+      // Circle progress update
+      const circle = document.getElementById("progressArc");
+      const text = document.getElementById("progressText");
+
+      const circumference = 2 * Math.PI * 28; // r=28
+      circle.style.strokeDasharray = circumference;
+      circle.style.strokeDashoffset = circumference - (percent / 100) * circumference;
+
+      text.textContent = `${percent}%`;
+
+    } catch (err) {
+      console.warn("Progress error:", err);
     }
   }
 
-  // initial load
-  loadCourseAndLessons();
 
-  // optional: poll progress every 6s to reflect changes if user completed tasks in another tab
-  setInterval(updateProgress, 6000);
+  // ---------------- BACK BUTTON ----------------
+  document.getElementById("backBtn").onclick = () => {
+    location.href = "MainPage.html";
+  };
+
+
+  // ---------------- STEP SYSTEM (INTRO → BASIC → PRACTICE → PROJECT) ----------------
+  const introScreen = document.getElementById("introScreen");
+  const stepper = document.getElementById("stepper");
+  const startGameBtn = document.getElementById("startGameBtn");
+
+  startGameBtn.onclick = () => {
+    introScreen.style.display = "none";
+    stepper.style.display = "block";
+  };
+
+
+  let currentStep = 1;
+  const totalSteps = 4;
+
+  const nextBtn = document.getElementById("nextStep");
+  const prevBtn = document.getElementById("prevStep");
+
+  nextBtn.onclick = () => {
+    if (currentStep < totalSteps) {
+      currentStep++;
+      updateStepUI();
+    }
+  };
+
+  prevBtn.onclick = () => {
+    if (currentStep > 1) {
+      currentStep--;
+      updateStepUI();
+    }
+  };
+
+  function updateStepUI() {
+    document.querySelectorAll(".step").forEach(step => {
+      const num = parseInt(step.dataset.step);
+      step.classList.toggle("step-active", num === currentStep);
+    });
+
+    document.querySelectorAll(".panel").forEach(panel => {
+      const num = parseInt(panel.dataset.step);
+      panel.classList.toggle("panel-active", num === currentStep);
+    });
+
+    updateProgress(); // update circle each step
+  }
+
+
+  // ---------------- LOAD EVERYTHING ----------------
+  loadCourse();
 });
 </script>
 </body>

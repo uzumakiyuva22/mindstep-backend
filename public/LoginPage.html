@@ -265,9 +265,16 @@ h2{
 </div>
 
 <script>
-const API_BASE = "http://localhost:10000";   // ALWAYS correct backend URL
+// ===============================
+// AUTO BACKEND URL (works LOCAL + RENDER)
+// ===============================
+const API_BASE = window.location.origin.includes("localhost")
+  ? "http://localhost:10000"
+  : window.location.origin;
 
-/* SWITCH LOGIN ↔ SIGNUP */
+// ===============================
+// SWITCH LOGIN / SIGNUP
+// ===============================
 document.getElementById("showSignup").onclick =
  () => document.getElementById("container").classList.add("active");
 
@@ -275,7 +282,9 @@ document.getElementById("showLogin").onclick =
  () => document.getElementById("container").classList.remove("active");
 
 
-/* PROFILE IMAGE PREVIEW */
+// ===============================
+// PROFILE IMAGE PREVIEW
+// ===============================
 document.getElementById("profileLabel").onclick =
  () => document.getElementById("signup-image").click();
 
@@ -290,9 +299,9 @@ document.getElementById("signup-image").onchange = e => {
 };
 
 
-/* ============================
-      LOGIN (100% FIXED)
-============================= */
+// ===============================
+// LOGIN (FINAL 100% FIXED)
+// ===============================
 document.getElementById("loginBtn").onclick = async () => {
   const usernameOrEmail = document.getElementById("login-username").value.trim();
   const password = document.getElementById("login-password").value.trim();
@@ -301,32 +310,31 @@ document.getElementById("loginBtn").onclick = async () => {
     return alert("Enter login details");
 
   try {
-    const res = await fetch(`${API_BASE}/api/login`, {
+    const res = await fetch(`/api/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ usernameOrEmail, password })
     });
 
-    if (!res.ok) return alert("Login failed (server error)");
-
     const data = await res.json();
 
-    if (!data.success) return alert(data.error || "Invalid login");
+    if (!data.success) {
+      return alert("Invalid username or password");
+    }
 
     localStorage.setItem("mindstep_user", JSON.stringify(data.user));
-
     location.href = "MainPage.html";
 
   } catch (err) {
     console.error(err);
-    alert("Login error — backend not reachable");
+    alert("Login failed: Backend not reachable");
   }
 };
 
 
-/* ============================
-      SIGNUP (100% FIXED)
-============================= */
+// ===============================
+// SIGNUP (FINAL 100% FIXED)
+// ===============================
 document.getElementById("signupBtn").onclick = async () => {
   const username = document.getElementById("signup-username").value.trim();
   const email = document.getElementById("signup-email").value.trim();
@@ -347,20 +355,23 @@ document.getElementById("signupBtn").onclick = async () => {
   if (image) form.append("image", image);
 
   try {
-    const res = await fetch(`${API_BASE}/api/signup`, {
+    const res = await fetch(`/api/signup`, {
       method: "POST",
       body: form
     });
 
     const data = await res.json();
-    if (!data.success) return alert(data.error || "Signup failed");
 
-    alert("Signup successful! Please log in.");
+    if (!data.success) {
+      return alert(data.error || "Signup failed");
+    }
+
+    alert("Signup successful! Please login now.");
     location.href = "LoginPage.html";
 
   } catch (err) {
     console.error(err);
-    alert("Signup failed — backend not reachable");
+    alert("Signup failed: Backend not reachable");
   }
 };
 </script>

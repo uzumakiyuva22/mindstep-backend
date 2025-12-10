@@ -538,9 +538,9 @@
         <div>© 2025 MindStepLap | MindStep@gmail.com</div>
         <div class="footer-links"></div>
         <div class="socials">
-          <a href="">T</a>
-          <a href=""Google.com>G</a>
-          <a href="">in</a>
+          <a href="https://twitter.com" target="_blank">T</a>
+          <a href="https://google.com" target="_blank">G</a>
+          <a href="https://linkedin.com" target="_blank">in</a>
         </div>
       </div>
     </footer>
@@ -559,61 +559,57 @@
     <!-- JavaScript Section -->
 <script>
 // === MainPage.js — FINAL 100% Working ===
+
 document.addEventListener("DOMContentLoaded", () => {
 
-  // ---------------------- USER LOADING ----------------------
-  const userId = localStorage.getItem("userId");
-  const username = localStorage.getItem("username");
-  const userImage = localStorage.getItem("userImage");
+  // ---------------------- LOAD USER ----------------------
+  const saved = localStorage.getItem("mindstep_user");
 
-  if (!userId) {
+  if (!saved) {
     alert("Please login first!");
-    window.location.href = "LoginPage.html";
-    return;
+    return (window.location.href = "LoginPage.html");
   }
 
-  // ---------------------- USER PROFILE SET ----------------------
-  document.getElementById("username").textContent = username;
-  document.getElementById("profileImg").src = userImage || "https://via.placeholder.com/60";
+  const user = JSON.parse(saved);
+
+  // Display user info
+  document.getElementById("username").textContent = user.username;
+  document.getElementById("profileImg").src =
+    user.image || "https://via.placeholder.com/60";
+
+
+  const userId = user._id;  // IMPORTANT
 
 
   // ---------------------- LOAD COURSES ----------------------
-  const courseSection = document.getElementById("courses");
-
   async function loadCourses() {
     try {
       const res = await fetch("/api/public/courses");
       const data = await res.json();
 
-      if (!data.success) {
-        console.error("Course fetch failed");
+      const courseSection = document.getElementById("courses");
+      courseSection.innerHTML = ""; // Clear old cards
+
+      if (!data.success || data.results.length === 0) {
+        courseSection.innerHTML =
+          `<h2 style="text-align:center;width:100%;color:#ff7070;">
+             ⚠ No Courses Found (Backend Seed Failed)
+           </h2>`;
         return;
       }
 
-      // If no courses found → show message
-      if (data.results.length === 0) {
-        courseSection.innerHTML = `
-          <h2 style="text-align:center; width:100%; color:#ff7070;">
-            ⚠ No Courses Found in Database <br> (Seed not executed)
-          </h2>
-        `;
-        return;
-      }
-
-      // Clear static cards
-      courseSection.innerHTML = "";
-
-      // Create dynamic course cards
-      data.results.forEach(async entry => {
+      for (const entry of data.results) {
         const { course, lessonCount } = entry;
 
-        let percent = 0;
+        // --- GET PROGRESS ---
+        let progress = 0;
         try {
-          const pRes = await fetch(`/api/course/${course.slug}/progress/${userId}`);
-          const pJson = await pRes.json();
-          percent = pJson.percent || 0;
-        } catch {}
+          const p = await fetch(`/api/course/${course.slug}/progress/${userId}`);
+          const pj = await p.json();
+          progress = pj.percent || 0;
+        } catch (e) {}
 
+        // --- Build course card ---
         const card = document.createElement("div");
         card.className = "card visible";
 
@@ -621,7 +617,10 @@ document.addEventListener("DOMContentLoaded", () => {
           <h3>${course.title} <span class="badge">${lessonCount} Lessons</span></h3>
           <p>${course.description}</p>
 
-  
+          <div class="progress-container">
+            <div class="progress-bar" style="width:${progress}%;"></div>
+          </div>
+          <div class="progress-text">${progress}% Completed</div>
 
           <button class="btn enroll">Start</button>
         `;
@@ -631,14 +630,48 @@ document.addEventListener("DOMContentLoaded", () => {
         };
 
         courseSection.appendChild(card);
-      });
+      }
 
     } catch (err) {
-      console.error("loadCourses ERROR:", err);
+      console.error("Course loading error:", err);
     }
   }
 
   loadCourses();
+
+
+  // ---------------------- FULL-STACK PROGRESS BAR ----------------------
+  async function loadFullStackProgress() {
+    let totalPercent = 0;
+    let courseCount = 0;
+
+    try {
+      const res = await fetch("/api/public/courses");
+      const data = await res.json();
+      if (!data.success) return;
+
+      for (const entry of data.results) {
+        const c = entry.course.slug;
+
+        const p = await fetch(`/api/course/${c}/progress/${userId}`);
+        const pj = await p.json();
+
+        totalPercent += pj.percent || 0;
+        courseCount++;
+      }
+
+      const avg = courseCount ? Math.round(totalPercent / courseCount) : 0;
+
+      // Update FSD progress bar
+      document.getElementById("fsd2").style.width = avg + "%";
+      document.getElementById("fsd5").textContent = `Completed: ${avg}%`;
+
+    } catch (err) {
+      console.error("FullStack progress error:", err);
+    }
+  }
+
+  loadFullStackProgress();
 
 
   // ---------------------- EXIT BUTTON ----------------------
@@ -648,14 +681,14 @@ document.addEventListener("DOMContentLoaded", () => {
   exitLink.onclick = () => modal.classList.add("active");
 
   document.getElementById("confirm-exit").onclick = () => {
-    localStorage.clear();
+    localStorage.removeItem("mindstep_user");
     window.location.href = "LoginPage.html";
   };
 
   document.getElementById("cancel-exit").onclick = () =>
     modal.classList.remove("active");
-
 });
+
 </script>
  </body>
   </html>

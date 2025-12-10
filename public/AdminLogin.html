@@ -204,8 +204,8 @@ body::before{
 <div class="toast" id="toast"></div>
 
 <script>
-// ===============================
-// ADMIN LOGIN — FINAL WORKING JS
+/// ===============================
+// ADMIN LOGIN — 100% FIXED VERSION
 // ===============================
 
 function showToast(msg) {
@@ -225,7 +225,7 @@ document.getElementById("adminLoginBtn").onclick = async () => {
     }
 
     try {
-        const res = await fetch("/api/admin-login", {
+        const res = await fetch("/api/auth/admin-login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ username, password })
@@ -238,22 +238,22 @@ document.getElementById("adminLoginBtn").onclick = async () => {
             return;
         }
 
-        // IMPORTANT:
-        // server.js protects admin routes using ADMIN_SECRET
-        // So we save that token in localStorage and use it in AdminDashboard
-        localStorage.setItem("admin_token", data.adminSecret);
+        // Save admin token for dashboard pages
+        localStorage.setItem("admin_token", data.token);
+        localStorage.setItem("admin_name", data.admin.username);
 
-        showToast("Login successful!");
+        showToast("Admin login successful!");
 
         setTimeout(() => {
             window.location.href = "AdminDashboard.html";
-        }, 800);
+        }, 900);
 
     } catch (err) {
         console.error(err);
-        showToast("Server error");
+        showToast("Server unreachable — check backend");
     }
 };
+
 </script>
 
 </body>
