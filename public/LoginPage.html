@@ -265,9 +265,9 @@ h2{
 </div>
 
 <script>
-/* ================================
-   SWITCH LOGIN ↔ SIGNUP
-================================ */
+const API_BASE = "http://localhost:10000";   // ALWAYS correct backend URL
+
+/* SWITCH LOGIN ↔ SIGNUP */
 document.getElementById("showSignup").onclick =
  () => document.getElementById("container").classList.add("active");
 
@@ -275,9 +275,7 @@ document.getElementById("showLogin").onclick =
  () => document.getElementById("container").classList.remove("active");
 
 
-/* ================================
-   PROFILE IMAGE PREVIEW
-================================ */
+/* PROFILE IMAGE PREVIEW */
 document.getElementById("profileLabel").onclick =
  () => document.getElementById("signup-image").click();
 
@@ -288,14 +286,13 @@ document.getElementById("signup-image").onchange = e => {
   const p = document.getElementById("signup-preview");
   p.src = URL.createObjectURL(f);
   p.style.display = "block";
-
   document.getElementById("profileLabel").style.display = "none";
 };
 
 
-/* ================================
-   USER LOGIN (100% FIXED)
-================================ */
+/* ============================
+      LOGIN (100% FIXED)
+============================= */
 document.getElementById("loginBtn").onclick = async () => {
   const usernameOrEmail = document.getElementById("login-username").value.trim();
   const password = document.getElementById("login-password").value.trim();
@@ -304,36 +301,32 @@ document.getElementById("loginBtn").onclick = async () => {
     return alert("Enter login details");
 
   try {
-    const res = await fetch("/api/login", {
+    const res = await fetch(`${API_BASE}/api/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ usernameOrEmail, password })
     });
 
+    if (!res.ok) return alert("Login failed (server error)");
+
     const data = await res.json();
 
-    if (!data.success)
-      return alert("Invalid login");
+    if (!data.success) return alert(data.error || "Invalid login");
 
-    // ✔ Backend returns: data.user
-    const user = data.user;
+    localStorage.setItem("mindstep_user", JSON.stringify(data.user));
 
-    // ✔ Correct storage (so all pages read it properly)
-    localStorage.setItem("mindstep_user", JSON.stringify(user));
-
-    // Redirect
     location.href = "MainPage.html";
 
   } catch (err) {
     console.error(err);
-    alert("Server error during login");
+    alert("Login error — backend not reachable");
   }
 };
 
 
-/* ================================
-   USER SIGNUP (SAFE & WORKING)
-================================ */
+/* ============================
+      SIGNUP (100% FIXED)
+============================= */
 document.getElementById("signupBtn").onclick = async () => {
   const username = document.getElementById("signup-username").value.trim();
   const email = document.getElementById("signup-email").value.trim();
@@ -354,21 +347,23 @@ document.getElementById("signupBtn").onclick = async () => {
   if (image) form.append("image", image);
 
   try {
-    const res = await fetch("/api/signup", { method: "POST", body: form });
+    const res = await fetch(`${API_BASE}/api/signup`, {
+      method: "POST",
+      body: form
+    });
+
     const data = await res.json();
+    if (!data.success) return alert(data.error || "Signup failed");
 
-    if (!data.success)
-      return alert(data.error || "Signup failed");
-
-    alert("Signup successful! Please login.");
+    alert("Signup successful! Please log in.");
     location.href = "LoginPage.html";
 
   } catch (err) {
     console.error(err);
-    alert("Signup failed — server error");
+    alert("Signup failed — backend not reachable");
   }
 };
-
 </script>
+
 </body>
 </html>
