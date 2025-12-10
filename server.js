@@ -80,7 +80,26 @@ try {
 mongoose.set("strictQuery", false);
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(() => console.log("✔ MongoDB connected"))
+  .then(async () => {
+    console.log("✔ MongoDB connected");
+    // Seed courses on startup if seed script exists
+    try {
+      const seed = require("./seeds/seed.js");
+      if (typeof seed === "function") await seed();
+    } catch (e) {
+      console.warn("Seed warning:", e && e.message ? e.message : e);
+    }
+
+    // Log current courses (count + slugs) to help debugging if frontend shows no lessons
+    try {
+      const Course = require("./models/Course");
+      const courses = await Course.find({}).lean();
+      console.log(`Courses in DB: ${courses.length}`);
+      if (courses.length > 0) console.log(`Course slugs: ${courses.map((c) => c.slug).join(", ")}`);
+    } catch (e) {
+      console.warn("Course log error:", e && e.message ? e.message : e);
+    }
+  })
   .catch((err) => {
     console.error("❌ MongoDB connection failed:", err && err.message ? err.message : err);
     process.exit(1);
@@ -498,4 +517,31 @@ server.on("error", (err) => {
   }
   console.error("Server error:", err && err.message ? err.message : err);
   process.exit(1);
+});
+
+// Public listing of courses with lesson counts (used by MainPage)
+app.get('/api/public/courses', async (req, res) => {
+  try {
+    const courses = await Course.find({}).lean();
+    const results = [];
+    for (const c of courses) {
+      let lessonCount = 0;
+      try {
+        if (mongoose.Types.ObjectId.isValid(c._id)) {
+          lessonCount = await Lesson.countDocuments({ course_id: mongoose.Types.ObjectId(c._id) });
+        } else {
+          // Fallback when course._id is a string (legacy UUIDs) — count by string value
+          lessonCount = await Lesson.countDocuments({ course_id: String(c._id) });
+        }
+      } catch (countErr) {
+        console.warn('/api/public/courses - count error for', c._id, countErr && countErr.message ? countErr.message : countErr);
+        lessonCount = 0;
+      }
+      results.push({ course: c, lessonCount });
+    }
+    return res.json({ success: true, results });
+  } catch (e) {
+    console.error('/api/public/courses error:', e && e.message ? e.message : e);
+    return res.status(500).json({ success: false, error: 'Server error' });
+  }
 });
