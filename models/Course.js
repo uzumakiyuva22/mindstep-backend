@@ -1,14 +1,12 @@
+// models/Course.js
 const mongoose = require("mongoose");
+const { v4: uuidv4 } = require("uuid");
 
-const courseSchema = new mongoose.Schema(
-  {
-    _id: mongoose.Schema.Types.ObjectId,
-    slug: { type: String, unique: true, required: true },
-    title: { type: String, required: true },
-    description: String,
-    created_at: { type: Date, default: Date.now }
-  },
-  { versionKey: false }
-);
+const courseSchema = new mongoose.Schema({
+  _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
+  slug: { type: String, required: true, unique: true },
+  title: { type: String, required: true },
+  description: { type: String, default: "" },
+}, { versionKey: false, timestamps: true });
 
 module.exports = mongoose.model("Course", courseSchema);
