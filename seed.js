@@ -1,8 +1,11 @@
+const mongoose = require("mongoose");
+require("dotenv").config();
+
 const Course = require("./models/Course");
 const Lesson = require("./models/Lesson");
 const Task = require("./models/Task");
 
-module.exports = async function seed() {
+async function seed() {
   const exists = await Course.countDocuments();
   if (exists > 0) {
     console.log("✔ Courses already exist – skip seed");
@@ -40,4 +43,30 @@ module.exports = async function seed() {
 
     console.log("✔ Seeded:", course.title);
   }
-};
+}
+
+module.exports = seed;
+
+// If run directly, connect to MongoDB, run seed, then exit.
+if (require.main === module) {
+  const MONGO = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/mindstep";
+  mongoose.set("strictQuery", false);
+  mongoose
+    .connect(MONGO)
+    .then(async () => {
+      console.log("→ Connected to Mongo for seeding");
+      try {
+        await seed();
+      } catch (err) {
+        console.error("Seed error:", err);
+        process.exitCode = 1;
+      } finally {
+        await mongoose.disconnect();
+        console.log("→ Disconnected after seeding");
+      }
+    })
+    .catch((err) => {
+      console.error("Mongo connect failed for seed:", err);
+      process.exit(1);
+    });
+}
