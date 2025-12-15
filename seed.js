@@ -18,6 +18,13 @@ const User = mongoose.model("User", new mongoose.Schema({
   created_at: { type: Date, default: Date.now }
 }), "users");
 
+// Define Admin model inline for seed
+const Admin = mongoose.model("Admin", new mongoose.Schema({
+  _id: { type: String, default: uuidv4 },
+  username: String,
+  password: String
+}), "admins");
+
 async function seed() {
   // Seed test users first
   const userCount = await User.countDocuments();
@@ -45,9 +52,17 @@ async function seed() {
     }
   }
 
+  // Ensure an admin exists (always run)
+  const adminCount = await Admin.countDocuments();
+  if (adminCount === 0) {
+    const adminPass = process.env.ADMIN_SECRET || "yuva22";
+    await Admin.create({ username: "Uzumaki_Yuva", password: bcrypt.hashSync(adminPass, 10) });
+    console.log("✔ Seeded admin: Uzumaki_Yuva");
+  }
+
   const exists = await Course.countDocuments();
   if (exists > 0) {
-    console.log("✔ Courses already exist – skip seed");
+    console.log("✔ Courses already exist – skip course seed");
     return;
   }
 
@@ -85,6 +100,8 @@ async function seed() {
 
     console.log("✔ Seeded:", course.title);
   }
+
+  
 }
 
 module.exports = seed;

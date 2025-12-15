@@ -160,7 +160,13 @@ app.post("/api/login", async (req, res) => {
   if (!user || !bcrypt.compareSync(password, user.password))
     return res.status(401).json({ error: "Invalid login" });
 
-  res.json({ success: true, user });
+  const respUser = user.toObject ? user.toObject() : user;
+  if (respUser.image && respUser.image.startsWith("/")) {
+    const base = `${req.protocol}://${req.get("host")}`;
+    respUser.image = base + respUser.image;
+  }
+
+  res.json({ success: true, user: respUser });
 });
 
 /* ---------------- COURSES ---------------- */
