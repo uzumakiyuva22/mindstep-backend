@@ -92,6 +92,17 @@ const Lesson = require("./models/Lesson");
 // COMPLETION — use shared model
 const Completion = require("./models/Completion");
 
+// ADMIN SECRET (fallback)
+const ADMIN_SECRET = process.env.ADMIN_SECRET || "admin_secret_placeholder";
+
+// helper to check admin token from Authorization: Bearer <token>
+function requireAdminMiddleware(req, res, next) {
+  const header = req.headers.authorization || "";
+  const token = header.startsWith("Bearer ") ? header.slice(7) : header;
+  if (!token || token !== ADMIN_SECRET) return res.status(401).json({ success: false, error: "Unauthorized" });
+  next();
+}
+
 /* ---------------- AUTH ---------------- */
 app.post("/api/signup", upload.single("image"), async (req, res) => {
   try {
@@ -209,6 +220,119 @@ app.get("/api/course/:slug/progress/:userId", async (req, res) => {
   });
 
   res.json({ success: true, percent: total ? Math.round((done / total) * 100) : 0 });
+});
+
+/* ---------------- ADMIN AUTH & ROUTES ---------------- */
+
+// Admin login endpoint used by AdminLogin.html
+app.post("/api/auth/admin-login", async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) return res.status(400).json({ success: false, error: "Missing credentials" });
+
+    // Try to find admin in DB
+    const admin = await Admin.findOne({ username });
+    if (admin) {
+      if (!bcrypt.compareSync(password, admin.password)) return res.json({ success: false, error: "Invalid admin" });
+      return res.json({ success: true, token: ADMIN_SECRET, admin: { username: admin.username } });
+    }
+
+    // Fallback: allow login when password matches ADMIN_SECRET
+    if (password === ADMIN_SECRET) {
+      // ensure admin exists in DB for convenience
+      try {
+        await Admin.updateOne({ username }, { $setOnInsert: { username, password: bcrypt.hashSync(password, 10) } }, { upsert: true });
+      } catch (e) { /* ignore */ }
+      return res.json({ success: true, token: ADMIN_SECRET, admin: { username } });
+    }
+
+    return res.json({ success: false, error: "Invalid admin" });
+  } catch (err) {
+    console.error("ADMIN LOGIN ERROR", err);
+    res.status(500).json({ success: false, error: "Admin login failed" });
+  }
+});
+
+// Admin overview
+app.get("/api/admin/overview", requireAdminMiddleware, async (req, res) => {
+  try {
+    const totalUsers = await User.countDocuments();
+    const activeCourses = await Course.countDocuments();
+    const reports = 3;
+    const dailyVisits = 224;
+    res.json({ success: true, totalUsers, activeCourses, reports, dailyVisits });
+  } catch (err) {
+    res.json({ success: false, error: "Overview error" });
+  }
+});
+
+// Get users
+app.get("/api/admin/users", requireAdminMiddleware, async (req, res) => {
+  try {
+    const users = await User.find({}).lean();
+    const results = [];
+    for (const u of users) {
+      const completed = await Completion.countDocuments({ user_id: u._id });
+      const total = await Lesson.countDocuments();
+      const pct = total === 0 ? 0 : Math.round((completed / total) * 100);
+      results.push({ _id: u._id, username: u.username, email: u.email, image: u.image, percentage: pct, lessonsDone: completed, created_at: u.created_at || new Date() });
+    }
+    res.json({ success: true, users: results });
+  } catch (err) {
+    res.json({ success: false, error: "Users load error" });
+  }
+});
+
+// Get single user
+app.get("/api/admin/user/:id", requireAdminMiddleware, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const u = await User.findById(id).lean();
+    if (!u) return res.json({ success: false, error: "User not found" });
+    const completed = await Completion.countDocuments({ user_id: id });
+    const total = await Lesson.countDocuments();
+    const pct = total === 0 ? 0 : Math.round((completed / total) * 100);
+    res.json({ success: true, user: u, lessonsDone: completed, percentage: pct });
+  } catch (err) {
+    res.json({ success: false, error: "User fetch error" });
+  }
+});
+
+// Update user
+app.put("/api/admin/user/:id", requireAdminMiddleware, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { username, email, password } = req.body;
+    const update = { username, email };
+    if (password) update.password = bcrypt.hashSync(password, 10);
+    await User.updateOne({ _id: id }, { $set: update });
+    res.json({ success: true });
+  } catch (err) {
+    res.json({ success: false, error: "Update failed" });
+  }
+});
+
+// Reset progress
+app.post("/api/admin/user/:id/reset", requireAdminMiddleware, async (req, res) => {
+  try {
+    const id = req.params.id;
+    await Completion.deleteMany({ user_id: id });
+    res.json({ success: true });
+  } catch (err) {
+    res.json({ success: false, error: "Reset failed" });
+  }
+});
+
+// Purge user
+app.post("/api/admin/user/:id/purge", requireAdminMiddleware, async (req, res) => {
+  try {
+    const id = req.params.id;
+    await User.deleteOne({ _id: id });
+    await Completion.deleteMany({ user_id: id });
+    res.json({ success: true });
+  } catch (err) {
+    res.json({ success: false, error: "Delete failed" });
+  }
 });
 
 /* ---------------- ROOT ---------------- */
