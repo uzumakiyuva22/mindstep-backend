@@ -1,5 +1,5 @@
 /**
- * server.js — MindStep FINAL (100% FIXED)
+ * server.js — MindStep FINAL (100% FIXED & STABLE)
  * Node 18+
  */
 
@@ -18,10 +18,9 @@ const cloudinary = require("cloudinary").v2;
 const PORT = process.env.PORT || 10000;
 const PUBLIC_DIR = path.join(__dirname, "public");
 const TEMP_DIR = path.join(__dirname, "temp");
-
 if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR, { recursive: true });
 
-/* ---------------- ENV CHECK ---------------- */
+/* ---------------- ENV ---------------- */
 if (!process.env.MONGO_URI) {
   console.error("❌ MONGO_URI missing");
   process.exit(1);
@@ -36,8 +35,7 @@ cloudinary.config({
 
 /* ---------------- DB ---------------- */
 mongoose.set("strictQuery", false);
-mongoose
-  .connect(process.env.MONGO_URI)
+mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✔ MongoDB connected"))
   .catch(err => {
     console.error("❌ Mongo error", err);
@@ -47,7 +45,7 @@ mongoose
 /* ---------------- APP ---------------- */
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: "20mb" }));
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(PUBLIC_DIR));
 
@@ -56,53 +54,29 @@ const upload = multer({ dest: TEMP_DIR });
 /* ---------------- MODELS ---------------- */
 
 // USER
-const userSchema = new mongoose.Schema({
+const User = mongoose.model("User", new mongoose.Schema({
   _id: { type: String, default: uuidv4 },
-  username: { type: String, required: true },
-  email: { type: String, required: true },
+  username: String,
+  email: String,
   password: String,
   image: String,
   percentage: { type: Number, default: 0 },
   created_at: { type: Date, default: Date.now }
-});
-const User = mongoose.model("User", userSchema);
+}));
 
 // ADMIN
-const adminSchema = new mongoose.Schema({
+const Admin = mongoose.model("Admin", new mongoose.Schema({
   _id: { type: String, default: uuidv4 },
   username: String,
   password: String
-});
-const Admin = mongoose.model("Admin", adminSchema);
+}));
 
 // COURSE & LESSON
 const Course = require("./models/Course");
 const Lesson = require("./models/Lesson");
 
-// COMPLETION ✅ FIXED
-const completionSchema = new mongoose.Schema({
-  _id: { type: String, default: uuidv4 },
-  user_id: String,
-  course_id: { type: mongoose.Schema.Types.ObjectId, ref: "Course" },
-  lesson_id: { type: mongoose.Schema.Types.ObjectId, ref: "Lesson" }
-});
-
-// ✅ INDEX MUST BE ON SCHEMA (NOT MODEL)
-completionSchema.index(
-  { user_id: 1, lesson_id: 1 },
-  { unique: true }
-);
-
-const Completion = mongoose.model("Completion", completionSchema);
-
-/* ---------------- ADMIN AUTH ---------------- */
-const ADMIN_SECRET = process.env.ADMIN_SECRET;
-const adminAuth = (req, res, next) => {
-  const token = (req.headers.authorization || "").replace("Bearer ", "");
-  if (!ADMIN_SECRET || token !== ADMIN_SECRET)
-    return res.status(401).json({ error: "Unauthorized" });
-  next();
-};
+// COMPLETION — use shared model
+const Completion = require("./models/Completion");
 
 /* ---------------- AUTH ---------------- */
 app.post("/api/signup", upload.single("image"), async (req, res) => {
@@ -146,15 +120,15 @@ app.post("/api/login", async (req, res) => {
 
 /* ---------------- COURSES ---------------- */
 app.get("/api/public/courses", async (req, res) => {
-  const courses = await Course.find({});
-  const result = [];
+  const courses = await Course.find();
+  const results = [];
 
   for (const c of courses) {
-    const lessonCount = await Lesson.countDocuments({ course_id: c._id });
-    result.push({ course: c, lessonCount });
+    const count = await Lesson.countDocuments({ course_id: c._id });
+    results.push({ course: c, lessonCount: count });
   }
 
-  res.json({ success: true, results: result });
+  res.json({ success: true, results });
 });
 
 app.get("/api/course/:slug/lessons", async (req, res) => {
@@ -165,27 +139,16 @@ app.get("/api/course/:slug/lessons", async (req, res) => {
   res.json({ success: true, course, lessons });
 });
 
-/* ---------------- PROGRESS ---------------- */
+/* ---------------- PROGRESS (🔥 FIXED) ---------------- */
 app.post("/api/complete", async (req, res) => {
   const { userId, lessonId } = req.body;
-  const lessons = await Lesson.find({
-  $or: [
-    { course_id: course._id },
-    { course_id: String(course._id) }
-  ]
-}).sort({ order: 1 });
 
+  const lesson = await Lesson.findById(lessonId);
   if (!lesson) return res.status(404).json({ error: "Lesson not found" });
 
   await Completion.updateOne(
     { user_id: userId, lesson_id: lesson._id },
-    {
-      $setOnInsert: {
-        user_id: userId,
-        lesson_id: lesson._id,
-        course_id: lesson.course_id
-      }
-    },
+    { $setOnInsert: { user_id: userId, lesson_id: lesson._id, course_id: lesson.course_id } },
     { upsert: true }
   );
 
@@ -211,22 +174,7 @@ app.get("/api/course/:slug/progress/:userId", async (req, res) => {
     course_id: course._id
   });
 
-  const percent = total ? Math.round((done / total) * 100) : 0;
-  res.json({ success: true, percent });
-});
-
-/* ---------------- ADMIN ---------------- */
-app.post("/api/admin-login", async (req, res) => {
-  const admin = await Admin.findOne({ username: req.body.username });
-  if (!admin || !bcrypt.compareSync(req.body.password, admin.password))
-    return res.status(401).json({ error: "Invalid admin" });
-
-  res.json({ success: true, adminSecret: ADMIN_SECRET });
-});
-
-app.get("/api/admin/users", adminAuth, async (req, res) => {
-  const users = await User.find({}).select("-password");
-  res.json({ success: true, users });
+  res.json({ success: true, percent: total ? Math.round((done / total) * 100) : 0 });
 });
 
 /* ---------------- ROOT ---------------- */
