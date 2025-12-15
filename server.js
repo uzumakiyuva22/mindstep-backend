@@ -19,6 +19,8 @@ const PORT = process.env.PORT || 10000;
 const PUBLIC_DIR = path.join(__dirname, "public");
 const TEMP_DIR = path.join(__dirname, "temp");
 if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR, { recursive: true });
+const UPLOADS_DIR = path.join(PUBLIC_DIR, "uploads");
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 /* ---------------- ENV ---------------- */
 if (!process.env.MONGO_URI) {
@@ -26,12 +28,24 @@ if (!process.env.MONGO_URI) {
   process.exit(1);
 }
 
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-  secure: true,
-});
+const CLOUDINARY_ENABLED = Boolean(
+  process.env.CLOUDINARY_CLOUD_NAME &&
+    process.env.CLOUDINARY_API_KEY &&
+    process.env.CLOUDINARY_API_SECRET
+);
+
+if (CLOUDINARY_ENABLED) {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+    secure: true,
+  });
+} else {
+  console.warn(
+    "⚠ Cloudinary credentials missing — image uploads will be stored locally at public/uploads/"
+  );
+}
 
 /* ---------------- DB ---------------- */
 mongoose.set("strictQuery", false);
@@ -87,9 +101,22 @@ app.post("/api/signup", upload.single("image"), async (req, res) => {
 
     let image = null;
     if (req.file) {
-      const up = await cloudinary.uploader.upload(req.file.path, { folder: "mindstep" });
-      image = up.secure_url;
-      fs.unlinkSync(req.file.path);
+      if (CLOUDINARY_ENABLED) {
+        try {
+          const up = await cloudinary.uploader.upload(req.file.path, { folder: "mindstep" });
+          image = up.secure_url;
+        } catch (err) {
+          console.error("Cloudinary upload failed:", err);
+        } finally {
+          if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        }
+      } else {
+        const ext = path.extname(req.file.originalname) || "";
+        const filename = `${uuidv4()}${ext}`;
+        const dest = path.join(UPLOADS_DIR, filename);
+        fs.renameSync(req.file.path, dest);
+        image = `/uploads/${filename}`;
+      }
     }
 
     const user = await User.create({
