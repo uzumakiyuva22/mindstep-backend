@@ -219,7 +219,7 @@ app.post("/api/admin-login", async (req, res) => {
 });
 
 app.get("/api/admin/users", adminAuth, async (req, res) => {
-  const users = await User.find({}, "-password");
+  const users = await User.find({}).select("-password");
   res.json({ success: true, users });
 });
 
