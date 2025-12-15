@@ -52,8 +52,11 @@ async function seed() {
   }
 
   const courses = [
-    { slug: "java", title: "Java Basics", description: "Core Java basics" },
-    { slug: "python", title: "Python Basics", description: "Python from zero" }
+    { slug: "html", title: "HTML", description: "Build semantic, accessible, and modern HTML structures." },
+    { slug: "css", title: "CSS", description: "Master responsive layouts, gradients, and animations." },
+    { slug: "javascript", title: "JavaScript", description: "Create interactive and dynamic web experiences." },
+    { slug: "java", title: "Java Basics", description: "Develop backend systems and scalable applications." },
+    { slug: "python", title: "Python Basics", description: "Automate tasks, analyze data, and build scripts." }
   ];
 
   for (const c of courses) {
