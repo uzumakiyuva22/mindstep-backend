@@ -212,6 +212,24 @@ app.get("/", (req, res) => {
 });
 
 /* ---------------- START ---------------- */
-app.listen(PORT, () =>
+const server = app.listen(PORT, () =>
   console.log(`🔥 MindStep running → http://localhost:${PORT}`)
 );
+
+server.on("error", (err) => {
+  if (err && err.code === "EADDRINUSE") {
+    console.error(`❌ Port ${PORT} is already in use. Is another server running?`);
+    process.exit(1);
+  }
+  console.error("❌ Server error:", err);
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled Rejection:", reason);
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught Exception:", err);
+  process.exit(1);
+});
