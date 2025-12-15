@@ -14,6 +14,7 @@ const mongoose = require("mongoose");
 const { v4: uuidv4 } = require("uuid");
 const cloudinary = require("cloudinary").v2;
 
+/* ---------------- CONFIG ---------------- */
 const PORT = process.env.PORT || 10000;
 const PUBLIC_DIR = path.join(__dirname, "public");
 const TEMP_DIR = path.join(__dirname, "temp");
@@ -35,10 +36,11 @@ cloudinary.config({
 
 /* ---------------- DB ---------------- */
 mongoose.set("strictQuery", false);
-mongoose.connect(process.env.MONGO_URI)
+mongoose
+  .connect(process.env.MONGO_URI)
   .then(() => console.log("✔ MongoDB connected"))
   .catch(err => {
-    console.error("Mongo error", err);
+    console.error("❌ Mongo error", err);
     process.exit(1);
   });
 
@@ -52,33 +54,46 @@ app.use(express.static(PUBLIC_DIR));
 const upload = multer({ dest: TEMP_DIR });
 
 /* ---------------- MODELS ---------------- */
-const User = mongoose.model("User", new mongoose.Schema({
+
+// USER
+const userSchema = new mongoose.Schema({
   _id: { type: String, default: uuidv4 },
-  username: String,
-  email: String,
+  username: { type: String, required: true },
+  email: { type: String, required: true },
   password: String,
   image: String,
   percentage: { type: Number, default: 0 },
   created_at: { type: Date, default: Date.now }
-}));
+});
+const User = mongoose.model("User", userSchema);
 
-const Admin = mongoose.model("Admin", new mongoose.Schema({
+// ADMIN
+const adminSchema = new mongoose.Schema({
   _id: { type: String, default: uuidv4 },
   username: String,
   password: String
-}));
+});
+const Admin = mongoose.model("Admin", adminSchema);
 
+// COURSE & LESSON
 const Course = require("./models/Course");
 const Lesson = require("./models/Lesson");
 
-const Completion = mongoose.model("Completion", new mongoose.Schema({
+// COMPLETION ✅ FIXED
+const completionSchema = new mongoose.Schema({
   _id: { type: String, default: uuidv4 },
   user_id: String,
   course_id: { type: mongoose.Schema.Types.ObjectId, ref: "Course" },
   lesson_id: { type: mongoose.Schema.Types.ObjectId, ref: "Lesson" }
-}));
+});
 
-Completion.index({ user_id: 1, lesson_id: 1 }, { unique: true });
+// ✅ INDEX MUST BE ON SCHEMA (NOT MODEL)
+completionSchema.index(
+  { user_id: 1, lesson_id: 1 },
+  { unique: true }
+);
+
+const Completion = mongoose.model("Completion", completionSchema);
 
 /* ---------------- ADMIN AUTH ---------------- */
 const ADMIN_SECRET = process.env.ADMIN_SECRET;
@@ -112,6 +127,7 @@ app.post("/api/signup", upload.single("image"), async (req, res) => {
 
     res.json({ success: true, user });
   } catch (e) {
+    console.error(e);
     res.status(500).json({ error: "Signup failed" });
   }
 });
@@ -121,6 +137,7 @@ app.post("/api/login", async (req, res) => {
   const user = await User.findOne({
     $or: [{ username: usernameOrEmail }, { email: usernameOrEmail }]
   });
+
   if (!user || !bcrypt.compareSync(password, user.password))
     return res.status(401).json({ error: "Invalid login" });
 
@@ -131,10 +148,12 @@ app.post("/api/login", async (req, res) => {
 app.get("/api/public/courses", async (req, res) => {
   const courses = await Course.find({});
   const result = [];
+
   for (const c of courses) {
     const lessonCount = await Lesson.countDocuments({ course_id: c._id });
     result.push({ course: c, lessonCount });
   }
+
   res.json({ success: true, results: result });
 });
 
@@ -170,7 +189,7 @@ app.post("/api/complete", async (req, res) => {
     course_id: lesson.course_id
   });
 
-  const percent = Math.round((done / total) * 100);
+  const percent = total ? Math.round((done / total) * 100) : 0;
   await User.findByIdAndUpdate(userId, { percentage: percent });
 
   res.json({ success: true, percent });
