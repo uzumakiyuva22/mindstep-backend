@@ -209,6 +209,21 @@ app.post("/api/complete", async (req, res) => {
   res.json({ success: true, percent });
 });
 
+// Admin create course (used by AdminDashboard client)
+app.post('/api/admin/course', requireAdminMiddleware, async (req, res) => {
+  try {
+    const { title, description, slug } = req.body;
+    if (!title || !slug) return res.json({ success: false, error: 'Missing fields' });
+    const existing = await Course.findOne({ slug });
+    if (existing) return res.json({ success: false, error: 'Course already exists' });
+    const c = await Course.create({ slug, title, description });
+    res.json({ success: true, course: c });
+  } catch (err) {
+    console.error('Create course error', err);
+    res.json({ success: false, error: 'Create failed' });
+  }
+});
+
 app.get("/api/course/:slug/progress/:userId", async (req, res) => {
   const course = await Course.findOne({ slug: req.params.slug });
   if (!course) return res.status(404).json({ error: "Course not found" });
