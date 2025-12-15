@@ -126,7 +126,14 @@ app.post("/api/signup", upload.single("image"), async (req, res) => {
       image
     });
 
-    res.json({ success: true, user });
+    // Normalize image URL for response
+    const respUser = user.toObject ? user.toObject() : user;
+    if (respUser.image && respUser.image.startsWith("/")) {
+      const base = `${req.protocol}://${req.get("host")}`;
+      respUser.image = base + respUser.image;
+    }
+
+    res.json({ success: true, user: respUser });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: "Signup failed" });
