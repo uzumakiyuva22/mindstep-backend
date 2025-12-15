@@ -168,7 +168,13 @@ app.get("/api/course/:slug/lessons", async (req, res) => {
 /* ---------------- PROGRESS ---------------- */
 app.post("/api/complete", async (req, res) => {
   const { userId, lessonId } = req.body;
-  const lesson = await Lesson.findById(lessonId);
+  const lessons = await Lesson.find({
+  $or: [
+    { course_id: course._id },
+    { course_id: String(course._id) }
+  ]
+}).sort({ order: 1 });
+
   if (!lesson) return res.status(404).json({ error: "Lesson not found" });
 
   await Completion.updateOne(
