@@ -1,11 +1,50 @@
 const mongoose = require("mongoose");
 require("dotenv").config();
+const bcrypt = require("bcryptjs");
+const { v4: uuidv4 } = require("uuid");
 
 const Course = require("./models/Course");
 const Lesson = require("./models/Lesson");
 const Task = require("./models/Task");
 
+// Define User model inline for seed
+const User = mongoose.model("User", new mongoose.Schema({
+  _id: { type: String, default: uuidv4 },
+  username: String,
+  email: String,
+  password: String,
+  image: String,
+  percentage: { type: Number, default: 0 },
+  created_at: { type: Date, default: Date.now }
+}), "users");
+
 async function seed() {
+  // Seed test users first
+  const userCount = await User.countDocuments();
+  if (userCount === 0) {
+    const testUsers = [
+      {
+        username: "testuser",
+        email: "test@mindstep.com",
+        password: bcrypt.hashSync("password123", 10),
+        image: null,
+        percentage: 0
+      },
+      {
+        username: "Team_Akatsuki_22",
+        email: "akatsuki@mindstep.com",
+        password: bcrypt.hashSync("password123", 10),
+        image: null,
+        percentage: 0
+      }
+    ];
+
+    for (const user of testUsers) {
+      await User.create(user);
+      console.log("✔ Seeded user:", user.username);
+    }
+  }
+
   const exists = await Course.countDocuments();
   if (exists > 0) {
     console.log("✔ Courses already exist – skip seed");
