@@ -156,17 +156,22 @@ app.post("/api/login", async (req, res) => {
 
 /* ---------------- COURSES ---------------- */
 app.get("/api/public/courses", async (req, res) => {
-  const courses = await Course.find();
-  const results = [];
+  const courses = await Course.find({ isActive: true }).sort({ order: 1 });
 
-  for (const c of courses) {
-    const count = await Lesson.countDocuments({ course_id: c._id });
-    results.push({ course: c, lessonCount: count });
+  const results = [];
+  for (const course of courses) {
+    const lessonCount = await Lesson.countDocuments({
+      course_id: course._id
+    });
+
+    results.push({
+      course,
+      lessonCount
+    });
   }
 
   res.json({ success: true, results });
 });
-
 app.get("/api/course/:slug/lessons", async (req, res) => {
   const course = await Course.findOne({ slug: req.params.slug });
   if (!course) return res.status(404).json({ error: "Course not found" });
