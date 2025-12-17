@@ -172,25 +172,40 @@ app.get("/api/public/courses", async (req, res) => {
 
   res.json({ success: true, results });
 });
-app.get("/api/course/:slug/lessons", async (req, res) => {
+// GET course overview by slug (FIX for course page)
+app.get("/api/course/:slug", async (req, res) => {
   try {
-    const course = await Course.findOne({ slug: req.params.slug });
-    if (!course) {
-      return res.status(404).json({ error: "Course not found" });
-    }
+    const course = await Course.findOne({
+      slug: req.params.slug,
+      isActive: true
+    }).lean();
 
-    const lessons = await Lesson.find({
-      course_id: course._id.toString()
-    }).sort({ order: 1 });
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: "Course not found"
+      });
+    }
 
     res.json({
       success: true,
-      lessons
+      course: {
+        _id: course._id,
+        slug: course.slug,
+        title: course.title,
+        description: course.description,
+        fullDescription: course.fullDescription || "",
+        image: course.image || "",
+        difficulty: course.difficulty || "Beginner"
+      }
     });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to load lessons" });
+    console.error("Course load error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Error loading course"
+    });
   }
 });
 
