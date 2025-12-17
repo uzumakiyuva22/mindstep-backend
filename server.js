@@ -173,12 +173,27 @@ app.get("/api/public/courses", async (req, res) => {
   res.json({ success: true, results });
 });
 app.get("/api/course/:slug/lessons", async (req, res) => {
-  const course = await Course.findOne({ slug: req.params.slug });
-  if (!course) return res.status(404).json({ error: "Course not found" });
+  try {
+    const course = await Course.findOne({ slug: req.params.slug });
+    if (!course) {
+      return res.status(404).json({ error: "Course not found" });
+    }
 
-  const lessons = await Lesson.find({ course_id: course._id.toString() }).sort({ order: 1 });
-  res.json({ success: true, course, lessons });
+    const lessons = await Lesson.find({
+      course_id: course._id.toString()
+    }).sort({ order: 1 });
+
+    res.json({
+      success: true,
+      lessons
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to load lessons" });
+  }
 });
+
 
 /* ---------------- PROGRESS (🔥 FIXED) ---------------- */
 app.post("/api/complete", async (req, res) => {
