@@ -1,4 +1,4 @@
-  <!DOCTYPE html>
+<!DOCTYPE html>
   <html lang="en">
   <head>
     <meta charset="UTF-8">
@@ -503,33 +503,13 @@
     </section>
     
 
-    <section class="cards" id="courses">
-      <div class="card reveal">
-      <h3>HTML <span class="badge">Beginner</span></h3>
-        <p>Build semantic, accessible, and modern HTML structures.</p>
-        <button class="btn enroll">Enroll</button>
-      </div>
-      <div class="card reveal">
-        <h3>CSS <span class="badge">Animations</span></h3>
-        <p>Master responsive layouts, gradients, and animations.</p>
-        <button class="btn enroll">Enroll</button>
-      </div>
-      <div class="card reveal">
-        <h3>JavaScript <span class="badge">Interactive</span></h3>
-        <p>Create interactive and dynamic web experiences.</p>
-        <button class="btn enroll">Enroll</button>
-      </div>
-      <div class="card reveal">
-        <h3>Java <span class="badge">Backend</span></h3>
-        <p>Develop backend systems and scalable applications.</p>
-        <button class="btn enroll">Enroll</button>
-      </div>
-      <div class="card reveal">
-        <h3>Python <span class="badge">Automation</span></h3>
-        <p>Automate tasks, analyze data, and build scripts.</p>
-        <button class="btn enroll">Enroll</button>
-      </div>
-    </section>
+    <!-- COURSES CONTAINER (dynamically filled by JavaScript) -->
+<section class="cards" id="courses">
+  <!-- JavaScript will fill this with course cards -->
+</section>
+
+<!-- The card styles are already in your CSS, no changes needed! -->
+<!-- Your existing CSS handles: .card, .badge, .progress-container, .enroll button -->
 
     <div id="lesson-plans"></div>
 
@@ -593,23 +573,26 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!data.success || data.results.length === 0) {
         courseSection.innerHTML =
           `<h2 style="text-align:center;width:100%;color:#ff7070;">
-             ⚠ No Courses Found (Backend Seed Failed)
+             ⚠ No Courses Found
            </h2>`;
         return;
       }
 
+      // LOOP THROUGH EACH COURSE FROM API
       for (const entry of data.results) {
         const { course, lessonCount } = entry;
 
-        // --- GET PROGRESS ---
+        // GET USER PROGRESS FOR THIS COURSE
         let progress = 0;
         try {
           const p = await fetch(`/api/course/${course.slug}/progress/${userId}`);
           const pj = await p.json();
           progress = pj.percent || 0;
-        } catch (e) {}
+        } catch (e) {
+          console.warn(`Progress not found for ${course.slug}`);
+        }
 
-        // --- Build course card ---
+        // CREATE COURSE CARD DYNAMICALLY
         const card = document.createElement("div");
         card.className = "card visible";
 
@@ -625,10 +608,12 @@ document.addEventListener("DOMContentLoaded", () => {
           <button class="btn enroll">Start</button>
         `;
 
+        // CLICK HANDLER - NAVIGATE TO COURSE PAGE
         card.querySelector(".enroll").onclick = () => {
           window.location.href = `course.html?course=${course.slug}`;
         };
 
+        // ADD CARD TO PAGE
         courseSection.appendChild(card);
       }
 
@@ -692,3 +677,114 @@ document.addEventListener("DOMContentLoaded", () => {
 </script>
  </body>
   </html>
+
+// Course Schema (Mongoose model)
+// filepath: (your backend) models/Course.js
+
+const courseSchema = new Schema({
+  slug: {
+    type: String,
+    unique: true,
+    required: true,
+    lowercase: true,
+    trim: true
+    // Example: "html-basics", "cpp-advanced"
+  },
+  title: {
+    type: String,
+    required: true
+    // Example: "HTML Basics", "C++ Fundamentals"
+  },
+  description: {
+    type: String,
+    required: true
+    // Short 1-2 sentence description for card
+  },
+  fullDescription: {
+    type: String
+    // Longer description for course.html
+  },
+  image: {
+    type: String
+    // URL to course thumbnail image
+  },
+  difficulty: {
+    type: String,
+    enum: ["Beginner", "Intermediate", "Advanced"],
+    default: "Beginner"
+  },
+  order: {
+    type: Number,
+    default: 999
+    // Controls display order on MainPage (1, 2, 3...)
+  },
+  isActive: {
+    type: Boolean,
+    default: true
+    // Set to false to hide course without deleting
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+const Course = mongoose.model("Course", courseSchema);
+module.exports = Course;
+
+// GET /api/public/courses
+app.get("/api/public/courses", async (req, res) => {
+  try {
+    // Fetch only active courses, sorted by order
+    const courses = await Course.find({ isActive: true })
+      .sort({ order: 1 })
+      .lean(); // lean() for better performance
+
+    // For each course, count lessons in the Lesson collection
+    const results = [];
+    
+    for (const course of courses) {
+      const lessonCount = await Lesson.countDocuments({ 
+        courseId: course._id 
+      });
+
+      results.push({
+        course: {
+          _id: course._id,
+          slug: course.slug,
+          title: course.title,
+          description: course.description,
+          image: course.image,
+          difficulty: course.difficulty
+        },
+        lessonCount: lessonCount
+      });
+    }
+
+    res.json({
+      success: true,
+      total: results.length,
+      results: results
+    });
+
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Error fetching courses",
+      error: err.message
+    });
+  }
+});
+
+// Sample course data
+{
+  "slug": "cpp-advanced",
+  "title": "C++ Advanced",
+  "description": "Master object-oriented programming and data structures.",
+  "fullDescription": "Deep dive into C++ with advanced concepts...",
+  "image": "https://your-cdn.com/cpp-course.jpg",
+  "difficulty": "Advanced",
+  "order": 5,
+  "isActive": true,
+  "createdAt": new Date()
+}

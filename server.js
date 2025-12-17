@@ -36,11 +36,10 @@ const CLOUDINARY_ENABLED = Boolean(
 
 if (CLOUDINARY_ENABLED) {
   cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-    secure: true,
-  });
+  cloudinary_url: process.env.CLOUDINARY_URL,
+  secure: true
+});
+
 } else {
   console.warn(
     "⚠ Cloudinary credentials missing — image uploads will be stored locally at public/uploads/"
@@ -107,27 +106,20 @@ function requireAdminMiddleware(req, res, next) {
 app.post("/api/signup", upload.single("image"), async (req, res) => {
   try {
     const { username, email, password } = req.body;
-    if (!username || !email || !password)
+
+    if (!username || !email || !password) {
       return res.status(400).json({ error: "Missing fields" });
+    }
 
     let image = null;
+
     if (req.file) {
-      if (CLOUDINARY_ENABLED) {
-        try {
-          const up = await cloudinary.uploader.upload(req.file.path, { folder: "mindstep" });
-          image = up.secure_url;
-        } catch (err) {
-          console.error("Cloudinary upload failed:", err);
-        } finally {
-          if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-        }
-      } else {
-        const ext = path.extname(req.file.originalname) || "";
-        const filename = `${uuidv4()}${ext}`;
-        const dest = path.join(UPLOADS_DIR, filename);
-        fs.renameSync(req.file.path, dest);
-        image = `/uploads/${filename}`;
-      }
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        folder: "mindstep/users"
+      });
+
+      image = result.secure_url;
+      fs.unlinkSync(req.file.path);
     }
 
     const user = await User.create({
@@ -137,20 +129,13 @@ app.post("/api/signup", upload.single("image"), async (req, res) => {
       image
     });
 
-    // Normalize image URL for response
-    const respUser = user.toObject ? user.toObject() : user;
-    if (respUser.image && respUser.image.startsWith("/")) {
-      const base = `${req.protocol}://${req.get("host")}`;
-      respUser.image = base + respUser.image;
-    }
-
-    res.json({ success: true, user: respUser });
-  } catch (e) {
-    console.error(e);
+    res.json({ success: true, user });
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Signup failed" });
   }
 });
-
+// Login startpoint
 app.post("/api/login", async (req, res) => {
   const { usernameOrEmail, password } = req.body;
   const user = await User.findOne({
