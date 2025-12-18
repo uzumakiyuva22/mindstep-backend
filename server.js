@@ -208,6 +208,29 @@ app.get("/api/course/:slug", async (req, res) => {
     });
   }
 });
+app.get("/api/course/:slug/lessons", async (req, res) => {
+  try {
+    const course = await Course.findOne({ slug: req.params.slug });
+    if (!course) {
+      return res.json({ success: false, error: "Course not found" });
+    }
+
+    const lessons = await Lesson.find({ course_id: course._id })
+                                .sort({ order: 1 });
+
+    res.json({
+      success: true,
+      course,
+      lessons
+    });
+
+  } catch (err) {
+    res.json({
+      success: false,
+      error: err.message
+    });
+  }
+});
 
 
 /* ---------------- PROGRESS (🔥 FIXED) ---------------- */
