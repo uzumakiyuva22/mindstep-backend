@@ -357,168 +357,114 @@
     </div>
   </div>
   <script>
-// === MindStep Course.js — FINAL 100% WORKING VERSION ===
+/* =========================
+   course.html — 100% FIXED JS
+   ========================= */
 
-document.addEventListener("DOMContentLoaded", () => {
+const API_BASE = window.location.origin;
 
-  // ---------------- USER CHECK ----------------
+// Get course slug
+const params = new URLSearchParams(window.location.search);
+const courseSlug = params.get("course");
+
+if (!courseSlug) {
+  alert("Course not found!");
+  window.location.href = "MainPage.html";
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+
+  /* ---------- AUTH ---------- */
   const saved = localStorage.getItem("mindstep_user");
   if (!saved) {
-    alert("Please login!");
-    return location.href = "LoginPage.html";
-  }
-  const user = JSON.parse(saved);
-  const userId = user._id;
-
-
-  // ---------------- GET COURSE SLUG ----------------
-  const params = new URLSearchParams(location.search);
-  const courseSlug = params.get("course");
-
-  if (!courseSlug) {
-    alert("Invalid course!");
+    alert("Please login first");
+    window.location.href = "LoginPage.html";
     return;
   }
 
+  const user = JSON.parse(saved);
+  const userId = user._id;
 
-  // ---------------- UI ELEMENTS ----------------
-  const courseTitleEl = document.getElementById("courseTitle");
-  const courseSubtitleEl = document.getElementById("courseSubtitle");
-  const lessonsBox = document.querySelector(".lessons");   // your real lessons container
-  const moduleHeading = document.getElementById("moduleHeading");
-  const moduleDesc = document.getElementById("moduleDesc");
+  /* ---------- COURSE INFO ---------- */
+  try {
+    const res = await fetch(`${API_BASE}/api/course/${courseSlug}`);
+    const data = await res.json();
 
-
-  // ---------------- LOAD COURSE + LESSONS ----------------
-  async function loadCourse() {
-    try {
-      const res = await fetch(`/api/course/${courseSlug}/lessons`);
-      const data = await res.json();
-
-      if (!data || !data.success) {
-        const msg = data && data.error ? data.error : 'Failed to load course (no details)';
-        lessonsBox.innerHTML = `<p style="color:#ff9b9b">Error loading course: ${msg}</p>`;
-        console.error('Course load failed:', data);
-        return;
-      }
-
-      const course = data.course;
-      const lessons = data.lessons;
-
-      // Set title
-      courseTitleEl.textContent = course.title;
-      courseSubtitleEl.textContent = course.description || "";
-
-      // Update module card text
-      moduleHeading.textContent = course.title;
-      moduleDesc.textContent = `This course has ${lessons.length} lessons. Continue your learning flow below.`;
-
-
-      // ---------------- DISPLAY LESSONS ----------------
-      lessonsBox.innerHTML = ""; // clear old static lessons
-
-      lessons.forEach((lesson, index) => {
-        const div = document.createElement("div");
-        div.className = "lesson";
-        div.innerHTML = `
-            <div>Lesson ${index + 1}: ${lesson.title}</div>
-            <button class="play">Start Lesson</button>
-        `;
-
-        div.querySelector(".play").onclick = () => {
-          location.href = `lesson.html?course=${courseSlug}&lessonId=${lesson._id}`;
-        };
-
-        lessonsBox.appendChild(div);
-      });
-
-      updateProgress();
-
-    } catch (err) {
-      console.error(err);
-      lessonsBox.innerHTML = "<p>Error loading course</p>";
+    if (!data.success) {
+      alert("Course not found");
+      return;
     }
+
+    // ✅ FIXED SELECTORS
+    document.getElementById("courseTitle").textContent =
+      data.course.title;
+
+    document.getElementById("courseSubtitle").textContent =
+      data.course.description || "";
+
+  } catch (err) {
+    console.error("Course load error:", err);
   }
 
+  /* ---------- LESSONS (🔥 MAIN FIX) ---------- */
+  try {
+    const res = await fetch(
+      `${API_BASE}/api/course/${courseSlug}/lessons`
+    );
+    const data = await res.json();
 
-  // ---------------- COURSE PROGRESS ----------------
-  async function updateProgress() {
-    try {
-      const res = await fetch(`/api/course/${courseSlug}/progress/${userId}`);
-      const data = await res.json();
-      const percent = data.percent || 0;
+    // ✅ FIXED TARGET
+    const lessonBox = document.querySelector(".lessons");
 
-      // Circle progress update
-      const circle = document.getElementById("progressArc");
-      const text = document.getElementById("progressText");
+    // Remove static demo lessons
+    lessonBox.innerHTML = `
+      <h3 style="font-family:Orbitron;margin-bottom:8px;">Lesson Plan</h3>
+    `;
 
-      const circumference = 2 * Math.PI * 28; // r=28
-      circle.style.strokeDasharray = circumference;
-      circle.style.strokeDashoffset = circumference - (percent / 100) * circumference;
-
-      text.textContent = `${percent}%`;
-
-    } catch (err) {
-      console.warn("Progress error:", err);
+    if (!data.success || data.lessons.length === 0) {
+      lessonBox.innerHTML += `
+        <p style="opacity:.6">No lessons available</p>
+      `;
+      return;
     }
+
+    // Render lessons dynamically
+    data.lessons.forEach((lesson, index) => {
+      const div = document.createElement("div");
+      div.className = "lesson";
+
+      div.innerHTML = `
+        <div>Lesson ${index + 1}: ${lesson.title}</div>
+        <button class="play">Start Lesson</button>
+      `;
+
+      div.querySelector(".play").onclick = async () => {
+        await fetch(`${API_BASE}/api/complete`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId,
+            lessonId: lesson._id
+          })
+        });
+
+        window.location.href =
+          `lesson.html?lesson=${lesson._id}`;
+      };
+
+      lessonBox.appendChild(div);
+    });
+
+  } catch (err) {
+    console.error("Lesson loading error:", err);
   }
 
-
-  // ---------------- BACK BUTTON ----------------
+  /* ---------- BACK BUTTON ---------- */
   document.getElementById("backBtn").onclick = () => {
-    location.href = "MainPage.html";
+    window.location.href = "MainPage.html";
   };
-
-
-  // ---------------- STEP SYSTEM (INTRO → BASIC → PRACTICE → PROJECT) ----------------
-  const introScreen = document.getElementById("introScreen");
-  const stepper = document.getElementById("stepper");
-  const startGameBtn = document.getElementById("startGameBtn");
-
-  startGameBtn.onclick = () => {
-    introScreen.style.display = "none";
-    stepper.style.display = "block";
-  };
-
-
-  let currentStep = 1;
-  const totalSteps = 4;
-
-  const nextBtn = document.getElementById("nextStep");
-  const prevBtn = document.getElementById("prevStep");
-
-  nextBtn.onclick = () => {
-    if (currentStep < totalSteps) {
-      currentStep++;
-      updateStepUI();
-    }
-  };
-
-  prevBtn.onclick = () => {
-    if (currentStep > 1) {
-      currentStep--;
-      updateStepUI();
-    }
-  };
-
-  function updateStepUI() {
-    document.querySelectorAll(".step").forEach(step => {
-      const num = parseInt(step.dataset.step);
-      step.classList.toggle("step-active", num === currentStep);
-    });
-
-    document.querySelectorAll(".panel").forEach(panel => {
-      const num = parseInt(panel.dataset.step);
-      panel.classList.toggle("panel-active", num === currentStep);
-    });
-
-    updateProgress(); // update circle each step
-  }
-
-
-  // ---------------- LOAD EVERYTHING ----------------
-  loadCourse();
 });
 </script>
+
 </body>
 </html>
