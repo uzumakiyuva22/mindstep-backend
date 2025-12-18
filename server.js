@@ -209,21 +209,24 @@ app.get("/api/course/:slug", async (req, res) => {
     });
   }
 });
-// GET lessons by course slug
+
 app.get("/api/course/:slug/lessons", async (req, res) => {
   try {
     const course = await Course.findOne({ slug: req.params.slug });
     if (!course) {
+      console.log("Course not found for slug:", req.params.slug);
       return res.json({ success: false, lessons: [] });
     }
 
-    const lessons = await Lesson.find({ course_id: course._id })
+    // Convert the ID to a string to ensure it matches the Lesson record
+    const lessons = await Lesson.find({ course_id: course._id.toString() })
       .sort({ order: 1 });
 
+    console.log(`Found ${lessons.length} lessons for course: ${course.title}`);
     res.json({ success: true, lessons });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false });
+    console.error("Error fetching lessons:", err);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 /* ---------------- PROGRESS (🔥 FIXED) ---------------- */
