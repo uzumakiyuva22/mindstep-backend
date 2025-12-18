@@ -209,33 +209,23 @@ app.get("/api/course/:slug", async (req, res) => {
     });
   }
 });
+// GET lessons by course slug
 app.get("/api/course/:slug/lessons", async (req, res) => {
   try {
     const course = await Course.findOne({ slug: req.params.slug });
     if (!course) {
-      return res.json({ success: false, error: "Course not found" });
+      return res.json({ success: false, lessons: [] });
     }
 
-    const lessons = await Lesson.find({
-  course_id: course._id.toString()
-}).sort({ order: 1 });
+    const lessons = await Lesson.find({ course_id: course._id })
+      .sort({ order: 1 });
 
-
-    res.json({
-      success: true,
-      course,
-      lessons
-    });
-
+    res.json({ success: true, lessons });
   } catch (err) {
-    res.json({
-      success: false,
-      error: err.message
-    });
+    console.error(err);
+    res.status(500).json({ success: false });
   }
 });
-
-
 /* ---------------- PROGRESS (🔥 FIXED) ---------------- */
 app.post("/api/complete", async (req, res) => {
   const { userId, lessonId } = req.body;
