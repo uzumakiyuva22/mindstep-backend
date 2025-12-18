@@ -160,9 +160,10 @@ app.get("/api/public/courses", async (req, res) => {
 
   const results = [];
   for (const course of courses) {
-    const lessonCount = await Lesson.countDocuments({
-      course_id: course._id
-    });
+   const lessonCount = await Lesson.countDocuments({
+  course_id: course._id.toString()
+});
+
 
     results.push({
       course,
@@ -215,8 +216,10 @@ app.get("/api/course/:slug/lessons", async (req, res) => {
       return res.json({ success: false, error: "Course not found" });
     }
 
-    const lessons = await Lesson.find({ course_id: course._id })
-                                .sort({ order: 1 });
+    const lessons = await Lesson.find({
+  course_id: course._id.toString()
+}).sort({ order: 1 });
+
 
     res.json({
       success: true,
@@ -276,12 +279,15 @@ app.post('/api/admin/course', requireAdminMiddleware, async (req, res) => {
 app.get("/api/course/:slug/progress/:userId", async (req, res) => {
   const course = await Course.findOne({ slug: req.params.slug });
   if (!course) return res.status(404).json({ error: "Course not found" });
+const total = await Lesson.countDocuments({
+  course_id: course._id.toString()
+});
 
-  const total = await Lesson.countDocuments({ course_id: course._id });
-  const done = await Completion.countDocuments({
-    user_id: req.params.userId,
-    course_id: course._id
-  });
+const done = await Completion.countDocuments({
+  user_id: req.params.userId,
+  course_id: course._id.toString()
+});
+
 
   res.json({ success: true, percent: total ? Math.round((done / total) * 100) : 0 });
 });
