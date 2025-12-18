@@ -538,128 +538,127 @@
 
     <!-- JavaScript Section -->
 <script>
-// === MainPage.js — FINAL 100% Working ===
+// === MainPage.js — FINAL 100% FIXED & DEPLOY SAFE ===
+
+const API_BASE = window.location.origin;
 
 document.addEventListener("DOMContentLoaded", () => {
 
-  // ---------------------- LOAD USER ----------------------
+  /* ---------------------- LOAD USER ---------------------- */
   const saved = localStorage.getItem("mindstep_user");
 
   if (!saved) {
     alert("Please login first!");
-    return (window.location.href = "LoginPage.html");
+    window.location.href = "LoginPage.html";
+    return;
   }
 
   const user = JSON.parse(saved);
+  const userId = user._id;
 
-  // Display user info
+  // Show user info
   document.getElementById("username").textContent = user.username;
   document.getElementById("profileImg").src =
     user.image || "https://via.placeholder.com/60";
 
 
-  const userId = user._id;  // IMPORTANT
-
-
-  // ---------------------- LOAD COURSES ----------------------
+  /* ---------------------- LOAD COURSES ---------------------- */
   async function loadCourses() {
     try {
-      const res = await fetch("/api/public/courses");
+      const res = await fetch(`${API_BASE}/api/public/courses`);
       const data = await res.json();
 
       const courseSection = document.getElementById("courses");
-      courseSection.innerHTML = ""; // Clear old cards
+      courseSection.innerHTML = "";
 
-      if (!data.success || data.results.length === 0) {
-        courseSection.innerHTML =
-          `<h2 style="text-align:center;width:100%;color:#ff7070;">
-             ⚠ No Courses Found
-           </h2>`;
+      if (!data.success || !data.results.length) {
+        courseSection.innerHTML = `
+          <h2 style="text-align:center;width:100%;color:#ff7070;">
+            ⚠ No Courses Found
+          </h2>`;
         return;
       }
 
-      // LOOP THROUGH EACH COURSE FROM API
       for (const entry of data.results) {
         const { course, lessonCount } = entry;
 
-        // GET USER PROGRESS FOR THIS COURSE
         let progress = 0;
         try {
-          const p = await fetch(`/api/course/${course.slug}/progress/${userId}`);
-          const pj = await p.json();
-          progress = pj.percent || 0;
-        } catch (e) {
-          console.warn(`Progress not found for ${course.slug}`);
+          const pRes = await fetch(
+            `${API_BASE}/api/course/${course.slug}/progress/${userId}`
+          );
+          const pData = await pRes.json();
+          progress = pData.percent || 0;
+        } catch {
+          progress = 0;
         }
 
-        // CREATE COURSE CARD DYNAMICALLY
         const card = document.createElement("div");
         card.className = "card visible";
 
         card.innerHTML = `
-          <h3>${course.title} <span class="badge">${lessonCount} Lessons</span></h3>
+          <h3>${course.title}
+            <span class="badge">${lessonCount} Lessons</span>
+          </h3>
           <p>${course.description}</p>
 
           <div class="progress-container">
-            <div class="progress-bar" style="width:${progress}%;"></div>
+            <div class="progress-bar" style="width:${progress}%"></div>
           </div>
           <div class="progress-text">${progress}% Completed</div>
 
           <button class="btn enroll">Start</button>
         `;
 
-        // CLICK HANDLER - NAVIGATE TO COURSE PAGE
         card.querySelector(".enroll").onclick = () => {
           window.location.href = `course.html?course=${course.slug}`;
         };
 
-        // ADD CARD TO PAGE
         courseSection.appendChild(card);
       }
 
     } catch (err) {
-      console.error("Course loading error:", err);
+      console.error("❌ Course loading failed:", err);
     }
   }
 
-  loadCourses();
 
-
-  // ---------------------- FULL-STACK PROGRESS BAR ----------------------
+  /* ---------------------- FULL STACK PROGRESS ---------------------- */
   async function loadFullStackProgress() {
-    let totalPercent = 0;
-    let courseCount = 0;
-
     try {
-      const res = await fetch("/api/public/courses");
+      const res = await fetch(`${API_BASE}/api/public/courses`);
       const data = await res.json();
-      if (!data.success) return;
+
+      if (!data.success || !data.results.length) return;
+
+      let total = 0;
+      let count = 0;
 
       for (const entry of data.results) {
-        const c = entry.course.slug;
+        const slug = entry.course.slug;
 
-        const p = await fetch(`/api/course/${c}/progress/${userId}`);
-        const pj = await p.json();
+        const pRes = await fetch(
+          `${API_BASE}/api/course/${slug}/progress/${userId}`
+        );
+        const pData = await pRes.json();
 
-        totalPercent += pj.percent || 0;
-        courseCount++;
+        total += pData.percent || 0;
+        count++;
       }
 
-      const avg = courseCount ? Math.round(totalPercent / courseCount) : 0;
+      const avg = count ? Math.round(total / count) : 0;
 
-      // Update FSD progress bar
       document.getElementById("fsd2").style.width = avg + "%";
-      document.getElementById("fsd5").textContent = `Completed: ${avg}%`;
+      document.getElementById("fsd5").textContent =
+        `Completed: ${avg}%`;
 
     } catch (err) {
-      console.error("FullStack progress error:", err);
+      console.error("❌ Full Stack progress error:", err);
     }
   }
 
-  loadFullStackProgress();
 
-
-  // ---------------------- EXIT BUTTON ----------------------
+  /* ---------------------- EXIT ---------------------- */
   const exitLink = document.getElementById("exit-link");
   const modal = document.getElementById("exit-modal");
 
@@ -670,10 +669,17 @@ document.addEventListener("DOMContentLoaded", () => {
     window.location.href = "LoginPage.html";
   };
 
-  document.getElementById("cancel-exit").onclick = () =>
+  document.getElementById("cancel-exit").onclick = () => {
     modal.classList.remove("active");
-});
+  };
 
+
+  /* ---------------------- INIT ---------------------- */
+  loadCourses();
+  loadFullStackProgress();
+
+});
 </script>
+
  </body>
   </html>
