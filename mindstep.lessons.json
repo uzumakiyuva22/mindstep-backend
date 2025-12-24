@@ -1,0 +1,243 @@
+[{
+  "_id": {
+    "$oid": "6942515d9bb1dc7d3fc5f2b0"
+  },
+  "title": "Introduction",
+  "description": "What is HTML, CSS, JavaScript?",
+  "order": 1,
+  "course_id": "69424ded9bb1dc7d3fc5f288"
+},
+{
+  "_id": {
+    "$oid": "694251869bb1dc7d3fc5f2b2"
+  },
+  "title": "HTML Basics",
+  "description": "Tags, elements, structure",
+  "order": 2,
+  "course_id": "69424ded9bb1dc7d3fc5f288"
+},
+{
+  "_id": {
+    "$oid": "694251a19bb1dc7d3fc5f2b4"
+  },
+  "title": "CSS Basics",
+  "description": "Styling, layout, colors",
+  "order": 3,
+  "course_id": "69424ded9bb1dc7d3fc5f288"
+},
+{
+  "_id": {
+    "$oid": "694251bf9bb1dc7d3fc5f2b6"
+  },
+  "title": "JavaScript Basics",
+  "description": "Logic, DOM, events",
+  "order": 4,
+  "course_id": "69424ded9bb1dc7d3fc5f288"
+},
+{
+  "_id": {
+    "$oid": "694251e89bb1dc7d3fc5f2b8"
+  },
+  "title": "Frontend Mini Project",
+  "description": "Build a responsive website",
+  "order": 5,
+  "course_id": "69424ded9bb1dc7d3fc5f288"
+},
+{
+  "_id": {
+    "$oid": "6942520b9bb1dc7d3fc5f2ba"
+  },
+  "title": "Introduction to Java",
+  "description": "Java overview and setup",
+  "order": 1,
+  "course_id": "69424e189bb1dc7d3fc5f28a"
+},
+{
+  "_id": {
+    "$oid": "694252299bb1dc7d3fc5f2bc"
+  },
+  "title": "Variables & Data Types",
+  "description": "Java data types",
+  "order": 2,
+  "course_id": "69424e189bb1dc7d3fc5f28a"
+},
+{
+  "_id": {
+    "$oid": "694252469bb1dc7d3fc5f2be"
+  },
+  "title": "OOP Basics",
+  "description": "Class, object, inheritance",
+  "order": 3,
+  "course_id": "69424e189bb1dc7d3fc5f28a"
+},
+{
+  "_id": {
+    "$oid": "694252669bb1dc7d3fc5f2c0"
+  },
+  "title": "Java Mini Project",
+  "description": "Console based project",
+  "order": 4,
+  "course_id": "69424e189bb1dc7d3fc5f28a"
+},
+{
+  "_id": {
+    "$oid": "694252879bb1dc7d3fc5f2c2"
+  },
+  "title": "Python Introduction",
+  "description": "Python basics and setup",
+  "order": 1,
+  "course_id": "69424e259bb1dc7d3fc5f28c"
+},
+{
+  "_id": {
+    "$oid": "6942529f9bb1dc7d3fc5f2c4"
+  },
+  "title": "Variables & Loops",
+  "description": "If, loops, functions",
+  "order": 2,
+  "course_id": "69424e259bb1dc7d3fc5f28c"
+},
+{
+  "_id": {
+    "$oid": "694252b89bb1dc7d3fc5f2c6"
+  },
+  "title": "Data Structures",
+  "description": "List, tuple, dictionary",
+  "order": 3,
+  "course_id": "69424e259bb1dc7d3fc5f28c"
+},
+{
+  "_id": {
+    "$oid": "694252d29bb1dc7d3fc5f2c8"
+  },
+  "title": "Python Mini Project",
+  "description": "Small real-world app",
+  "order": 4,
+  "course_id": "69424e259bb1dc7d3fc5f28c"
+},
+{
+  "_id": {
+    "$oid": "694252f99bb1dc7d3fc5f2ca"
+  },
+  "title": "Node.js Introduction",
+  "description": "Server-side JavaScript",
+  "order": 1,
+  "course_id": "69424e339bb1dc7d3fc5f28e"
+},
+{
+  "_id": {
+    "$oid": "694253119bb1dc7d3fc5f2cc"
+  },
+  "title": "Express Basics",
+  "description": "Routing & APIs",
+  "order": 2,
+  "course_id": "69424e339bb1dc7d3fc5f28e"
+},
+{
+  "_id": {
+    "$oid": "694253289bb1dc7d3fc5f2ce"
+  },
+  "title": "REST API",
+  "description": "CRUD operations",
+  "order": 3,
+  "course_id": "69424e339bb1dc7d3fc5f28e"
+},
+{
+  "_id": {
+    "$oid": "694253409bb1dc7d3fc5f2d0"
+  },
+  "title": "Backend Mini Project",
+  "description": "API based project",
+  "order": 4,
+  "course_id": "69424e339bb1dc7d3fc5f28e"
+},
+{
+  "_id": {
+    "$oid": "694255a09bb1dc7d3fc5f2e3"
+  },
+  "title": "MongoDB Introduction",
+  "description": "NoSQL basics",
+  "order": 1,
+  "course_id": "694254de9bb1dc7d3fc5f2e0"
+},
+{
+  "_id": {
+    "$oid": "694255bc9bb1dc7d3fc5f2e5"
+  },
+  "title": "CRUD Operations",
+  "description": "Insert, find, update, delete",
+  "order": 2,
+  "course_id": "694254de9bb1dc7d3fc5f2e0"
+},
+{
+  "_id": {
+    "$oid": "694255d19bb1dc7d3fc5f2e7"
+  },
+  "title": "Schema Design",
+  "description": "Relations and modeling",
+  "order": 3,
+  "course_id": "694254de9bb1dc7d3fc5f2e0"
+},
+{
+  "_id": {
+    "$oid": "694255f69bb1dc7d3fc5f2e9"
+  },
+  "title": "React Introduction",
+  "description": "Components & JSX",
+  "order": 1,
+  "course_id": "69424e419bb1dc7d3fc5f290"
+},
+{
+  "_id": {
+    "$oid": "694256139bb1dc7d3fc5f2eb"
+  },
+  "title": "State & Props",
+  "description": "Data handling",
+  "order": 2,
+  "course_id": "69424e419bb1dc7d3fc5f290"
+},
+{
+  "_id": {
+    "$oid": "694256479bb1dc7d3fc5f2ed"
+  },
+  "title": "API Integration",
+  "description": "Fetch backend data",
+  "order": 3,
+  "course_id": "69424e419bb1dc7d3fc5f290"
+},
+{
+  "_id": {
+    "$oid": "694256699bb1dc7d3fc5f2ef"
+  },
+  "title": "Project Planning",
+  "description": "Architecture design",
+  "order": 1,
+  "course_id": "69424e519bb1dc7d3fc5f292"
+},
+{
+  "_id": {
+    "$oid": "694256859bb1dc7d3fc5f2f1"
+  },
+  "title": "Frontend Integration",
+  "description": "React + API",
+  "order": 2,
+  "course_id": "69424e519bb1dc7d3fc5f292"
+},
+{
+  "_id": {
+    "$oid": "694256b79bb1dc7d3fc5f2f4"
+  },
+  "title": "Backend Integration",
+  "description": "Node + MongoDB",
+  "order": 3,
+  "course_id": "69424e519bb1dc7d3fc5f292"
+},
+{
+  "_id": {
+    "$oid": "694256d49bb1dc7d3fc5f2f6"
+  },
+  "title": "Deployment",
+  "description": "Render & MongoDB Atlas",
+  "order": 4,
+  "course_id": "69424e519bb1dc7d3fc5f292"
+}]

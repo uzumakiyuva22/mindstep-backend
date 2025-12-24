@@ -13,6 +13,8 @@ const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
 const { v4: uuidv4 } = require("uuid");
 const cloudinary = require("cloudinary").v2;
+const Task = require("./models/Task");
+const TaskProgress = require("./models/TaskProgress");
 
 /* ---------------- CONFIG ---------------- */
 const PORT = process.env.PORT || 10000;
@@ -209,7 +211,7 @@ app.get("/api/course/:slug", async (req, res) => {
     });
   }
 });
-
+ 
 app.get("/api/course/:slug/lessons", async (req, res) => {
   try {
     const course = await Course.findOne({ slug: req.params.slug });
@@ -229,6 +231,117 @@ app.get("/api/course/:slug/lessons", async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 });
+// GET single lesson by ID (🔥 REQUIRED)
+app.get("/api/lesson/:lessonId", async (req, res) => {
+  try {
+    const lesson = await Lesson.findById(req.params.lessonId).lean();
+
+    if (!lesson) {
+      return res.status(404).json({
+        success: false,
+        message: "Lesson not found"
+      });
+    }
+
+    res.json({
+      success: true,
+      lesson
+    });
+
+  } catch (err) {
+    console.error("Lesson fetch error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Invalid lesson id"
+    });
+  }
+});
+// GET lesson + tasks (🔥 REQUIRED)
+app.get("/api/lesson/:lessonId/details", async (req, res) => {
+  try {
+    const lessonId = req.params.lessonId;
+
+    if (!mongoose.Types.ObjectId.isValid(lessonId)) {
+      return res.status(400).json({ success: false, message: "Invalid lesson id" });
+    }
+
+    const lesson = await Lesson.findById(lessonId).lean();
+    if (!lesson) {
+      return res.json({ success: false, message: "Lesson not found" });
+    }
+
+    const tasks = await Task.find({
+      lesson_id: new mongoose.Types.ObjectId(lessonId)
+    }).sort({ order: 1 });
+
+    return res.json({
+      success: true,
+      lesson,
+      tasks
+    });
+
+  } catch (err) {
+    console.error("Lesson details error:", err);
+    return res.status(500).json({ success: false });
+  }
+});
+
+app.post("/api/task/submit", async (req, res) => {
+  try {
+    const { userId, taskId, lessonId, output } = req.body;
+
+    const task = await Task.findById(taskId);
+    if (!task) return res.json({ passed: false });
+
+    let passed = false;
+
+    if (task.language === "html" || task.language === "css") {
+      passed = true; // preview-based tasks
+    } else {
+      passed =
+        output.trim() === task.expectedOutput.trim();
+    }
+
+    if (passed) {
+      await TaskProgress.updateOne(
+        { user_id: userId, task_id: taskId },
+        {
+          $set: {
+            user_id: userId,
+            task_id: taskId,
+            lesson_id: lessonId,
+            passed: true
+          }
+        },
+        { upsert: true }
+      );
+    }
+
+    res.json({ passed });
+  } catch (err) {
+    console.error("Task submit error:", err);
+    res.status(500).json({ passed: false });
+  }
+});
+app.get("/api/lesson/:lessonId/progress/:userId", async (req, res) => {
+  const { lessonId, userId } = req.params;
+
+  const total = await Task.countDocuments({
+    lesson_id: lessonId
+  });
+
+  const done = await TaskProgress.countDocuments({
+    lesson_id: lessonId,
+    user_id: userId,
+    passed: true
+  });
+
+  res.json({
+    success: true,
+    completed: total > 0 && total === done
+  });
+});
+
 /* ---------------- PROGRESS (🔥 FIXED) ---------------- */
 app.post("/api/complete", async (req, res) => {
   const { userId, lessonId } = req.body;
@@ -395,6 +508,51 @@ app.post("/api/admin/user/:id/purge", requireAdminMiddleware, async (req, res) =
     res.json({ success: true });
   } catch (err) {
     res.json({ success: false, error: "Delete failed" });
+  }
+});
+const generateCertificate = require("./utils/generateCertificate");
+const sendCertificateMail = require("./utils/sendCertificateMail");
+
+app.post("/api/generate-certificate", async (req, res) => {
+  try {
+    const { userId, courseTitle } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    // Validate completion
+    const completedLessons = await Completion.countDocuments({
+      user_id: userId,
+      course_id: courseTitle
+    });
+
+    if (completedLessons === 0) {
+      return res.status(400).json({ error: "Course not completed" });
+    }
+
+    const certificateId = `MS-${Date.now()}`;
+
+    const pdfPath = await generateCertificate({
+      username: user.username,
+      courseTitle,
+      certificateId
+    });
+
+    await sendCertificateMail({
+      to: user.email,
+      username: user.username,
+      courseTitle,
+      attachmentPath: pdfPath
+    });
+
+    res.json({
+      success: true,
+      message: "Certificate generated and emailed"
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Certificate generation failed" });
   }
 });
 

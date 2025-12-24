@@ -1,0 +1,1607 @@
+[{
+  "_id": {
+    "$oid": "6942515d9bb1dc7d3fc5f2b0"
+  },
+  "title": "Introduction",
+  "description": "What is HTML, CSS, JavaScript?",
+  "order": 1,
+  "course_id": "69424ded9bb1dc7d3fc5f288",
+  "estimatedTime": "40 minutes",
+  "lesson": {
+    "learningOutcomes": [
+      "Frontend development endru enna nu clear understanding",
+      "HTML, CSS, JavaScript roles differentiate panna theriyum",
+      "Future frameworks (React) learning-ku strong base"
+    ],
+    "intro": "Indha lesson frontend development-ku foundation. Website open pannumbodhu screen-la kaattura ellame frontend. Indha frontend eppadi build aagudhu nu purinjukka indha lesson romba important.",
+    "deepExplanation": [
+      "Frontend development-na user interact pannra part. Browser-la kaattura UI ellame frontend. Idhula moonu core technologies irukku: HTML, CSS, JavaScript.",
+      "HTML (HyperText Markup Language) website skeleton. Heading, paragraph, image, button ellam HTML-la define pannuvom.",
+      "CSS (Cascading Style Sheets) indha skeleton-ku look & feel kudukkum. Colors, layout, spacing, animations ellam CSS responsibility.",
+      "JavaScript website-ku brain. User click pannina enna nadakkanum, data change aagumbodhu UI update aaguradhu, backend-kitta data fetch pannradhu ellam JavaScript.",
+      "Real website-la indha moonum separate-ah illa; together work pannum."
+    ],
+    "conceptBreakdown": [
+      {
+        "concept": "HTML",
+        "explanation": "Structure & content"
+      },
+      {
+        "concept": "CSS",
+        "explanation": "Design & layout"
+      },
+      {
+        "concept": "JavaScript",
+        "explanation": "Logic & interaction"
+      }
+    ],
+    "example": {
+      "description": "Simple frontend interaction",
+      "code": "<h1>Welcome</h1>\n<button onclick=\"alert('Hello')\">Click Me</button>"
+    },
+    "realWorldAnalogy": "HTML = building structure, CSS = paint & interior, JavaScript = electricity & switches",
+    "whyImportant": [
+      "Frontend developer role understand panna",
+      "Frameworks confusion avoid panna",
+      "Interview basic questions answer panna"
+    ],
+    "commonMistakes": [
+      "HTML, CSS, JS ellam same nu nenachukaradhu",
+      "JavaScript direct start pannitu basics skip pannradhu",
+      "Practice illaama theory mattum padikkaradhu"
+    ],
+    "practice": {
+      "easy": "HTML, CSS, JS roles explain pannunga",
+      "medium": "Simple HTML + CSS page create pannunga",
+      "challenge": "Button click alert varra JS add pannunga"
+    },
+    "summary": "Frontend development foundation indha moonu technologies. Idhu clear irundha next lessons smooth-aa pogum.",
+    "nextLesson": "HTML Basics"
+  },
+  "lesson_id": null
+},
+{
+  "_id": {
+    "$oid": "694251869bb1dc7d3fc5f2b2"
+  },
+  "title": "HTML Basics",
+  "description": "Tags, elements, structure",
+  "order": 2,
+  "course_id": "69424ded9bb1dc7d3fc5f288",
+  "estimatedTime": "40 minutes",
+  "lesson": {
+    "learningOutcomes": [
+      "HTML structure clear-ah puriyum",
+      "Tags & elements difference theriyum",
+      "Simple webpage build panna confidence varum"
+    ],
+    "intro": "HTML basics website create panna first practical step. Indha lesson-la tags, elements, structure ellam deep-ah paakkalaam.",
+    "deepExplanation": [
+      "HTML tag browser-kku instruction kudukkum. Example: <h1> heading nu sollum, <p> paragraph nu sollum.",
+      "HTML element = opening tag + content + closing tag. Example: <p>Hello</p>.",
+      "HTML document-ku fixed structure irukku: doctype, html, head, body.",
+      "Correct structure use pannina dhaan browser error illaama render pannum."
+    ],
+    "conceptBreakdown": [
+      {
+        "concept": "Tag",
+        "explanation": "Instruction to browser"
+      },
+      {
+        "concept": "Element",
+        "explanation": "Complete HTML component"
+      },
+      {
+        "concept": "Attribute",
+        "explanation": "Extra information (src, href)"
+      }
+    ],
+    "example": {
+      "description": "Basic HTML structure",
+      "code": "<!DOCTYPE html>\n<html>\n<head>\n<title>My Page</title>\n</head>\n<body>\n<h1>Hello</h1>\n<p>This is HTML</p>\n</body>\n</html>"
+    },
+    "whyImportant": [
+      "SEO friendly structure",
+      "Browser compatibility",
+      "Framework learning easy"
+    ],
+    "commonMistakes": [
+      "Closing tag maranthudradhu",
+      "Body outside html tag",
+      "Improper nesting"
+    ],
+    "practice": {
+      "easy": "Basic HTML page create pannunga",
+      "medium": "Image + link add pannunga",
+      "challenge": "Small profile page build pannunga"
+    },
+    "summary": "HTML basics strong irundha frontend journey smooth-aagum.",
+    "nextLesson": "CSS Basics"
+  },
+  "lesson_id": null
+},
+{
+  "_id": {
+    "$oid": "694251a19bb1dc7d3fc5f2b4"
+  },
+  "title": "CSS Basics",
+  "description": "Styling, layout, colors",
+  "order": 3,
+  "course_id": "69424ded9bb1dc7d3fc5f288",
+  "estimatedTime": "40 minutes",
+  "lesson": {
+    "learningOutcomes": [
+      "CSS role clear-a puriyum",
+      "Basic styling apply panna theriyum",
+      "Simple layouts design panna confidence varum"
+    ],
+    "intro": "HTML skeleton-ku life kudukkuradhu CSS. Indha lesson-la styling basics deep-ah paakkalaam.",
+    "deepExplanation": [
+      "CSS website appearance control pannum. Color, font, spacing, alignment ellam CSS-la decide pannuvom.",
+      "CSS selector use panni HTML elements target pannuvom.",
+      "Inline, internal, external CSS nu types irukku. Real projects-la external CSS best.",
+      "CSS proper-ah use pannina website professional-a theriyum."
+    ],
+    "conceptBreakdown": [
+      {
+        "concept": "Selector",
+        "explanation": "Which element to style"
+      },
+      {
+        "concept": "Property",
+        "explanation": "What to change"
+      },
+      {
+        "concept": "Value",
+        "explanation": "How much to change"
+      }
+    ],
+    "example": {
+      "description": "Basic CSS styling",
+      "code": "h1 {\n  color: blue;\n  text-align: center;\n}\n\np {\n  font-size: 18px;\n}"
+    },
+    "whyImportant": [
+      "User attraction",
+      "Professional UI",
+      "Responsive design base"
+    ],
+    "commonMistakes": [
+      "Semicolon miss pannradhu",
+      "Wrong selector use pannradhu",
+      "Inline CSS overuse"
+    ],
+    "practice": {
+      "easy": "Text color & font change pannunga",
+      "medium": "Simple card design pannunga",
+      "challenge": "Responsive layout try pannunga"
+    },
+    "summary": "CSS basics strong irundha advanced design easy-aagum.",
+    "nextLesson": "JavaScript Basics"
+  },
+  "lesson_id": null
+},
+{
+  "_id": {
+    "$oid": "694251bf9bb1dc7d3fc5f2b6"
+  },
+  "title": "JavaScript Basics",
+  "description": "Logic, DOM, events",
+  "order": 4,
+  "course_id": "69424ded9bb1dc7d3fc5f288",
+  "estimatedTime": "40 minutes",
+  "lesson": {
+    "learningOutcomes": [
+      "JavaScript role frontend-la puriyum",
+      "Basic logic write panna confidence varum",
+      "DOM manipulation concept clear aagum"
+    ],
+    "intro": "HTML structure, CSS design apram website-ku life kudukkuradhu JavaScript. Indha lesson-la JavaScript basics deep-ah paakkalaam.",
+    "deepExplanation": [
+      "JavaScript website interaction handle pannum. User click pannina enna nadakkanum, data eppadi change aagum ellam JS decide pannum.",
+      "JavaScript-la variables, conditions, functions use panni logic build pannuvom.",
+      "DOM (Document Object Model) moolama JavaScript HTML elements access pannum.",
+      "Events-na user actions. Click, keypress, submit ellam events."
+    ],
+    "conceptBreakdown": [
+      {
+        "concept": "Variable",
+        "explanation": "Data store panna use pannuvom"
+      },
+      {
+        "concept": "DOM",
+        "explanation": "HTML elements access panna bridge"
+      },
+      {
+        "concept": "Event",
+        "explanation": "User interaction trigger"
+      }
+    ],
+    "example": {
+      "description": "Button click event",
+      "code": "document.getElementById('btn').addEventListener('click', function() {\n  alert('Button Clicked');\n});"
+    },
+    "whyImportant": [
+      "Interactive website build panna",
+      "Framework learning base",
+      "Real projects logic write panna"
+    ],
+    "commonMistakes": [
+      "Script tag wrong place",
+      "DOM load munna access pannradhu",
+      "Variable scope confusion"
+    ],
+    "practice": {
+      "easy": "Button click alert create pannunga",
+      "medium": "Text change using DOM",
+      "challenge": "Simple calculator logic"
+    },
+    "summary": "JavaScript basics strong irundha frontend powerful-aagum.",
+    "nextLesson": "Frontend Mini Project"
+  },
+  "lesson_id": null
+},
+{
+  "_id": {
+    "$oid": "694251e89bb1dc7d3fc5f2b8"
+  },
+  "title": "Frontend Mini Project",
+  "description": "Build a responsive website",
+  "order": 5,
+  "course_id": "69424ded9bb1dc7d3fc5f288",
+  "estimatedTime": "40 minutes",
+  "lesson": {
+    "learningOutcomes": [
+      "HTML, CSS, JS together use panna theriyum",
+      "Small real website build panna confidence",
+      "Responsive thinking develop aagum"
+    ],
+    "intro": "Indha mini project frontend basics ellam combine panna use pannum. Real project experience idhu.",
+    "deepExplanation": [
+      "Project panna learning strong aagum. Indha project-la HTML structure, CSS styling, JS interaction ellam use pannuvom.",
+      "Responsive design-na desktop, mobile ellathulayum site nalla kaattanum.",
+      "Problem solve panna approach improve aagum."
+    ],
+    "projectSteps": [
+      "HTML layout create pannunga",
+      "CSS styling & responsiveness add pannunga",
+      "JavaScript interaction add pannunga"
+    ],
+    "example": {
+      "description": "Project idea",
+      "code": "Landing page with navbar, section, button click alert"
+    },
+    "whyImportant": [
+      "Portfolio strength",
+      "Interview discussion",
+      "Confidence boost"
+    ],
+    "commonMistakes": [
+      "Perfect design try pannitu stuck aaguradhu",
+      "Mobile view ignore pannradhu",
+      "Code structure messy"
+    ],
+    "practice": {
+      "easy": "Static landing page",
+      "medium": "Responsive navbar",
+      "challenge": "Contact form with JS validation"
+    },
+    "summary": "Mini project complete pannina frontend fundamentals solid-aagum.",
+    "nextLesson": "Introduction to Java"
+  },
+  "lesson_id": null
+},
+{
+  "_id": {
+    "$oid": "6942520b9bb1dc7d3fc5f2ba"
+  },
+  "title": "Introduction to Java",
+  "description": "Java overview and setup",
+  "order": 1,
+  "course_id": "69424e189bb1dc7d3fc5f28a",
+  "estimatedTime": "40 minutes",
+  "lesson": {
+    "learningOutcomes": [
+      "Java language purpose puriyum",
+      "JDK, JVM, JRE difference theriyum",
+      "Java environment setup confidence"
+    ],
+    "intro": "Java oru powerful, platform-independent programming language. Indha lesson Java basics introduce pannum.",
+    "deepExplanation": [
+      "Java write once, run anywhere principle follow pannum.",
+      "JDK = Java Development Kit (coding tools)",
+      "JRE = Java Runtime Environment (run panna)",
+      "JVM = Java Virtual Machine (platform independent execution)",
+      "Java backend, Android, enterprise apps ellathulayum use aagudhu."
+    ],
+    "conceptBreakdown": [
+      {
+        "concept": "JDK",
+        "explanation": "Develop panna tools"
+      },
+      {
+        "concept": "JRE",
+        "explanation": "Run panna environment"
+      },
+      {
+        "concept": "JVM",
+        "explanation": "Platform independence"
+      }
+    ],
+    "example": {
+      "description": "First Java program",
+      "code": "class Hello {\n  public static void main(String[] args) {\n    System.out.println(\"Hello Java\");\n  }\n}"
+    },
+    "whyImportant": [
+      "Backend development base",
+      "Strong OOP language",
+      "Industry usage high"
+    ],
+    "commonMistakes": [
+      "Filename mismatch",
+      "main method syntax error",
+      "Java install path confusion"
+    ],
+    "practice": {
+      "easy": "Hello World program",
+      "medium": "Print user name",
+      "challenge": "Simple calculator using Java"
+    },
+    "summary": "Java introduction strong irundha next lessons easy-aagum.",
+    "nextLesson": "Variables & Data Types"
+  },
+  "lesson_id": null
+},
+{
+  "_id": {
+    "$oid": "694252299bb1dc7d3fc5f2bc"
+  },
+  "title": "Variables & Data Types",
+  "description": "Java data types",
+  "order": 2,
+  "course_id": "69424e189bb1dc7d3fc5f28a",
+  "estimatedTime": "40 minutes",
+  "lesson": {
+    "learningOutcomes": [
+      "Variable declare & use panna confidence",
+      "Primitive vs Non-primitive clear understanding",
+      "Memory & type safety basics"
+    ],
+    "intro": "Program write pannumbodhu data store panna variables use pannuvom. Indha lesson Java variables & data types deep-ah explain pannum.",
+    "deepExplanation": [
+      "Variable-na data store panna oru container. Java strongly typed language; variable type munna define pannanum.",
+      "Primitive data types: byte, short, int, long, float, double, char, boolean.",
+      "Non-primitive data types: String, Array, Class, Object.",
+      "Correct data type choose pannina memory efficient & bug-free code write panna mudiyum."
+    ],
+    "conceptBreakdown": [
+      {
+        "concept": "Primitive",
+        "explanation": "Simple value store (int, boolean)"
+      },
+      {
+        "concept": "Non-Primitive",
+        "explanation": "Reference types (String, Array)"
+      },
+      {
+        "concept": "Type Casting",
+        "explanation": "One type to another type convert pannradhu"
+      }
+    ],
+    "example": {
+      "description": "Java variables example",
+      "code": "int age = 20;\nString name = \"Yuva\";\nboolean isStudent = true;"
+    },
+    "whyImportant": [
+      "Logic writing base",
+      "OOP understanding",
+      "Interview fundamentals"
+    ],
+    "commonMistakes": [
+      "Wrong data type choose pannradhu",
+      "Variable initialize panna maranthudradhu",
+      "Overflow / underflow ignore pannradhu"
+    ],
+    "practice": {
+      "easy": "Name, age store pannunga",
+      "medium": "Type casting try pannunga",
+      "challenge": "User input read panni calculation pannunga"
+    },
+    "summary": "Variables & data types Java foundation. Idhu strong irundha logic easy.",
+    "nextLesson": "OOP Basics"
+  },
+  "lesson_id": null
+},
+{
+  "_id": {
+    "$oid": "694252469bb1dc7d3fc5f2be"
+  },
+  "title": "OOP Basics",
+  "description": "Class, object, inheritance",
+  "order": 3,
+  "course_id": "69424e189bb1dc7d3fc5f28a",
+  "estimatedTime": "40 minutes",
+  "lesson": {
+    "learningOutcomes": [
+      "Class & object difference clear aagum",
+      "Inheritance concept understand pannalaam",
+      "Real-world modeling ability improve"
+    ],
+    "intro": "Java oru Object-Oriented Programming language. Indha lesson OOP basics explain pannum.",
+    "deepExplanation": [
+      "Class blueprint. Object real instance. OOP real-world problems model panna help pannum.",
+      "Encapsulation data hide pannum.",
+      "Inheritance reuse code. Child class parent properties inherit pannum.",
+      "Polymorphism flexibility kudukkum."
+    ],
+    "conceptBreakdown": [
+      {
+        "concept": "Class",
+        "explanation": "Blueprint of object"
+      },
+      {
+        "concept": "Object",
+        "explanation": "Instance of class"
+      },
+      {
+        "concept": "Inheritance",
+        "explanation": "Parent-child relationship"
+      }
+    ],
+    "example": {
+      "description": "OOP example",
+      "code": "class Animal {\n  void sound() { System.out.println(\"Sound\"); }\n}\nclass Dog extends Animal {\n  void sound() { System.out.println(\"Bark\"); }\n}"
+    },
+    "realWorldAnalogy": "Class = blueprint, Object = house built from blueprint",
+    "whyImportant": [
+      "Large applications structure",
+      "Code reuse",
+      "Industry standard design"
+    ],
+    "commonMistakes": [
+      "Class vs object confusion",
+      "Inheritance misuse",
+      "Overcomplicated design"
+    ],
+    "practice": {
+      "easy": "Student class create pannunga",
+      "medium": "Inheritance example",
+      "challenge": "Bank system model pannunga"
+    },
+    "summary": "OOP Java power. Idhu master pannina real apps easy.",
+    "nextLesson": "Java Mini Project"
+  },
+  "lesson_id": null
+},
+{
+  "_id": {
+    "$oid": "694252669bb1dc7d3fc5f2c0"
+  },
+  "title": "Java Mini Project",
+  "description": "Console based project",
+  "order": 4,
+  "course_id": "69424e189bb1dc7d3fc5f28a",
+  "estimatedTime": "40 minutes",
+  "lesson": {
+    "learningOutcomes": [
+      "Java concepts real project-la apply panna confidence",
+      "Logic & structure improve",
+      "Interview-ready mini project"
+    ],
+    "intro": "Theory mattum podhuma? Project dhaan real learning. Indha lesson Java mini project guide pannum.",
+    "deepExplanation": [
+      "Console based project beginners-ku best.",
+      "Variables, loops, conditions, OOP ellam integrate pannuvom.",
+      "Project structure think panna habit varum."
+    ],
+    "projectIdea": "Student Management System",
+    "projectSteps": [
+      "Menu display",
+      "User input",
+      "Data process",
+      "Output display"
+    ],
+    "example": {
+      "description": "Menu example",
+      "code": "System.out.println(\"1. Add Student\");\nSystem.out.println(\"2. View Students\");"
+    },
+    "whyImportant": [
+      "Confidence boost",
+      "Portfolio value",
+      "Practical understanding"
+    ],
+    "commonMistakes": [
+      "One file-la ellam code",
+      "No comments",
+      "Error handling illa"
+    ],
+    "practice": {
+      "easy": "Menu program",
+      "medium": "Student details store",
+      "challenge": "Full console app complete pannunga"
+    },
+    "summary": "Mini project complete pannina Java fundamentals solid.",
+    "nextLesson": "Python Introduction"
+  },
+  "lesson_id": null
+},
+{
+  "_id": {
+    "$oid": "694252879bb1dc7d3fc5f2c2"
+  },
+  "title": "Python Introduction",
+  "description": "Python basics and setup",
+  "order": 1,
+  "course_id": "69424e259bb1dc7d3fc5f28c",
+  "estimatedTime": "40 minutes",
+  "lesson": {
+    "learningOutcomes": [
+      "Python enna, enga use aagudhu nu puriyum",
+      "Python install & run panna confidence",
+      "Syntax simplicity advantage understand pannalaam"
+    ],
+    "intro": "Python oru beginner-friendly, powerful programming language. Indha lesson Python journey-ku starting point.",
+    "deepExplanation": [
+      "Python readable syntax use pannum, so beginners-ku easy.",
+      "Web development, data science, AI, automation ellathulayum Python use aagudhu.",
+      "Python interpreted language; compile step illa.",
+      "Indentation Python-la rule; idhu code readability improve pannum."
+    ],
+    "conceptBreakdown": [
+      {
+        "concept": "Interpreted",
+        "explanation": "Line by line execute aagum"
+      },
+      {
+        "concept": "Indentation",
+        "explanation": "Block define panna spaces use pannum"
+      },
+      {
+        "concept": "Versatility",
+        "explanation": "Multiple domains-la use"
+      }
+    ],
+    "example": {
+      "description": "First Python program",
+      "code": "print(\"Hello Python\")"
+    },
+    "whyImportant": [
+      "Beginner-friendly language",
+      "High industry demand",
+      "Fast development"
+    ],
+    "commonMistakes": [
+      "Indentation error",
+      "Python version confusion",
+      "print function syntax error"
+    ],
+    "practice": {
+      "easy": "Hello World print pannunga",
+      "medium": "User name print pannunga",
+      "challenge": "Simple calculator output"
+    },
+    "summary": "Python introduction strong irundha next lessons smooth.",
+    "nextLesson": "Variables & Loops"
+  },
+  "lesson_id": null
+},
+{
+  "_id": {
+    "$oid": "6942529f9bb1dc7d3fc5f2c4"
+  },
+  "title": "Variables & Loops",
+  "description": "If, loops, functions",
+  "order": 2,
+  "course_id": "69424e259bb1dc7d3fc5f28c",
+  "estimatedTime": "40 minutes",
+  "lesson": {
+    "learningOutcomes": [
+      "Python variables use panna theriyum",
+      "Decision making & looping logic build panna mudiyum",
+      "Functions concept clear aagum"
+    ],
+    "intro": "Program logic build panna variables, conditions, loops core role play pannum.",
+    "deepExplanation": [
+      "Python-la variable declare panna type specify panna vendam.",
+      "If condition decision making-ku use.",
+      "Loops repetitive tasks-ku use.",
+      "Functions code reuse panna help pannum."
+    ],
+    "conceptBreakdown": [
+      {
+        "concept": "Variable",
+        "explanation": "Data store panna container"
+      },
+      {
+        "concept": "If-Else",
+        "explanation": "Decision making"
+      },
+      {
+        "concept": "Loop",
+        "explanation": "Repeated execution"
+      }
+    ],
+    "example": {
+      "description": "If & loop example",
+      "code": "for i in range(5):\n  print(i)\n\nif i > 3:\n  print(\"Greater\")"
+    },
+    "whyImportant": [
+      "Logic building",
+      "Automation scripts",
+      "Interview fundamentals"
+    ],
+    "commonMistakes": [
+      "Indentation error",
+      "Infinite loop",
+      "Wrong condition logic"
+    ],
+    "practice": {
+      "easy": "1 to 10 print pannunga",
+      "medium": "Even / odd check",
+      "challenge": "Simple menu-based program"
+    },
+    "summary": "Variables & loops Python backbone.",
+    "nextLesson": "Data Structures"
+  },
+  "lesson_id": null
+},
+{
+  "_id": {
+    "$oid": "694252b89bb1dc7d3fc5f2c6"
+  },
+  "title": "Data Structures",
+  "description": "List, tuple, dictionary",
+  "order": 3,
+  "course_id": "69424e259bb1dc7d3fc5f28c",
+  "estimatedTime": "40 minutes",
+  "lesson": {
+    "learningOutcomes": [
+      "Python data structures use panna theriyum",
+      "Data organize panna skill improve",
+      "Real-world data handling confidence"
+    ],
+    "intro": "Single value pothaadhu; multiple values handle panna data structures use pannuvom.",
+    "deepExplanation": [
+      "List ordered, mutable collection.",
+      "Tuple ordered but immutable.",
+      "Dictionary key-value pairs store pannum.",
+      "Correct data structure choose pannina performance improve aagum."
+    ],
+    "conceptBreakdown": [
+      {
+        "concept": "List",
+        "explanation": "Changeable collection"
+      },
+      {
+        "concept": "Tuple",
+        "explanation": "Read-only collection"
+      },
+      {
+        "concept": "Dictionary",
+        "explanation": "Key-value mapping"
+      }
+    ],
+    "example": {
+      "description": "Data structures example",
+      "code": "names = [\"A\", \"B\"]\nstudent = {\"name\": \"Yuva\", \"age\": 20}"
+    },
+    "whyImportant": [
+      "Data processing",
+      "Backend development",
+      "Data science base"
+    ],
+    "commonMistakes": [
+      "Index error",
+      "Key error",
+      "Wrong structure choice"
+    ],
+    "practice": {
+      "easy": "List create pannunga",
+      "medium": "Dictionary update pannunga",
+      "challenge": "Student record system"
+    },
+    "summary": "Python data structures real applications-ku base.",
+    "nextLesson": "Python Mini Project"
+  },
+  "lesson_id": null
+},
+{
+  "_id": {
+    "$oid": "694252d29bb1dc7d3fc5f2c8"
+  },
+  "title": "Python Mini Project",
+  "description": "Small real-world app",
+  "order": 4,
+  "course_id": "69424e259bb1dc7d3fc5f28c",
+  "estimatedTime": "40 minutes",
+  "lesson": {
+    "learningOutcomes": [
+      "Python concepts real project-la apply panna confidence",
+      "Problem-solving approach develop aagum",
+      "Mini portfolio project ready"
+    ],
+    "intro": "Theory mattum pothaadhu. Indha mini project Python basics ellam practical-aa use pannum.",
+    "deepExplanation": [
+      "Project-based learning beginners-ku best.",
+      "Variables, loops, conditions, data structures ellam integrate pannuvom.",
+      "Error handling & clean output important."
+    ],
+    "projectIdea": "Expense Tracker (Console)",
+    "projectSteps": [
+      "Menu display (Add/View expenses)",
+      "User input read pannunga",
+      "List/dictionary-la data store pannunga",
+      "Total calculate panni display pannunga"
+    ],
+    "example": {
+      "description": "Menu snippet",
+      "code": "print('1. Add Expense')\nprint('2. View Total')"
+    },
+    "whyImportant": [
+      "Hands-on experience",
+      "Interview discussion point",
+      "Logic clarity"
+    ],
+    "commonMistakes": [
+      "Validation miss pannradhu",
+      "Hardcoded values",
+      "Poor formatting"
+    ],
+    "practice": {
+      "easy": "Simple menu print pannunga",
+      "medium": "Expense list maintain pannunga",
+      "challenge": "File-la save/load add pannunga"
+    },
+    "summary": "Mini project complete pannina Python fundamentals solid.",
+    "nextLesson": "Node.js Introduction"
+  },
+  "lesson_id": null
+},
+{
+  "_id": {
+    "$oid": "694252f99bb1dc7d3fc5f2ca"
+  },
+  "title": "Node.js Introduction",
+  "description": "Server-side JavaScript",
+  "order": 1,
+  "course_id": "69424e339bb1dc7d3fc5f28e",
+  "estimatedTime": "40 minutes",
+  "lesson": {
+    "learningOutcomes": [
+      "Node.js enna, enga use aagudhu nu puriyum",
+      "Client vs Server difference clear aagum",
+      "Simple Node server run panna confidence"
+    ],
+    "intro": "JavaScript browser-la mattum illa. Server-side-la run panna Node.js use pannuvom.",
+    "deepExplanation": [
+      "Node.js JavaScript runtime built on Chrome V8 engine.",
+      "Event-driven, non-blocking I/O – fast & scalable.",
+      "Backend APIs, real-time apps (chat) create panna use aagum.",
+      "NPM packages ecosystem romba strong."
+    ],
+    "conceptBreakdown": [
+      {
+        "concept": "Runtime",
+        "explanation": "JS execute pannum environment"
+      },
+      {
+        "concept": "Non-blocking",
+        "explanation": "Async operations"
+      },
+      {
+        "concept": "NPM",
+        "explanation": "Package manager"
+      }
+    ],
+    "example": {
+      "description": "Simple Node server",
+      "code": "const http = require('http');\nhttp.createServer((req, res) => {\n  res.end('Hello Node');\n}).listen(3000);"
+    },
+    "whyImportant": [
+      "Full-stack development base",
+      "Fast backend build",
+      "Industry demand"
+    ],
+    "commonMistakes": [
+      "Blocking code use pannradhu",
+      "Port conflicts",
+      "Package.json ignore pannradhu"
+    ],
+    "practice": {
+      "easy": "Hello Node server run pannunga",
+      "medium": "Different routes handle pannunga",
+      "challenge": "Simple JSON response API"
+    },
+    "summary": "Node.js backend world-ku entry ticket.",
+    "nextLesson": "Express Basics"
+  },
+  "lesson_id": null
+},
+{
+  "_id": {
+    "$oid": "694253119bb1dc7d3fc5f2cc"
+  },
+  "title": "Express Basics",
+  "description": "Routing & APIs",
+  "order": 2,
+  "course_id": "69424e339bb1dc7d3fc5f28e",
+  "estimatedTime": "40 minutes",
+  "lesson": {
+    "learningOutcomes": [
+      "Express framework purpose puriyum",
+      "Routes create panna confidence",
+      "Basic REST API build panna mudiyum"
+    ],
+    "intro": "Node.js raw-aa irundhaalum Express framework backend development easy pannum.",
+    "deepExplanation": [
+      "Express lightweight Node.js framework.",
+      "Routing moolama different URLs handle pannuvom.",
+      "Middleware request-response cycle control pannum.",
+      "REST APIs build panna Express best choice."
+    ],
+    "conceptBreakdown": [
+      {
+        "concept": "Route",
+        "explanation": "URL handling logic"
+      },
+      {
+        "concept": "Middleware",
+        "explanation": "Request processing layer"
+      },
+      {
+        "concept": "REST",
+        "explanation": "API design principle"
+      }
+    ],
+    "example": {
+      "description": "Basic Express API",
+      "code": "const express = require('express');\nconst app = express();\napp.get('/api', (req, res) => res.json({msg:'Hello'}));\napp.listen(3000);"
+    },
+    "whyImportant": [
+      "Backend API creation",
+      "Frontend integration",
+      "Scalable server apps"
+    ],
+    "commonMistakes": [
+      "Middleware order mistake",
+      "No error handling",
+      "Hardcoded responses"
+    ],
+    "practice": {
+      "easy": "GET route create pannunga",
+      "medium": "POST route add pannunga",
+      "challenge": "Simple CRUD API"
+    },
+    "summary": "Express basics strong irundha backend powerful-aagum.",
+    "nextLesson": "REST API"
+  },
+  "lesson_id": null
+},
+{
+  "_id": {
+    "$oid": "694253289bb1dc7d3fc5f2ce"
+  },
+  "title": "REST API",
+  "description": "CRUD operations",
+  "order": 3,
+  "course_id": "69424e339bb1dc7d3fc5f28e",
+  "estimatedTime": "40 minutes",
+  "lesson": {
+    "learningOutcomes": [
+      "REST API concept clear-a puriyum",
+      "CRUD operations design panna confidence",
+      "Frontend–backend communication understand pannalaam"
+    ],
+    "intro": "Modern web applications-la frontend & backend communicate pannradhu REST API moolama. Indha lesson REST fundamentals deep-ah cover pannum.",
+    "deepExplanation": [
+      "REST = Representational State Transfer. Idhu oru architectural style.",
+      "API endpoints HTTP methods use pannum: GET (read), POST (create), PUT/PATCH (update), DELETE (remove).",
+      "Stateless communication – each request independent.",
+      "JSON format common data exchange medium."
+    ],
+    "conceptBreakdown": [
+      {
+        "concept": "GET",
+        "explanation": "Data read pannradhu"
+      },
+      {
+        "concept": "POST",
+        "explanation": "New data create pannradhu"
+      },
+      {
+        "concept": "PUT/PATCH",
+        "explanation": "Existing data update pannradhu"
+      },
+      {
+        "concept": "DELETE",
+        "explanation": "Data remove pannradhu"
+      }
+    ],
+    "example": {
+      "description": "Simple REST routes",
+      "code": "app.get('/users', (req, res) => res.json(users));\napp.post('/users', (req, res) => res.json({msg:'Created'}));"
+    },
+    "whyImportant": [
+      "Frontend integration",
+      "Mobile app support",
+      "Scalable backend design"
+    ],
+    "commonMistakes": [
+      "Wrong HTTP method usage",
+      "Status codes ignore pannradhu",
+      "Validation illaama data save pannradhu"
+    ],
+    "practice": {
+      "easy": "GET & POST API create pannunga",
+      "medium": "PUT / DELETE add pannunga",
+      "challenge": "Full CRUD API with in-memory data"
+    },
+    "summary": "REST API backend backbone.",
+    "nextLesson": "Backend Mini Project"
+  },
+  "lesson_id": null
+},
+{
+  "_id": {
+    "$oid": "694253409bb1dc7d3fc5f2d0"
+  },
+  "title": "Backend Mini Project",
+  "description": "API based project",
+  "order": 4,
+  "course_id": "69424e339bb1dc7d3fc5f28e",
+  "estimatedTime": "40 minutes",
+  "lesson": {
+    "learningOutcomes": [
+      "REST API real project-la apply panna confidence",
+      "Backend folder structure clarity",
+      "Debugging & testing skills improve"
+    ],
+    "intro": "Theory complete aana apram backend mini project real learning kudukkum.",
+    "deepExplanation": [
+      "Indha project-la Express + REST API concepts integrate pannuvom.",
+      "CRUD operations full cycle understand aagum.",
+      "Postman use panni API test pannalaam."
+    ],
+    "projectIdea": "User Management API",
+    "projectSteps": [
+      "Express server setup",
+      "Routes define pannunga",
+      "CRUD logic implement pannunga",
+      "Postman-la test pannunga"
+    ],
+    "example": {
+      "description": "User schema (concept)",
+      "code": "{ name: String, email: String }"
+    },
+    "whyImportant": [
+      "Real backend experience",
+      "Interview project",
+      "Confidence boost"
+    ],
+    "commonMistakes": [
+      "Routes messy",
+      "No validation",
+      "Error handling skip"
+    ],
+    "practice": {
+      "easy": "GET all users API",
+      "medium": "POST new user",
+      "challenge": "Full CRUD + status codes"
+    },
+    "summary": "Backend mini project complete pannina Node + Express solid.",
+    "nextLesson": "MongoDB Introduction"
+  },
+  "lesson_id": null
+},
+{
+  "_id": {
+    "$oid": "694255a09bb1dc7d3fc5f2e3"
+  },
+  "title": "MongoDB Introduction",
+  "description": "NoSQL basics",
+  "order": 1,
+  "course_id": "694254de9bb1dc7d3fc5f2e0",
+  "estimatedTime": "40 minutes",
+  "lesson": {
+    "learningOutcomes": [
+      "MongoDB NoSQL concept puriyum",
+      "Collection & document difference clear aagum",
+      "Relational DB vs MongoDB compare panna mudiyum"
+    ],
+    "intro": "Traditional SQL databases-ku alternative-ah MongoDB NoSQL database. Indha lesson MongoDB basics explain pannum.",
+    "deepExplanation": [
+      "MongoDB document-based database.",
+      "Table-ku badhil collection, row-ku badhil document.",
+      "Schema flexible – fields vary aagalam.",
+      "JSON-like BSON format use pannum."
+    ],
+    "conceptBreakdown": [
+      {
+        "concept": "Database",
+        "explanation": "Collections container"
+      },
+      {
+        "concept": "Collection",
+        "explanation": "Documents group"
+      },
+      {
+        "concept": "Document",
+        "explanation": "JSON-like record"
+      }
+    ],
+    "example": {
+      "description": "Sample document",
+      "code": "{ \"name\": \"Yuva\", \"age\": 20 }"
+    },
+    "whyImportant": [
+      "Modern web apps",
+      "Scalability",
+      "MERN stack base"
+    ],
+    "commonMistakes": [
+      "SQL thinking apply pannradhu",
+      "Schema-less misuse",
+      "Indexes ignore pannradhu"
+    ],
+    "practice": {
+      "easy": "Collection create pannunga",
+      "medium": "Document insert pannunga",
+      "challenge": "Multiple documents query pannunga"
+    },
+    "summary": "MongoDB basics strong irundha backend powerful.",
+    "nextLesson": "CRUD Operations"
+  },
+  "lesson_id": null
+},
+{
+  "_id": {
+    "$oid": "694255bc9bb1dc7d3fc5f2e5"
+  },
+  "title": "CRUD Operations",
+  "description": "Insert, find, update, delete",
+  "order": 2,
+  "course_id": "694254de9bb1dc7d3fc5f2e0",
+  "estimatedTime": "40 minutes",
+  "lesson": {
+    "learningOutcomes": [
+      "MongoDB CRUD operations clear-ah puriyum",
+      "Compass & backend-la data manage panna confidence",
+      "Real API flow understand pannalaam"
+    ],
+    "intro": "Database use panna theriyum-na CRUD operations theriyanum. Indha lesson MongoDB CRUD operations deep-ah cover pannum.",
+    "deepExplanation": [
+      "CRUD = Create, Read, Update, Delete. Indha four operations ellame database life-cycle.",
+      "MongoDB-la insertOne / insertMany data create pannum.",
+      "find / findOne data read pannum.",
+      "updateOne / updateMany data modify pannum.",
+      "deleteOne / deleteMany data remove pannum.",
+      "Filters & operators correct-ah use pannina accurate results varum."
+    ],
+    "conceptBreakdown": [
+      {
+        "concept": "Create",
+        "explanation": "New document insert"
+      },
+      {
+        "concept": "Read",
+        "explanation": "Existing data fetch"
+      },
+      {
+        "concept": "Update",
+        "explanation": "Modify existing data"
+      },
+      {
+        "concept": "Delete",
+        "explanation": "Remove data"
+      }
+    ],
+    "example": {
+      "description": "Basic CRUD examples",
+      "code": "db.users.insertOne({name:'Yuva'});\ndb.users.find({name:'Yuva'});\ndb.users.updateOne({name:'Yuva'}, {$set:{age:20}});\ndb.users.deleteOne({name:'Yuva'});"
+    },
+    "whyImportant": [
+      "Backend API implementation",
+      "Real-time data handling",
+      "Application stability"
+    ],
+    "commonMistakes": [
+      "Filter wrong-a use pannradhu",
+      "$set use panna maranthudradhu",
+      "Delete operation careless-aa use pannradhu"
+    ],
+    "practice": {
+      "easy": "Insert & find operations",
+      "medium": "Update specific field",
+      "challenge": "Conditional delete logic"
+    },
+    "summary": "CRUD operations MongoDB core skill.",
+    "nextLesson": "Schema Design"
+  },
+  "lesson_id": null
+},
+{
+  "_id": {
+    "$oid": "694255d19bb1dc7d3fc5f2e7"
+  },
+  "title": "Schema Design",
+  "description": "Relations and modeling",
+  "order": 3,
+  "course_id": "694254de9bb1dc7d3fc5f2e0",
+  "estimatedTime": "40 minutes",
+  "lesson": {
+    "learningOutcomes": [
+      "MongoDB schema design principles puriyum",
+      "Embedding vs referencing difference clear aagum",
+      "Scalable data model create panna confidence"
+    ],
+    "intro": "Schema-less nu sonnalum MongoDB-la proper schema design romba important.",
+    "deepExplanation": [
+      "Schema design-na data eppadi store pannuvom nu plan pannradhu.",
+      "Embedding related data same document-la store pannum.",
+      "Referencing related data separate collection-la store panni ObjectId link use pannum.",
+      "Right choice application performance decide pannum."
+    ],
+    "conceptBreakdown": [
+      {
+        "concept": "Embedding",
+        "explanation": "Related data same document"
+      },
+      {
+        "concept": "Referencing",
+        "explanation": "Related data separate collections"
+      },
+      {
+        "concept": "Indexing",
+        "explanation": "Query speed improve"
+      }
+    ],
+    "example": {
+      "description": "User & Orders schema",
+      "code": "{ userId: ObjectId, orders: [{item:'Book', price:100}] }"
+    },
+    "whyImportant": [
+      "Performance optimization",
+      "Scalability",
+      "Maintainable backend"
+    ],
+    "commonMistakes": [
+      "Over-embedding",
+      "Too many references",
+      "Index ignore pannradhu"
+    ],
+    "practice": {
+      "easy": "Simple schema design",
+      "medium": "User–Order relation",
+      "challenge": "Optimized schema for large data"
+    },
+    "summary": "Good schema design = fast & scalable app.",
+    "nextLesson": "React Introduction"
+  },
+  "lesson_id": null
+},
+{
+  "_id": {
+    "$oid": "694255f69bb1dc7d3fc5f2e9"
+  },
+  "title": "React Introduction",
+  "description": "Components & JSX",
+  "order": 1,
+  "course_id": "69424e419bb1dc7d3fc5f290",
+  "estimatedTime": "40 minutes",
+  "lesson": {
+    "learningOutcomes": [
+      "React framework purpose puriyum",
+      "Component-based thinking develop aagum",
+      "JSX syntax confidence"
+    ],
+    "intro": "React modern frontend development-ku most popular library. Indha lesson React fundamentals introduce pannum.",
+    "deepExplanation": [
+      "React component-based architecture follow pannum.",
+      "UI small reusable components-ah break pannuvom.",
+      "JSX JavaScript + HTML mix.",
+      "Virtual DOM performance improve pannum."
+    ],
+    "conceptBreakdown": [
+      {
+        "concept": "Component",
+        "explanation": "Reusable UI block"
+      },
+      {
+        "concept": "JSX",
+        "explanation": "JS + HTML syntax"
+      },
+      {
+        "concept": "Virtual DOM",
+        "explanation": "Efficient UI updates"
+      }
+    ],
+    "example": {
+      "description": "Simple React component",
+      "code": "function App() {\n  return <h1>Hello React</h1>;\n}"
+    },
+    "whyImportant": [
+      "Modern frontend apps",
+      "Reusable UI",
+      "Industry standard"
+    ],
+    "commonMistakes": [
+      "JSX syntax error",
+      "Component naming lowercase",
+      "Too much logic in one component"
+    ],
+    "practice": {
+      "easy": "Simple component create pannunga",
+      "medium": "Multiple components use pannunga",
+      "challenge": "Reusable card component"
+    },
+    "summary": "React introduction frontend next level.",
+    "nextLesson": "State & Props"
+  },
+  "lesson_id": null
+},
+{
+  "_id": {
+    "$oid": "694256139bb1dc7d3fc5f2eb"
+  },
+  "title": "State & Props",
+  "description": "Data handling",
+  "order": 2,
+  "course_id": "69424e419bb1dc7d3fc5f290",
+  "estimatedTime": "40 minutes",
+  "lesson": {
+    "learningOutcomes": [
+      "Props vs State difference clear-a puriyum",
+      "Data flow React-la eppadi nadakkudhu nu theriyum",
+      "Dynamic UI build panna confidence"
+    ],
+    "intro": "React application dynamic-a behave aaguradhu State & Props mela depend aagudhu. Indha lesson data handling deep-ah cover pannum.",
+    "deepExplanation": [
+      "Props parent component-lendhu child component-kku data pass panna use pannuvom. Props read-only.",
+      "State component-kulla irukkura private data. useState hook moolama update pannuvom.",
+      "State update aagumbodhu React component re-render aagum.",
+      "Unidirectional data flow React strength."
+    ],
+    "conceptBreakdown": [
+      {
+        "concept": "Props",
+        "explanation": "Parent → Child data pass (read-only)"
+      },
+      {
+        "concept": "State",
+        "explanation": "Component internal data (mutable)"
+      },
+      {
+        "concept": "Re-render",
+        "explanation": "State change-la UI update"
+      }
+    ],
+    "example": {
+      "description": "Props & State example",
+      "code": "function Child({ name }) { return <h1>Hello {name}</h1>; }\nfunction Parent() {\n  const [name, setName] = React.useState('Yuva');\n  return <Child name={name} />;\n}"
+    },
+    "whyImportant": [
+      "Dynamic applications",
+      "User interaction handling",
+      "Scalable component design"
+    ],
+    "commonMistakes": [
+      "Props modify panna try pannradhu",
+      "State direct-a change pannradhu",
+      "Too many states in one component"
+    ],
+    "practice": {
+      "easy": "Props pass pannunga",
+      "medium": "Counter using state",
+      "challenge": "Todo list with state"
+    },
+    "summary": "State & Props React core pillars.",
+    "nextLesson": "API Integration"
+  },
+  "lesson_id": null
+},
+{
+  "_id": {
+    "$oid": "694256479bb1dc7d3fc5f2ed"
+  },
+  "title": "API Integration",
+  "description": "Fetch backend data",
+  "order": 3,
+  "course_id": "69424e419bb1dc7d3fc5f290",
+  "estimatedTime": "40 minutes",
+  "lesson": {
+    "learningOutcomes": [
+      "Frontend-backend integration puriyum",
+      "Async data_ATTACH pannradhu theriyum",
+      "Error & loading state handle panna confidence"
+    ],
+    "intro": "Real React application backend data illama incomplete. Indha lesson API integration deep-ah cover pannum.",
+    "deepExplanation": [
+      "API integration-na backend server-kitta HTTP request send pannradhu.",
+      "fetch / axios use panni data retrieve pannuvom.",
+      "useEffect hook lifecycle manage pannum.",
+      "Loading & error states user experience improve pannum."
+    ],
+    "conceptBreakdown": [
+      {
+        "concept": "useEffect",
+        "explanation": "Side-effects handle pannum"
+      },
+      {
+        "concept": "Async/Await",
+        "explanation": "Asynchronous code handle"
+      },
+      {
+        "concept": "HTTP",
+        "explanation": "Client-server communication"
+      }
+    ],
+    "example": {
+      "description": "Fetch data example",
+      "code": "useEffect(() => {\n  fetch('/api/users')\n    .then(res => res.json())\n    .then(data => setUsers(data));\n}, []);"
+    },
+    "whyImportant": [
+      "Live data display",
+      "User-specific content",
+      "Production-ready apps"
+    ],
+    "commonMistakes": [
+      "useEffect dependency miss",
+      "No error handling",
+      "CORS issue ignore pannradhu"
+    ],
+    "practice": {
+      "easy": "Public API fetch pannunga",
+      "medium": "Loading spinner add pannunga",
+      "challenge": "Error handling UI"
+    },
+    "summary": "API integration React real-world usage.",
+    "nextLesson": "Project Planning"
+  },
+  "lesson_id": null
+},
+{
+  "_id": {
+    "$oid": "694256699bb1dc7d3fc5f2ef"
+  },
+  "title": "Project Planning",
+  "description": "Architecture design",
+  "order": 1,
+  "course_id": "69424e519bb1dc7d3fc5f292",
+  "estimatedTime": "40 minutes",
+  "lesson": {
+    "learningOutcomes": [
+      "Project architecture plan panna theriyum",
+      "Tech stack select panna confidence",
+      "Future scalability consider panna skill"
+    ],
+    "intro": "Coding start panna munna proper planning project success decide pannum.",
+    "deepExplanation": [
+      "Project planning-na requirements collect pannradhu.",
+      "Architecture decide pannina confusion avoid pannalaam.",
+      "Frontend, backend, database roles clear-a define pannuvom.",
+      "Folder structure, API flow plan pannuvom."
+    ],
+    "conceptBreakdown": [
+      {
+        "concept": "Requirements",
+        "explanation": "User expectations"
+      },
+      {
+        "concept": "Architecture",
+        "explanation": "System structure"
+      },
+      {
+        "concept": "Scalability",
+        "explanation": "Future growth"
+      }
+    ],
+    "example": {
+      "description": "MERN architecture",
+      "code": "Frontend: React\nBackend: Node.js\nDatabase: MongoDB"
+    },
+    "whyImportant": [
+      "Time save",
+      "Clean codebase",
+      "Team collaboration"
+    ],
+    "commonMistakes": [
+      "Planning skip pannradhu",
+      "Overengineering",
+      "Requirements unclear"
+    ],
+    "practice": {
+      "easy": "Simple app plan pannunga",
+      "medium": "Folder structure design",
+      "challenge": "Full MERN architecture"
+    },
+    "summary": "Good planning = successful project.",
+    "nextLesson": "Frontend Integration"
+  },
+  "lesson_id": null
+},
+{
+  "_id": {
+    "$oid": "694256859bb1dc7d3fc5f2f1"
+  },
+  "title": "Frontend Integration",
+  "description": "React + API",
+  "order": 2,
+  "course_id": "69424e519bb1dc7d3fc5f292",
+  "estimatedTime": "40 minutes",
+  "lesson": {
+    "learningOutcomes": [
+      "Frontend & backend connect panna full clarity",
+      "React-la real API data render panna confidence",
+      "End-to-end user flow understand pannalaam"
+    ],
+    "intro": "Backend ready-a irundhaalum frontend connect pannina dhaan application complete. Indha lesson frontend integration deep-ah cover pannum.",
+    "deepExplanation": [
+      "Frontend integration-na backend API endpoints React components-la consume pannradhu.",
+      "Axios / fetch use panni HTTP requests send pannuvom.",
+      "Response data state-la store panni UI-la render pannuvom.",
+      "Authentication token, headers, params ellam integration stage-la important."
+    ],
+    "conceptBreakdown": [
+      {
+        "concept": "API Endpoint",
+        "explanation": "Backend URL to fetch data"
+      },
+      {
+        "concept": "State Management",
+        "explanation": "Fetched data store pannradhu"
+      },
+      {
+        "concept": "Re-render",
+        "explanation": "State change-la UI update"
+      }
+    ],
+    "example": {
+      "description": "React + API integration",
+      "code": "useEffect(() => {\n  fetch('/api/products')\n    .then(res => res.json())\n    .then(data => setProducts(data));\n}, []);"
+    },
+    "whyImportant": [
+      "Dynamic applications",
+      "User-specific content",
+      "Production-ready frontend"
+    ],
+    "commonMistakes": [
+      "Wrong API URL",
+      "No loading state",
+      "State misuse"
+    ],
+    "practice": {
+      "easy": "API data list render pannunga",
+      "medium": "Search / filter add pannunga",
+      "challenge": "Protected route integration"
+    },
+    "summary": "Frontend integration application alive aagura stage.",
+    "nextLesson": "Backend Integration"
+  },
+  "lesson_id": null
+},
+{
+  "_id": {
+    "$oid": "694256b79bb1dc7d3fc5f2f4"
+  },
+  "title": "Backend Integration",
+  "description": "Node + MongoDB",
+  "order": 3,
+  "course_id": "69424e519bb1dc7d3fc5f292",
+  "estimatedTime": "40 minutes",
+  "lesson": {
+    "learningOutcomes": [
+      "Node server & MongoDB connect panna confidence",
+      "Mongoose schema & API flow clear aagum",
+      "Data persistence understand pannalaam"
+    ],
+    "intro": "Backend integration-na application heart. Indha lesson Node.js + MongoDB integration deep-ah cover pannum.",
+    "deepExplanation": [
+      "Node.js Express server MongoDB-kitta connect pannum.",
+      "Mongoose ODM use panni schema define pannuvom.",
+      "API requests database-la data save / fetch pannum.",
+      "Error handling, validation backend quality decide pannum."
+    ],
+    "conceptBreakdown": [
+      {
+        "concept": "Mongoose",
+        "explanation": "MongoDB ODM for Node.js"
+      },
+      {
+        "concept": "Schema",
+        "explanation": "Data structure definition"
+      },
+      {
+        "concept": "Controller",
+        "explanation": "Business logic layer"
+      }
+    ],
+    "example": {
+      "description": "MongoDB connection",
+      "code": "mongoose.connect(process.env.MONGO_URI)\n  .then(() => console.log('DB Connected'));\n"
+    },
+    "whyImportant": [
+      "Data persistence",
+      "Scalable backend",
+      "Secure API design"
+    ],
+    "commonMistakes": [
+      "Environment variable misuse",
+      "Schema mismatch",
+      "Async error ignore pannradhu"
+    ],
+    "practice": {
+      "easy": "Simple schema create pannunga",
+      "medium": "CRUD API with DB",
+      "challenge": "Auth + protected routes"
+    },
+    "summary": "Backend integration app backbone.",
+    "nextLesson": "Deployment"
+  },
+  "lesson_id": null
+},
+{
+  "_id": {
+    "$oid": "694256d49bb1dc7d3fc5f2f6"
+  },
+  "title": "Deployment",
+  "description": "Render & MongoDB Atlas",
+  "order": 4,
+  "course_id": "69424e519bb1dc7d3fc5f292",
+  "estimatedTime": "40 minutes",
+  "lesson": {
+    "learningOutcomes": [
+      "Application deploy panna confidence",
+      "Cloud database usage puriyum",
+      "Production issues basic understanding"
+    ],
+    "intro": "Local system-la run aagura project world-ku visible aaguradhu deployment. Indha lesson deployment process deep-ah explain pannum.",
+    "deepExplanation": [
+      "Backend Render-la host pannalaam.",
+      "MongoDB Atlas cloud database provide pannum.",
+      "Environment variables production-la critical.",
+      "Build logs & errors read panna theriyanum."
+    ],
+    "deploymentSteps": [
+      "GitHub push",
+      "Render service create",
+      "Environment variables set",
+      "MongoDB Atlas connect",
+      "Test production URL"
+    ],
+    "example": {
+      "description": "Env variables example",
+      "code": "MONGO_URI=your_atlas_url\nPORT=10000"
+    },
+    "whyImportant": [
+      "Public access",
+      "Portfolio showcase",
+      "Real user testing"
+    ],
+    "commonMistakes": [
+      "Wrong env values",
+      "CORS issue",
+      "Build fail ignore pannradhu"
+    ],
+    "practice": {
+      "easy": "Static site deploy",
+      "medium": "Backend deploy",
+      "challenge": "Full MERN deploy"
+    },
+    "summary": "Deployment = project completion.",
+    "nextLesson": "🎉 Course Completed"
+  },
+  "lesson_id": null
+},
+{
+  "_id": {
+    "$oid": "6948e9cc6c32ccedbb14139f"
+  },
+  "lesson_id": {
+    "$oid": "6942520b9bb1dc7d3fc5f2ba"
+  },
+  "language": "java",
+  "title": "Print Hello World",
+  "description": "Write a Java program to print Hello World",
+  "starterCode": "public class Main {\n  public static void main(String[] args) {\n    \n  }\n}",
+  "expectedOutput": "Hello World",
+  "order": 1
+}]

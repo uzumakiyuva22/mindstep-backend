@@ -1,14 +1,21 @@
 const mongoose = require("mongoose");
 
-module.exports = mongoose.model(
-  "Task",
-  new mongoose.Schema({
-    course_id: { type: mongoose.Schema.Types.ObjectId, ref: "Course" },
-    lesson_id: { type: mongoose.Schema.Types.ObjectId, ref: "Lesson" },
-    title: String,
-    description: String,
-    starterCode: String,
-    language: String,
-    expectedOutput: String
-  })
-);
+const TaskSchema = new mongoose.Schema({
+  lesson_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Lesson",
+    required: true
+  },
+  language: {
+    type: String,
+    enum: ["python", "java", "javascript", "html", "css"],
+    required: true
+  },
+  title: String,
+  description: String,
+  starterCode: String,
+  expectedOutput: String,
+  order: Number
+});
+
+module.exports = mongoose.model("Task", TaskSchema);
