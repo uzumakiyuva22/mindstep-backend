@@ -1,321 +1,318 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>MindStep — Lesson</title>
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>MindStep — Lesson</title>
 
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 
-  <style>
-    :root { --primary-red:#ff2d55; --primary-blue:#0066ff; --cyan:#00e5ff; }
-    body {
-      font-family: Inter, sans-serif;
-      background: linear-gradient(135deg,#030314,#06122a);
-      color: #eaf6ff;
-      min-height: 100vh;
-      display:flex; flex-direction:column; align-items:center;
-      padding:30px 20px;
-    }
-    h1 { font-family: Orbitron; text-shadow:0 0 12px var(--cyan); }
+    <style>
+      :root { --primary-red:#ff2d55; --primary-blue:#0066ff; --cyan:#00e5ff; }
+      body {
+        font-family: Inter, sans-serif;
+        background: linear-gradient(135deg,#030314,#06122a);
+        color: #eaf6ff;
+        min-height: 100vh;
+        display:flex; flex-direction:column; align-items:center;
+        padding:30px 20px;
+      }
+      h1 { font-family: Orbitron; text-shadow:0 0 12px var(--cyan); }
 
-    button {
-      padding:10px 24px; border:none; border-radius:10px;
-      font-weight:700;
-      background:linear-gradient(90deg,var(--primary-red),var(--primary-blue));
-      color:#fff; cursor:pointer; transition:.3s; margin-top:10px;
-    }
-    button:hover { transform:scale(1.05); box-shadow:0 0 20px var(--cyan); }
+      button {
+        padding:10px 24px; border:none; border-radius:10px;
+        font-weight:700;
+        background:linear-gradient(90deg,var(--primary-red),var(--primary-blue));
+        color:#fff; cursor:pointer; transition:.3s; margin-top:10px;
+      }
+      button:hover { transform:scale(1.05); box-shadow:0 0 20px var(--cyan); }
 
-    select,textarea {
-      width:100%; margin-top:10px; padding:10px; border-radius:8px;
-      border:none; background:#0e0f1a; color:#fff; font-family:monospace;
-    }
-
-    pre {
-      background:#0c0d12; color:#00ffb7;
-      padding:14px; border-radius:10px; white-space:pre-wrap;
-      margin-top:10px; font-family:Consolas,monospace;
-    }
-
-    iframe {
-      width:100%; height:300px; border:1px solid #333;
-      border-radius:10px; background:#fff; margin-top:10px;
-    }
-    .container { max-width:800px; width:100%; }
-
-    /* Popup box (Course Completed) */
-    .popup {
-      display:none; position:fixed; top:0; left:0; width:100%; height:100%;
-      background:rgba(0,0,0,0.7);
-      justify-content:center; align-items:center;
-      z-index:1000;
-    }
-    .popup-content {
-      background:#11182a; color:#eaf6ff; padding:30px 40px;
-      border-radius:12px; text-align:center;
-      box-shadow:0 0 25px var(--cyan);
-    }
-    .popup-content h2 {
-      font-family: Orbitron; color:var(--cyan);
-      text-shadow:0 0 10px var(--primary-blue);
-    }
-  </style>
-</head>
-
-<body>
-  <div class="container">
-    <h1 id="lessonTitle">Lesson</h1>
-    <p id="lessonDesc">Loading lesson...</p>
-
-    <!-- Language selection -->
-    <div id="langSelectArea">
-      <label for="lang">Select Language:</label>
-      <select id="lang">
-        <option value="java">Java</option>
-        <option value="python">Python</option>
-        <option value="javascript">JavaScript</option>
-        <option value="html">HTML</option>
-        <option value="css">CSS</option>
-      </select>
-    </div>
-
-    <!-- Code area -->
-    <textarea id="code" rows="12"></textarea>
-
-    <button id="runBtn">Run Code</button>
-    <pre id="output">Ready.</pre>
-    <iframe id="preview" style="display:none;"></iframe>
-
-    <!-- Mark Complete -->
-    <button id="completeBtn">✅ Mark Complete</button>
-  </div>
-
-  <!-- Final Popup -->
-  <div class="popup" id="popupBox">
-    <div class="popup-content">
-      <h2>🎉 Course Completed!</h2>
-      <p>You have finished all lessons in this course.</p>
-      <button id="closePopup">Close & Return to Main Page</button>
-    </div>
-  </div>
-
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-
-  /* ---------- GET LESSON ID ---------- */
-  const params = new URLSearchParams(window.location.search);
-  const lessonId = params.get("lesson"); // ?lesson=<ObjectId>
-
-  if (!lessonId || lessonId.length !== 24) {
-    alert("Invalid lesson link!");
-    window.location.href = "MainPage.html";
-    return;
-  }
-
-  /* ---------- CHECK USER ---------- */
-  const user = JSON.parse(localStorage.getItem("mindstep_user") || "null");
-  if (!user) {
-    alert("Please login!");
-    window.location.href = "LoginPage.html";
-    return;
-  }
-  const userId = user._id;
-
-  /* ---------- ELEMENTS ---------- */
-  const titleEl = document.getElementById("lessonTitle");
-  const descEl  = document.getElementById("lessonDesc");
-  const langSel = document.getElementById("lang");
-  const container = document.querySelector(".container");
-
-  /* ---------- CLEAR LOADING TEXT ---------- */
-  descEl.textContent = "";
-
-  /* ---------- THEORY BOX ---------- */
-  const theoryBox = document.createElement("div");
-  theoryBox.id = "theoryBox";
-  container.appendChild(theoryBox);
-
-  /* ---------- TASK BOX (LOCKED) ---------- */
-  const taskContainer = document.createElement("div");
-  taskContainer.id = "tasks";
-  taskContainer.style.display = "none";
-  taskContainer.style.marginTop = "60px";
-  container.appendChild(taskContainer);
-
-  let ALL_TASKS = [];
-  let TASK_UNLOCKED = false;
-
-  /* ---------- LOAD LESSON + TASKS ---------- */
-  async function loadLesson() {
-    try {
-      const res = await fetch(`/api/lesson/${lessonId}/details`);
-      const data = await res.json();
-
-      if (!data.success) {
-        titleEl.textContent = "Lesson not found";
-        return;
+      select,textarea {
+        width:100%; margin-top:10px; padding:10px; border-radius:8px;
+        border:none; background:#0e0f1a; color:#fff; font-family:monospace;
       }
 
-      titleEl.textContent = data.lesson.title;
+      pre {
+        background:#0c0d12; color:#00ffb7;
+        padding:14px; border-radius:10px; white-space:pre-wrap;
+        margin-top:10px; font-family:Consolas,monospace;
+      }
 
-      const L = data.lesson.lesson;
+      iframe {
+        width:100%; height:300px; border:1px solid #333;
+        border-radius:10px; background:#fff; margin-top:10px;
+      }
+      .container { max-width:800px; width:100%; }
 
-      /* ---------- THEORY CONTENT (LONG) ---------- */
-      theoryBox.innerHTML = `
-        <h2>Introduction</h2>
-        <p>${L.intro}</p>
+      /* Popup box (Course Completed) */
+      .popup {
+        display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+        background:rgba(0,0,0,0.7);
+        justify-content:center; align-items:center;
+        z-index:1000;
+      }
+      .popup-content {
+        background:#11182a; color:#eaf6ff; padding:30px 40px;
+        border-radius:12px; text-align:center;
+        box-shadow:0 0 25px var(--cyan);
+      }
+      .popup-content h2 {
+        font-family: Orbitron; color:var(--cyan);
+        text-shadow:0 0 10px var(--primary-blue);
+      }
+    </style>
+  </head>
 
-        <h2>Deep Explanation</h2>
-        ${L.deepExplanation.map(t => `<p>${t}</p>`).join("")}
+  <body>
+    <div class="container">
+      <h1 id="lessonTitle">Lesson</h1>
+      <p id="lessonDesc">Loading lesson...</p>
 
-        <h2>Concept Breakdown</h2>
-        <ul>
-          ${L.conceptBreakdown.map(c =>
-            `<li><b>${c.concept}</b> — ${c.explanation}</li>`
-          ).join("")}
-        </ul>
+      <div id="langSelectArea" style="display:none;"> <label for="lang">Select Language:</label>
+        <select id="lang">
+          <option value="java">Java</option>
+          <option value="python">Python</option>
+          <option value="javascript">JavaScript</option>
+          <option value="html">HTML</option>
+          <option value="css">CSS</option>
+        </select>
+      </div>
 
-        <h2>Example</h2>
-        <p>${L.example.description}</p>
-        <pre>${L.example.code}</pre>
+      <textarea id="code" rows="12" style="display:none;"></textarea> <button id="runBtn" style="display:none;">Run Code</button>
+      <pre id="output" style="display:none;">Ready.</pre>
+      <iframe id="preview" style="display:none;"></iframe>
 
-        <h2>Why This Matters</h2>
-        <ul>${L.whyImportant.map(w => `<li>${w}</li>`).join("")}</ul>
+      <button id="completeBtn" style="margin-top: 40px;">✅ Mark Lesson Complete</button>
+    </div>
 
-        <h2>Common Mistakes</h2>
-        <ul>${L.commonMistakes.map(m => `<li>${m}</li>`).join("")}</ul>
+    <div class="popup" id="popupBox">
+      <div class="popup-content">
+        <h2>🎉 Course Completed!</h2>
+        <p>You have finished all lessons in this course.</p>
+        <button id="closePopup">Close & Return to Main Page</button>
+      </div>
+    </div>
 
-        <h2>Summary</h2>
-        <p>${L.summary}</p>
+  <script>
+  document.addEventListener("DOMContentLoaded", () => {
 
-        <div style="
-          margin-top:30px;
-          padding:16px;
-          background:rgba(255,255,255,0.08);
-          border-radius:12px;
-        ">
-          <b>⬇ Scroll down to unlock practice tasks</b>
-        </div>
-      `;
+    /* ---------- GET LESSON ID ---------- */
+    const params = new URLSearchParams(window.location.search);
+    const lessonId = params.get("lesson");
 
-      ALL_TASKS = data.tasks || [];
-
-      setupLanguageDropdown();
-
-    } catch (err) {
-      console.error(err);
-      titleEl.textContent = "Error loading lesson";
-    }
-  }
-
-  /* ---------- LANGUAGE DROPDOWN ---------- */
-  function setupLanguageDropdown() {
-    const langs = [...new Set(ALL_TASKS.map(t => t.language))];
-
-    [...langSel.options].forEach(opt => {
-      opt.style.display = langs.includes(opt.value) ? "block" : "none";
-    });
-
-    if (langs.length > 0) {
-      langSel.value = langs[0];
-    }
-  }
-
-  /* ---------- UNLOCK TASKS ON SCROLL ---------- */
-  window.addEventListener("scroll", () => {
-    if (TASK_UNLOCKED) return;
-
-    if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 200) {
-      TASK_UNLOCKED = true;
-      taskContainer.style.display = "block";
-      renderTasks();
-    }
-  });
-
-  /* ---------- RENDER TASKS ---------- */
-  function renderTasks() {
-    taskContainer.innerHTML = "<h2>Practice Tasks</h2>";
-
-    const selectedLang = langSel.value;
-    const tasks = ALL_TASKS.filter(t => t.language === selectedLang);
-
-    if (tasks.length === 0) {
-      taskContainer.innerHTML += "<p>No tasks available for this language.</p>";
+    if (!lessonId || lessonId.length !== 24) {
+      alert("Invalid lesson link!");
+      window.location.href = "MainPage.html";
       return;
     }
 
-    tasks.forEach((task, i) => {
-      const div = document.createElement("div");
-      div.style = `
-        padding:16px;
-        margin-top:20px;
-        background:rgba(255,255,255,0.06);
-        border-radius:12px;
-      `;
+    /* ---------- CHECK USER ---------- */
+    const user = JSON.parse(localStorage.getItem("mindstep_user") || "null");
+    if (!user) {
+      alert("Please login!");
+      window.location.href = "LoginPage.html";
+      return;
+    }
+    const userId = user._id;
 
-      div.innerHTML = `
-        <h3>Task ${i + 1}: ${task.title}</h3>
-        <p>${task.description}</p>
+    /* ---------- ELEMENTS ---------- */
+    const titleEl = document.getElementById("lessonTitle");
+    const descEl  = document.getElementById("lessonDesc");
+    const completeBtn = document.getElementById("completeBtn");
+    const container = document.querySelector(".container");
+    const popupBox = document.getElementById("popupBox");
+    const closePopup = document.getElementById("closePopup");
 
-        <textarea id="code_${task._id}"
-          style="width:100%;height:140px;margin-top:8px;
-          background:#05070f;color:#eaf6ff;border-radius:10px;">
-${task.starterCode || ""}
-        </textarea>
+    descEl.textContent = "";
 
-        <button class="runTaskBtn" data-id="${task._id}">
-          ▶ Run Task
-        </button>
+    /* ---------- THEORY BOX ---------- */
+    const theoryBox = document.createElement("div");
+    container.insertBefore(theoryBox, completeBtn);
 
-        <pre id="out_${task._id}">Output will appear here...</pre>
-      `;
+    /* ---------- TASK BOX ---------- */
+    const taskContainer = document.createElement("div");
+    taskContainer.style.marginTop = "50px";
+    container.insertBefore(taskContainer, completeBtn);
 
-      taskContainer.appendChild(div);
+    let ALL_TASKS = [];
+    let PASSED_TASKS = new Set();
+
+    /* ---------- LOAD LESSON ---------- */
+    async function loadLesson() {
+      try {
+        const res = await fetch(`/api/lesson/${lessonId}/details`);
+        const data = await res.json();
+
+        if (!data.success) {
+          titleEl.textContent = "Lesson not found";
+          return;
+        }
+
+        titleEl.textContent = data.lesson.title;
+        const L = data.lesson.lesson;
+
+        theoryBox.innerHTML = `
+          <h2>Introduction</h2>
+          <p>${L.intro}</p>
+
+          <h2>Deep Explanation</h2>
+          ${(L.deepExplanation || []).map(p => `<p>${p}</p>`).join("")}
+
+          <h2>Concept Breakdown</h2>
+          <ul>
+            ${(L.conceptBreakdown || []).map(c =>
+              `<li><b>${c.concept}</b> — ${c.explanation}</li>`
+            ).join("")}
+          </ul>
+
+          <h2>Example</h2>
+          <pre>${L.example?.code || ""}</pre>
+
+          <h2>Why This Matters</h2>
+          <ul>${(L.whyImportant || []).map(w => `<li>${w}</li>`).join("")}</ul>
+
+          <h2>Common Mistakes</h2>
+          <ul>${(L.commonMistakes || []).map(m => `<li>${m}</li>`).join("")}</ul>
+
+          <h2>Summary</h2>
+          <p>${L.summary}</p>
+
+          <hr style="margin:40px 0;">
+        `;
+
+        ALL_TASKS = data.tasks || [];
+        renderTasks();
+        checkCompletionStatus();
+
+      } catch (err) {
+        console.error(err);
+        titleEl.textContent = "Error loading lesson";
+      }
+    }
+
+    /* ---------- RENDER TASKS ---------- */
+    function renderTasks() {
+      taskContainer.innerHTML = "<h2>Practice Tasks</h2>";
+
+      if (ALL_TASKS.length === 0) {
+        taskContainer.innerHTML += "<p>No tasks available.</p>";
+        return;
+      }
+
+      ALL_TASKS.forEach((task, i) => {
+        const div = document.createElement("div");
+        div.style = `
+          margin-top:20px;
+          padding:16px;
+          background:rgba(255,255,255,0.06);
+          border-radius:12px;
+          border:1px solid #333;
+        `;
+
+        div.innerHTML = `
+          <h3>Task ${i + 1}: ${task.title}</h3>
+          <p>${task.description}</p>
+
+          <textarea id="code_${task._id}" style="
+            width:100%; height:140px; margin-top:8px;
+            background:#05070f; color:#fff; border-radius:10px;
+            padding:10px; font-family:monospace;"></textarea>
+
+          <button class="runTaskBtn" data-id="${task._id}">
+            ▶ Run Task
+          </button>
+
+          <pre id="out_${task._id}" style="
+            margin-top:10px; padding:10px;
+            background:#000; border-radius:6px;">
+  Waiting for input...
+          </pre>
+        `;
+
+        taskContainer.appendChild(div);
+      });
+    }
+
+    /* ---------- RUN TASK ---------- */
+    taskContainer.addEventListener("click", async (e) => {
+      const btn = e.target.closest(".runTaskBtn");
+      if (!btn) return;
+
+      const taskId = btn.dataset.id;
+      const code = document.getElementById(`code_${taskId}`).value.trim();
+      const out  = document.getElementById(`out_${taskId}`);
+
+      if (!code) {
+        out.textContent = "❌ Please write code before running.";
+        out.style.color = "#ff2d55";
+        return;
+      }
+
+      out.textContent = "Checking...";
+      out.style.color = "#ffff00";
+
+      try {
+        const res = await fetch("/api/task/submit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId, lessonId, taskId, output: code })
+        });
+
+        const result = await res.json();
+
+        if (result.success && result.passed) {
+          PASSED_TASKS.add(taskId);
+          out.textContent = "✅ Passed!";
+          out.style.color = "#00ff88";
+          checkCompletionStatus();
+        } else {
+          out.textContent = "❌ Failed. Try again.";
+          out.style.color = "#ff2d55";
+        }
+
+      } catch (err) {
+        out.textContent = "Server error.";
+        out.style.color = "red";
+      }
     });
-  }
 
-  /* ---------- LANGUAGE CHANGE ---------- */
-  langSel.addEventListener("change", () => {
-    if (TASK_UNLOCKED) renderTasks();
-  });
+    /* ---------- CHECK ALL TASKS DONE ---------- */
+    async function checkCompletionStatus() {
+      const res = await fetch(`/api/lesson/${lessonId}/tasks-status/${userId}`);
+      const data = await res.json();
 
-  /* ---------- RUN TASK ---------- */
-  taskContainer.addEventListener("click", async (e) => {
-    const btn = e.target.closest(".runTaskBtn");
-    if (!btn) return;
+      completeBtn.disabled = !data.allDone;
+      completeBtn.style.opacity = data.allDone ? "1" : "0.5";
+    }
 
-    const taskId = btn.dataset.id;
-    const code = document.getElementById(`code_${taskId}`).value;
-    const out  = document.getElementById(`out_${taskId}`);
+    /* ---------- COMPLETE LESSON ---------- */
+    completeBtn.addEventListener("click", async () => {
+      if (completeBtn.disabled) {
+        alert("Complete all tasks first.");
+        return;
+      }
 
-    out.textContent = "Checking...";
-
-    try {
-      const output = code.trim();
-      out.textContent = output || "No output";
-
-      await fetch("/api/task/submit", {
+      const res = await fetch("/api/lesson/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId,
-          lessonId,
-          taskId,
-          output
-        })
+        body: JSON.stringify({ userId, lessonId })
       });
 
-    } catch {
-      out.textContent = "Error running task";
-    }
+      const data = await res.json();
+
+      if (data.success) {
+        popupBox.style.display = "flex";
+      }
+    });
+
+    closePopup.addEventListener("click", () => {
+      window.location.href = "MainPage.html";
+    });
+
+    /* ---------- START ---------- */
+    loadLesson();
   });
+  </script>
 
-  /* ---------- START ---------- */
-  loadLesson();
-
-});
-</script>
-
-</body>
-</html>
+  </body>
+  </html>
