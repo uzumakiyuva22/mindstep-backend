@@ -316,35 +316,45 @@ app.get("/api/lesson/:lessonId/details", async (req, res) => {
 // ✅ 100% FIXED TASK SUBMISSION ROUTE
 app.post("/api/task/submit", async (req, res) => {
   try {
-    const { userId, lessonId, taskId, code } = req.body;
+    const { user_Id, lesson_Id, task_Id, code } = req.body;
 
     // 1. Validate Task
-    const task = await Task.findById(taskId);
+    const task = await Task.findById(task_Id);
     if (!task) {
       return res.json({ success: false, passed: false, error: "Task not found" });
     }
 
+    // Normalizing Language
+    const lang = (task.language || "").toLowerCase();
+
     // 2. Handle HTML & CSS (IMMEDIATE SUCCESS + PREVIEW)
-    if (task.language === "html" || task.language === "css") {
-      // Always pass HTML/CSS, return code for preview iframe
+    if (lang === "html" || lang === "css") {
+      // ✅ FIX: Use snake_case keys (user_id, task_id) to match Schema
       await TaskProgress.findOneAndUpdate(
-        { userId, taskId },
-        { userId, lessonId, taskId, passed: true, output: "View Preview", submittedAt: new Date() },
+        { user_id: user_Id, task_id: task_Id },
+        { 
+          user_id: user_Id, 
+          lesson_id: lesson_Id, 
+          task_id: task_Id, 
+          passed: true, 
+          output: "View Preview", 
+          submittedAt: new Date() 
+        },
         { upsert: true }
       );
 
       return res.json({
         success: true,
         passed: true,
-        output: code, // Send raw code back for iframe srcdoc
-        preview: true // Flag for frontend
+        output: code,
+        preview: true
       });
     }
 
     // 3. Run Code (Java, Python, JS)
     let result;
     try {
-      switch (task.language) {
+      switch (lang) {
         case "java":
           result = await runJava(code);
           break;
@@ -355,31 +365,29 @@ app.post("/api/task/submit", async (req, res) => {
           result = await runJavaScript(code);
           break;
         default:
-          return res.json({ success: false, passed: false, error: "Unsupported language" });
+          return res.json({ success: false, passed: false, error: "Unsupported language: " + lang });
       }
     } catch (runErr) {
       console.error("Runtime Error:", runErr);
       return res.json({ success: false, passed: false, output: "Runtime Error: " + runErr.message });
     }
 
-    // 4. RELAXED Output Matching
-    // Normalize: remove carriage returns, trim whitespace
+    // 4. Output Matching
     const outputString = result && result.output ? result.output.toString().replace(/\r/g, "").trim() : "";
     const expectedString = task.expectedOutput ? task.expectedOutput.toString().replace(/\r/g, "").trim() : "";
 
-    // ✅ LOGIC FIX: Check if output CONTAINS expected text (not strict equals)
-    // If no expected output is defined, we assume passing (unless it's a specific challenge)
     const passed = expectedString 
       ? outputString.includes(expectedString) 
       : true;
 
     // 5. Save Progress
+    // ✅ FIX: Use snake_case keys (user_id, task_id) to match Schema
     await TaskProgress.findOneAndUpdate(
-      { userId, taskId },
+      { user_id: user_Id, task_id: task_Id },
       {
-        userId,
-        lessonId,
-        taskId,
+        user_id: user_Id,
+        lesson_id: lesson_Id,
+        task_id: task_Id,
         passed,
         output: outputString,
         submittedAt: new Date(),
@@ -390,7 +398,7 @@ app.post("/api/task/submit", async (req, res) => {
     res.json({
       success: true,
       passed,
-      output: outputString, // Always return output so user sees what happened
+      output: outputString,
       preview: false
     });
 
@@ -399,13 +407,14 @@ app.post("/api/task/submit", async (req, res) => {
     res.status(500).json({ success: false, passed: false, error: "Server Error" });
   }
 });
+
 // GET Task Status
 app.get("/api/lesson/:lessonId/tasks-status/:userId", async (req, res) => {
   const { lessonId, userId } = req.params;
 
   // ✅ Task uses lesson_id (Schema definition)
   const total = await Task.countDocuments({ lesson_id: lessonId });
-  
+
   // ✅ TaskProgress uses lessonId (Schema definition)
   const completed = await TaskProgress.countDocuments({
     lessonId,
@@ -424,7 +433,7 @@ app.get("/api/lesson/:lessonId/tasks-status/:userId", async (req, res) => {
 app.post("/api/complete", async (req, res) => {
   try {
     const { userId, lessonId } = req.body;
-    
+
     // ✅ Consistency Checks
     const totalTasks = await Task.countDocuments({ lesson_id: lessonId });
     const passedTasks = await TaskProgress.countDocuments({
@@ -462,7 +471,7 @@ app.post("/api/complete", async (req, res) => {
     });
 
     const percent = totalLessons === 0 ? 0 : Math.round((completedLessonsCount / totalLessons) * 100);
-    
+
     // 3. Update User Profile ✅ Using UserModel
     await UserModel.findByIdAndUpdate(userId, { percentage: percent });
 
@@ -599,11 +608,11 @@ app.post("/api/admin/course", requireAdminMiddleware, async (req, res) => {
     const { title, description, slug } = req.body;
     if (!title || !slug)
       return res.json({ success: false, error: "Missing fields" });
-    
+
     const existing = await Course.findOne({ slug });
     if (existing)
       return res.json({ success: false, error: "Course already exists" });
-    
+
     const c = await Course.create({ slug, title, description });
     res.json({ success: true, course: c });
   } catch (err) {
@@ -618,8 +627,8 @@ app.get("/api/admin/overview", requireAdminMiddleware, async (req, res) => {
     // ✅ Using UserModel
     const totalUsers = await UserModel.countDocuments();
     const activeCourses = await Course.countDocuments();
-    const reports = 3; 
-    const dailyVisits = 224; 
+    const reports = 3;
+    const dailyVisits = 224;
     res.json({ success: true, totalUsers, activeCourses, reports, dailyVisits });
   } catch (err) {
     res.json({ success: false, error: "Overview error" });
@@ -632,18 +641,18 @@ app.get("/api/admin/users", requireAdminMiddleware, async (req, res) => {
     // ✅ Using UserModel
     const users = await UserModel.find({}).lean();
     const results = [];
-    const totalLessons = await Lesson.countDocuments(); 
+    const totalLessons = await Lesson.countDocuments();
 
     for (const u of users) {
       const completed = await Completion.countDocuments({ user_id: u._id });
       const pct = totalLessons === 0 ? 0 : Math.round((completed / totalLessons) * 100);
-      
+
       results.push({
         _id: u._id,
         username: u.username,
         email: u.email,
         image: u.image,
-        percentage: pct, 
+        percentage: pct,
         lessonsDone: completed,
         created_at: u.created_at || new Date(),
       });
@@ -665,7 +674,7 @@ app.get("/api/admin/user/:id", requireAdminMiddleware, async (req, res) => {
     const completed = await Completion.countDocuments({ user_id: id });
     const total = await Lesson.countDocuments();
     const pct = total === 0 ? 0 : Math.round((completed / total) * 100);
-    
+
     res.json({ success: true, user: u, lessonsDone: completed, percentage: pct });
   } catch (err) {
     res.json({ success: false, error: "User fetch error" });
@@ -692,7 +701,7 @@ app.post("/api/admin/user/:id/reset", requireAdminMiddleware, async (req, res) =
   try {
     const id = req.params.id;
     await Completion.deleteMany({ user_id: id });
-    await TaskProgress.deleteMany({ userId: id }); 
+    await TaskProgress.deleteMany({ userId: id });
     // ✅ Using UserModel
     await UserModel.findByIdAndUpdate(id, { percentage: 0 });
     res.json({ success: true });
@@ -720,6 +729,10 @@ app.get("/", (req, res) => {
   const file = path.join(PUBLIC_DIR, "LoginPage.html");
   if (fs.existsSync(file)) return res.sendFile(file);
   res.send("MindStep Backend Running");
+});
+
+app.get("/health", (req, res) => {
+  res.status(200).send("OK");
 });
 
 /* ---------------- START SERVER ---------------- */

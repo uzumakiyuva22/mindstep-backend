@@ -1,318 +1,464 @@
-  <!DOCTYPE html>
-  <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>MindStep — Lesson</title>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
+  <title>MindStep — Studio</title>
 
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
 
-    <style>
-      :root { --primary-red:#ff2d55; --primary-blue:#0066ff; --cyan:#00e5ff; }
-      body {
-        font-family: Inter, sans-serif;
-        background: linear-gradient(135deg,#030314,#06122a);
-        color: #eaf6ff;
-        min-height: 100vh;
-        display:flex; flex-direction:column; align-items:center;
-        padding:30px 20px;
-      }
-      h1 { font-family: Orbitron; text-shadow:0 0 12px var(--cyan); }
+  <style>
+    :root {
+      --ios-blue: #007AFF;
+      --ios-green: #34C759;
+      --ios-red: #FF3B30;
+      --ios-gray: #8E8E93;
+      --glass-bg: rgba(30, 30, 30, 0.65);
+      --glass-border: rgba(255, 255, 255, 0.12);
+      --bg-dark: #000000;
+      --font-main: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --font-code: "JetBrains Mono", "SF Mono", Consolas, monospace;
+    }
 
-      button {
-        padding:10px 24px; border:none; border-radius:10px;
-        font-weight:700;
-        background:linear-gradient(90deg,var(--primary-red),var(--primary-blue));
-        color:#fff; cursor:pointer; transition:.3s; margin-top:10px;
-      }
-      button:hover { transform:scale(1.05); box-shadow:0 0 20px var(--cyan); }
+    * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
 
-      select,textarea {
-        width:100%; margin-top:10px; padding:10px; border-radius:8px;
-        border:none; background:#0e0f1a; color:#fff; font-family:monospace;
-      }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: var(--font-main);
+      background-color: var(--bg-dark);
+      /* Premium Apple-style Mesh Gradient Background */
+      background-image: 
+        radial-gradient(circle at 15% 50%, rgba(0, 122, 255, 0.15), transparent 25%), 
+        radial-gradient(circle at 85% 30%, rgba(255, 45, 85, 0.15), transparent 25%);
+      background-attachment: fixed;
+      color: #ffffff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
 
-      pre {
-        background:#0c0d12; color:#00ffb7;
-        padding:14px; border-radius:10px; white-space:pre-wrap;
-        margin-top:10px; font-family:Consolas,monospace;
-      }
+    /* --- Layout Container --- */
+    .app-container {
+      max-width: 1100px;
+      width: 100%;
+      padding: 40px 20px;
+      padding-bottom: 100px;
+    }
 
-      iframe {
-        width:100%; height:300px; border:1px solid #333;
-        border-radius:10px; background:#fff; margin-top:10px;
-      }
-      .container { max-width:800px; width:100%; }
+    /* --- Headers --- */
+    header {
+      margin-bottom: 40px;
+      text-align: center;
+      animation: fadeInDown 0.8s ease;
+    }
 
-      /* Popup box (Course Completed) */
-      .popup {
-        display:none; position:fixed; top:0; left:0; width:100%; height:100%;
-        background:rgba(0,0,0,0.7);
-        justify-content:center; align-items:center;
-        z-index:1000;
-      }
-      .popup-content {
-        background:#11182a; color:#eaf6ff; padding:30px 40px;
-        border-radius:12px; text-align:center;
-        box-shadow:0 0 25px var(--cyan);
-      }
-      .popup-content h2 {
-        font-family: Orbitron; color:var(--cyan);
-        text-shadow:0 0 10px var(--primary-blue);
-      }
-    </style>
-  </head>
+    h1 {
+      font-weight: 700;
+      font-size: 2.5rem;
+      letter-spacing: -0.02em;
+      margin: 0;
+      background: linear-gradient(135deg, #fff 0%, #a5a5a5 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
 
-  <body>
-    <div class="container">
-      <h1 id="lessonTitle">Lesson</h1>
-      <p id="lessonDesc">Loading lesson...</p>
+    /* --- Glass Cards (The "Apple" Look) --- */
+    .glass-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(25px);
+      -webkit-backdrop-filter: blur(25px);
+      border: 1px solid var(--glass-border);
+      border-radius: 24px;
+      padding: 30px;
+      margin-bottom: 30px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
 
-      <div id="langSelectArea" style="display:none;"> <label for="lang">Select Language:</label>
-        <select id="lang">
-          <option value="java">Java</option>
-          <option value="python">Python</option>
-          <option value="javascript">JavaScript</option>
-          <option value="html">HTML</option>
-          <option value="css">CSS</option>
-        </select>
-      </div>
+    /* --- Theory Section --- */
+    .theory-content h3 { font-size: 1.2rem; color: var(--ios-blue); margin-top: 0; margin-bottom: 15px; }
+    .theory-content p { font-size: 1.05rem; line-height: 1.6; color: rgba(255,255,255,0.85); margin-bottom: 15px; }
+    .theory-content hr { border: 0; height: 1px; background: var(--glass-border); margin: 30px 0; }
 
-      <textarea id="code" rows="12" style="display:none;"></textarea> <button id="runBtn" style="display:none;">Run Code</button>
-      <pre id="output" style="display:none;">Ready.</pre>
-      <iframe id="preview" style="display:none;"></iframe>
+    /* --- Compiler Interface --- */
+    .task-header { margin-bottom: 20px; }
+    .task-title { font-size: 1.4rem; font-weight: 600; margin-bottom: 8px; }
+    .task-desc { color: var(--ios-gray); font-size: 0.95rem; }
 
-      <button id="completeBtn" style="margin-top: 40px;">✅ Mark Lesson Complete</button>
+    .compiler-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    @media (min-width: 900px) {
+      .compiler-grid { grid-template-columns: 1.2fr 0.8fr; } /* Editor wider than output */
+    }
+
+    /* Window Controls (Red/Yellow/Green dots) */
+    .window-controls { display: flex; gap: 8px; margin-bottom: 15px; opacity: 0.7; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot.red { background: #FF5F57; }
+    .dot.yellow { background: #FEBC2E; }
+    .dot.green { background: #28C840; }
+
+    .editor-label {
+      font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;
+      color: var(--ios-gray); font-weight: 600; margin-bottom: 10px; display: block;
+    }
+
+    /* Code Editor Area */
+    textarea.code-editor {
+      width: 100%;
+      height: 350px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 20px;
+      color: #fff;
+      font-family: var(--font-code);
+      font-size: 14px;
+      line-height: 1.5;
+      resize: vertical;
+      transition: border-color 0.2s;
+    }
+    textarea.code-editor:focus { border-color: var(--ios-blue); }
+
+    /* Output/Preview Area */
+    .output-window {
+      height: 350px;
+      background: #000;
+      border-radius: 16px;
+      border: 1px solid var(--glass-border);
+      overflow: hidden;
+      position: relative;
+    }
+
+    pre.console-output {
+      margin: 0; padding: 20px;
+      font-family: var(--font-code); font-size: 13px;
+      color: #34C759; white-space: pre-wrap;
+      height: 100%; overflow-y: auto;
+    }
+    
+    iframe.preview-frame {
+      width: 100%; height: 100%; border: none; background: #fff;
+    }
+
+    /* --- Action Buttons (iOS Style) --- */
+    .action-bar {
+      display: flex; justify-content: flex-end; margin-top: 15px;
+    }
+
+    button.ios-btn {
+      background: var(--ios-blue);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 99px; /* Pill shape */
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 8px;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+    }
+
+    button.ios-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0, 122, 255, 0.4); }
+    button.ios-btn:active { transform: scale(0.96); }
+    button.ios-btn:disabled { background: #333; color: #666; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    /* Complete Lesson Button */
+    #completeBtn {
+      width: 100%;
+      padding: 18px;
+      font-size: 1.1rem;
+      background: var(--ios-green);
+      box-shadow: 0 4px 15px rgba(52, 199, 89, 0.3);
+    }
+    #completeBtn:hover { box-shadow: 0 6px 20px rgba(52, 199, 89, 0.5); }
+
+    /* --- Animations --- */
+    @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* --- Popup --- */
+    .popup-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.6); backdrop-filter: blur(10px);
+      z-index: 1000; align-items: center; justify-content: center;
+    }
+    .popup-card {
+      background: rgba(30, 30, 30, 0.9);
+      border: 1px solid rgba(255,255,255,0.1);
+      padding: 40px; border-radius: 30px;
+      text-align: center; max-width: 400px; width: 90%;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+      animation: fadeInUp 0.4s ease;
+    }
+    .popup-card h2 { margin-top: 0; background: linear-gradient(to right, #FFD60A, #FF9F0A); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  </style>
+</head>
+
+<body>
+
+<div class="app-container">
+  <header>
+    <h1 id="lessonTitle">Loading Studio...</h1>
+  </header>
+
+  <div id="theoryContainer" class="theory-content">
     </div>
 
-    <div class="popup" id="popupBox">
-      <div class="popup-content">
-        <h2>🎉 Course Completed!</h2>
-        <p>You have finished all lessons in this course.</p>
-        <button id="closePopup">Close & Return to Main Page</button>
-      </div>
+  <div id="tasksContainer">
     </div>
 
-  <script>
-  document.addEventListener("DOMContentLoaded", () => {
+  <button id="completeBtn" class="ios-btn" disabled>
+    <i class="fas fa-check-circle"></i> Complete Lesson
+  </button>
+</div>
 
-    /* ---------- GET LESSON ID ---------- */
-    const params = new URLSearchParams(window.location.search);
-    const lessonId = params.get("lesson");
+<div class="popup-overlay" id="popupBox">
+  <div class="popup-card">
+    <div style="font-size: 3rem; margin-bottom: 10px;">🎉</div>
+    <h2>Lesson Completed</h2>
+    <p style="color: #aaa; margin-bottom: 30px;">Excellent work. Your progress has been synced.</p>
+    <button id="closePopup" class="ios-btn" style="width: 100%; justify-content: center; background: #333;">Return to Courses</button>
+  </div>
+</div>
 
-    if (!lessonId || lessonId.length !== 24) {
-      alert("Invalid lesson link!");
-      window.location.href = "MainPage.html";
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  // --- 1. PRELOAD PYODIDE (Client-Side Python) ---
+  let pyodideReadyPromise = loadPyodide();
+
+  const params = new URLSearchParams(window.location.search);
+  const lessonId = params.get("lesson");
+
+  // Auth & Redirect Checks
+  if (!lessonId) { alert("Invalid lesson link!"); window.location.href = "MainPage.html"; return; }
+  const user = JSON.parse(localStorage.getItem("mindstep_user") || "null");
+  if (!user) { alert("Please login!"); window.location.href = "LoginPage.html"; return; }
+  
+  const userId = user._id;
+
+  // DOM Elements
+  const titleEl = document.getElementById("lessonTitle");
+  const theoryContainer = document.getElementById("theoryContainer");
+  const tasksContainer = document.getElementById("tasksContainer");
+  const completeBtn = document.getElementById("completeBtn");
+  const popupBox = document.getElementById("popupBox");
+  let PASSED_TASKS = new Set();
+
+  // --- 2. LOAD LESSON DATA ---
+  async function loadLesson() {
+    try {
+      const res = await fetch(`/api/lesson/${lessonId}/details`);
+      const data = await res.json();
+
+      if (!data.success) { titleEl.textContent = "Lesson not found"; return; }
+
+      titleEl.textContent = data.lesson.title;
+      renderTheory(data.lesson.lesson || data.lesson);
+      renderTasks(data.tasks || []);
+      checkCompletionStatus();
+
+    } catch (err) {
+      console.error(err);
+      titleEl.textContent = "Error loading content";
+    }
+  }
+
+  // Render Theory (Glass Card Style)
+  function renderTheory(content) {
+    theoryContainer.innerHTML = `
+      <div class="glass-card">
+        <div class="window-controls"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div></div>
+        <h3>📖 Concept</h3>
+        <p>${content.intro || "Introduction to this topic."}</p>
+        ${(content.deepExplanation || []).map(p => `<p>${p}</p>`).join("")}
+      </div>
+    `;
+  }
+
+  // Render Tasks (IDE Style)
+  function renderTasks(tasks) {
+    if (tasks.length === 0) {
+      tasksContainer.innerHTML = "<div class='glass-card'><p>No tasks available.</p></div>";
       return;
     }
 
-    /* ---------- CHECK USER ---------- */
-    const user = JSON.parse(localStorage.getItem("mindstep_user") || "null");
-    if (!user) {
-      alert("Please login!");
-      window.location.href = "LoginPage.html";
+    tasks.forEach((task, index) => {
+      const lang = (task.language || "").toLowerCase();
+      const isWeb = lang === 'html' || lang === 'css';
+      
+      const div = document.createElement("div");
+      div.className = "glass-card";
+      
+      div.innerHTML = `
+        <div class="task-header">
+          <div class="task-title">Task ${index + 1}: ${task.title}</div>
+          <div class="task-desc">${task.description}</div>
+        </div>
+        
+        <div class="compiler-grid">
+          <div>
+            <span class="editor-label"><i class="fas fa-code"></i> Source Code (${task.language})</span>
+            <textarea id="code_${task._id}" class="code-editor" spellcheck="false" 
+              placeholder="Type your code here...">${task.exampleCode || ''}</textarea>
+            
+            <div class="action-bar">
+              <button class="ios-btn runTaskBtn" data-id="${task._id}" data-lang="${lang}">
+                <i class="fas fa-play"></i> Run Code
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <span class="editor-label"><i class="fas fa-terminal"></i> ${isWeb ? 'Live Preview' : 'Console'}</span>
+            <div class="output-window">
+              ${isWeb 
+                ? `<iframe id="preview_${task._id}" class="preview-frame" title="Result"></iframe>` 
+                : `<pre id="out_${task._id}" class="console-output">Ready...</pre>`
+              }
+            </div>
+          </div>
+        </div>
+      `;
+      tasksContainer.appendChild(div);
+    });
+  }
+
+  // --- 3. RUN CODE LOGIC (Including Python Fix) ---
+  tasksContainer.addEventListener("click", async (e) => {
+    // Handle Run Button Click
+    const btn = e.target.closest('.runTaskBtn'); // closest handles icon clicks
+    if (!btn) return;
+
+    const taskId = btn.dataset.id;
+    const lang = btn.dataset.lang; 
+    const code = document.getElementById(`code_${taskId}`).value.trim();
+    
+    // Output Elements
+    const outputEl = document.getElementById(`out_${taskId}`);
+    const previewEl = document.getElementById(`preview_${taskId}`);
+
+    // Basic Validation
+    if (!code) {
+      if(outputEl) outputEl.textContent = "⚠️ Please write some code first.";
+      else alert("Please write code.");
       return;
     }
-    const userId = user._id;
 
-    /* ---------- ELEMENTS ---------- */
-    const titleEl = document.getElementById("lessonTitle");
-    const descEl  = document.getElementById("lessonDesc");
-    const completeBtn = document.getElementById("completeBtn");
-    const container = document.querySelector(".container");
-    const popupBox = document.getElementById("popupBox");
-    const closePopup = document.getElementById("closePopup");
+    // UI Feedback
+    btn.disabled = true;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Running...`;
+    if(outputEl) outputEl.textContent = "Compiling...";
 
-    descEl.textContent = "";
-
-    /* ---------- THEORY BOX ---------- */
-    const theoryBox = document.createElement("div");
-    container.insertBefore(theoryBox, completeBtn);
-
-    /* ---------- TASK BOX ---------- */
-    const taskContainer = document.createElement("div");
-    taskContainer.style.marginTop = "50px";
-    container.insertBefore(taskContainer, completeBtn);
-
-    let ALL_TASKS = [];
-    let PASSED_TASKS = new Set();
-
-    /* ---------- LOAD LESSON ---------- */
-    async function loadLesson() {
-      try {
-        const res = await fetch(`/api/lesson/${lessonId}/details`);
-        const data = await res.json();
-
-        if (!data.success) {
-          titleEl.textContent = "Lesson not found";
-          return;
-        }
-
-        titleEl.textContent = data.lesson.title;
-        const L = data.lesson.lesson;
-
-        theoryBox.innerHTML = `
-          <h2>Introduction</h2>
-          <p>${L.intro}</p>
-
-          <h2>Deep Explanation</h2>
-          ${(L.deepExplanation || []).map(p => `<p>${p}</p>`).join("")}
-
-          <h2>Concept Breakdown</h2>
-          <ul>
-            ${(L.conceptBreakdown || []).map(c =>
-              `<li><b>${c.concept}</b> — ${c.explanation}</li>`
-            ).join("")}
-          </ul>
-
-          <h2>Example</h2>
-          <pre>${L.example?.code || ""}</pre>
-
-          <h2>Why This Matters</h2>
-          <ul>${(L.whyImportant || []).map(w => `<li>${w}</li>`).join("")}</ul>
-
-          <h2>Common Mistakes</h2>
-          <ul>${(L.commonMistakes || []).map(m => `<li>${m}</li>`).join("")}</ul>
-
-          <h2>Summary</h2>
-          <p>${L.summary}</p>
-
-          <hr style="margin:40px 0;">
-        `;
-
-        ALL_TASKS = data.tasks || [];
-        renderTasks();
-        checkCompletionStatus();
-
-      } catch (err) {
-        console.error(err);
-        titleEl.textContent = "Error loading lesson";
-      }
+    // --- A. HTML/CSS PREVIEW (Instant) ---
+    if (previewEl && (lang === 'html' || lang === 'css')) {
+      const previewDoc = previewEl.contentDocument || previewEl.contentWindow.document;
+      previewDoc.open();
+      previewDoc.write(lang === 'html' ? code : `<style>${code}</style>`);
+      previewDoc.close();
     }
 
-    /* ---------- RENDER TASKS ---------- */
-    function renderTasks() {
-      taskContainer.innerHTML = "<h2>Practice Tasks</h2>";
-
-      if (ALL_TASKS.length === 0) {
-        taskContainer.innerHTML += "<p>No tasks available.</p>";
-        return;
-      }
-
-      ALL_TASKS.forEach((task, i) => {
-        const div = document.createElement("div");
-        div.style = `
-          margin-top:20px;
-          padding:16px;
-          background:rgba(255,255,255,0.06);
-          border-radius:12px;
-          border:1px solid #333;
-        `;
-
-        div.innerHTML = `
-          <h3>Task ${i + 1}: ${task.title}</h3>
-          <p>${task.description}</p>
-
-          <textarea id="code_${task._id}" style="
-            width:100%; height:140px; margin-top:8px;
-            background:#05070f; color:#fff; border-radius:10px;
-            padding:10px; font-family:monospace;"></textarea>
-
-          <button class="runTaskBtn" data-id="${task._id}">
-            ▶ Run Task
-          </button>
-
-          <pre id="out_${task._id}" style="
-            margin-top:10px; padding:10px;
-            background:#000; border-radius:6px;">
-  Waiting for input...
-          </pre>
-        `;
-
-        taskContainer.appendChild(div);
-      });
-    }
-
-    /* ---------- RUN TASK ---------- */
-    taskContainer.addEventListener("click", async (e) => {
-      const btn = e.target.closest(".runTaskBtn");
-      if (!btn) return;
-
-      const taskId = btn.dataset.id;
-      const code = document.getElementById(`code_${taskId}`).value.trim();
-      const out  = document.getElementById(`out_${taskId}`);
-
-      if (!code) {
-        out.textContent = "❌ Please write code before running.";
-        out.style.color = "#ff2d55";
-        return;
-      }
-
-      out.textContent = "Checking...";
-      out.style.color = "#ffff00";
-
+    // --- B. PYTHON CLIENT-SIDE EXECUTION (Pyodide) ---
+    if (lang === 'python') {
       try {
-        const res = await fetch("/api/task/submit", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId, lessonId, taskId, output: code })
+        const pyodide = await pyodideReadyPromise;
+        let outputBuffer = "";
+        
+        // Capture standard output
+        pyodide.setStdout({
+          batched: (msg) => { outputBuffer += msg + "\n"; }
         });
 
-        const result = await res.json();
-
-        if (result.success && result.passed) {
-          PASSED_TASKS.add(taskId);
-          out.textContent = "✅ Passed!";
-          out.style.color = "#00ff88";
-          checkCompletionStatus();
-        } else {
-          out.textContent = "❌ Failed. Try again.";
-          out.style.color = "#ff2d55";
+        // Run
+        await pyodide.runPythonAsync(code);
+        
+        // Show Success
+        if(outputEl) {
+          outputEl.style.color = "#34C759"; // iOS Green
+          outputEl.textContent = outputBuffer || "Process finished with exit code 0 (No Output)";
         }
-
       } catch (err) {
-        out.textContent = "Server error.";
-        out.style.color = "red";
+        // Show Error
+        if(outputEl) {
+           outputEl.style.color = "#FF3B30"; // iOS Red
+           outputEl.textContent = err;
+        }
       }
-    });
-
-    /* ---------- CHECK ALL TASKS DONE ---------- */
-    async function checkCompletionStatus() {
-      const res = await fetch(`/api/lesson/${lessonId}/tasks-status/${userId}`);
-      const data = await res.json();
-
-      completeBtn.disabled = !data.allDone;
-      completeBtn.style.opacity = data.allDone ? "1" : "0.5";
     }
 
-    /* ---------- COMPLETE LESSON ---------- */
-    completeBtn.addEventListener("click", async () => {
-      if (completeBtn.disabled) {
-        alert("Complete all tasks first.");
-        return;
-      }
-
-      const res = await fetch("/api/lesson/complete", {
+    // --- C. SERVER SUBMISSION (Validation & Progress) ---
+    try {
+      const res = await fetch("/api/task/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, lessonId })
+        body: JSON.stringify({ userId, lessonId, taskId, code })
       });
+      const result = await res.json();
 
-      const data = await res.json();
+      // Reset Button
+      btn.disabled = false;
+      btn.innerHTML = originalText;
 
-      if (data.success) {
-        popupBox.style.display = "flex";
+      if (result.passed) {
+        PASSED_TASKS.add(taskId);
+        checkCompletionStatus();
+        
+        // Update Console (Non-Python)
+        if(lang !== 'python' && outputEl) {
+           outputEl.style.color = "#34C759";
+           outputEl.textContent = (result.output || "") + "\n\n✅ PASSED";
+        } else if (lang === 'python' && outputEl) {
+           // For Python, append status to local output
+           outputEl.textContent += "\n\n✅ TASK PASSED (Saved)";
+        }
+      } else {
+        // Fail
+        if(lang !== 'python' && outputEl) {
+           outputEl.style.color = "#FF3B30";
+           outputEl.textContent = (result.output || "Error") + "\n\n❌ FAILED";
+        }
       }
-    });
 
-    closePopup.addEventListener("click", () => {
-      window.location.href = "MainPage.html";
-    });
-
-    /* ---------- START ---------- */
-    loadLesson();
+    } catch (err) {
+      console.error(err);
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+      if(lang !== 'python' && outputEl) outputEl.textContent = "Server Error (Check Network)";
+    }
   });
-  </script>
 
-  </body>
-  </html>
+  // Check if all tasks done
+  async function checkCompletionStatus() {
+    try {
+      const res = await fetch(`/api/lesson/${lessonId}/tasks-status/${userId}`);
+      const data = await res.json();
+      
+      if (data.allDone || (data.total > 0 && PASSED_TASKS.size === data.total)) {
+        completeBtn.disabled = false;
+        completeBtn.style.opacity = "1";
+      }
+    } catch(e) {}
+  }
+
+  // Handlers for Popup
+  completeBtn.onclick = () => { document.getElementById("popupBox").style.display = "flex"; };
+  document.getElementById("closePopup").onclick = () => window.location.href = "public/courses";
+
+  // Init
+  loadLesson();
+});
+</script>
+</body>
+</html>

@@ -1,9 +1,9 @@
-# Dockerfile for MindStep app: Node + OpenJDK 17
+# Dockerfile for MindStep app: Node + OpenJDK 17 + Python 3
 FROM node:18-bullseye
 
-# Install OpenJDK 17 (headless)
+# Install OpenJDK 17 AND Python 3
 RUN apt-get update \
-  && apt-get install -y openjdk-17-jdk-headless ca-certificates curl \
+  && apt-get install -y openjdk-17-jdk-headless python3 ca-certificates curl \
   && rm -rf /var/lib/apt/lists/*
 
 # Create app directory
@@ -13,7 +13,8 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci --production || npm install --production
+# NOTE: Use 'npm install' if package-lock.json might be missing
+RUN npm install --production
 
 # Copy app
 COPY . .
@@ -21,15 +22,15 @@ COPY . .
 # Ensure temp directory exists
 RUN mkdir -p /usr/src/app/temp
 
-# Set JAVA_HOME and ensure it's on PATH
+# Set JAVA_HOME
 ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 ENV PATH=$JAVA_HOME/bin:$PATH
 
-# Expose default port (can be overridden by env PORT)
+# Expose port
 EXPOSE 10000
 
 # Start the app
 CMD ["node", "server.js"]
 
-# Docker healthcheck — ensures the app and javac availability endpoint respond
+# Docker healthcheck
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s CMD curl -f http://localhost:10000/health || exit 1
