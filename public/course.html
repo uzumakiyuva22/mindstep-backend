@@ -2,469 +2,395 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>MindStep — Course</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
+  <title>MindStep — Sky Dashboard</title>
 
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=SF+Pro+Display:wght@400;600&display=swap" rel="stylesheet">
 
   <style>
     :root {
-      --primary-red: #ff2d55;
-      --primary-blue: #0066ff;
-      --cyan: #00e5ff;
-      --max-width: 1200px;
-      --card-radius: 16px;
+      /* Sky Blue Palette */
+      --sky-primary: #33A1FD;
+      --sky-glow: rgba(51, 161, 253, 0.5);
+      --sky-dark: #0072E5;
+      --success-green: #30D158;
+      
+      --glass-bg: rgba(20, 25, 35, 0.65);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --bg-dark: #050505;
+      
+      --font-main: "Inter", -apple-system, sans-serif;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
 
-    html, body {
-      height: 100%;
-      font-family: Inter, sans-serif;
-      background: linear-gradient(120deg, #040416 0%, #07102a 100%);
-      color: #eaf6ff;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
+    body {
+      margin: 0; padding: 0;
+      font-family: var(--font-main);
+      background-color: var(--bg-dark);
+      /* Cinematic Sky Mesh */
+      background-image: 
+        radial-gradient(at 10% 0%, rgba(51, 161, 253, 0.15) 0px, transparent 60%),
+        radial-gradient(at 90% 100%, rgba(0, 114, 229, 0.15) 0px, transparent 60%);
+      background-attachment: fixed;
+      color: #ffffff;
+      min-height: 100vh;
+      overflow-x: hidden;
     }
 
+    /* --- Navbar --- */
     nav {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 14px 28px;
-      background: rgba(255, 255, 255, 0.02);
-      backdrop-filter: blur(6px);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      padding: 18px 40px;
+      display: flex; justify-content: space-between; align-items: center;
+      background: rgba(10, 10, 15, 0.8);
+      backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+      border-bottom: 1px solid var(--glass-border);
+      position: sticky; top: 0; z-index: 100;
     }
+    .logo {
+      font-weight: 800; font-size: 1.3rem; letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #fff, #bbb);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .user-pill {
+      background: rgba(51, 161, 253, 0.1); padding: 6px 16px; border-radius: 30px;
+      font-size: 0.85rem; font-weight: 600; color: var(--sky-primary);
+      border: 1px solid rgba(51, 161, 253, 0.2); transition: 0.3s;
+    }
+    .user-pill:hover { background: rgba(51, 161, 253, 0.2); }
 
-    .logo { font-family: Orbitron, sans-serif; font-weight: 700; font-size: 18px; }
-
-    .container { max-width: var(--max-width); margin: 28px auto; padding: 20px; }
+    /* --- Container --- */
+    .container {
+      max-width: 1100px; margin: 0 auto; padding: 40px 24px;
+      animation: fadeIn 0.8s ease-out;
+    }
 
     .back-btn {
-      display: inline-flex; gap: 8px; align-items: center; padding: 10px 14px;
-      border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.03);
-      cursor: pointer; font-weight: 700; color: #eaf6ff;
+      display: inline-flex; align-items: center; gap: 8px;
+      color: rgba(255,255,255,0.6); text-decoration: none;
+      font-weight: 500; font-size: 0.95rem; margin-bottom: 30px;
+      transition: 0.3s;
+    }
+    .back-btn:hover { color: #fff; transform: translateX(-5px); }
+
+    /* --- Dashboard Grid --- */
+    .dashboard-grid {
+      display: grid; grid-template-columns: 340px 1fr; gap: 30px;
+      margin-bottom: 50px;
+    }
+    @media (max-width: 900px) { .dashboard-grid { grid-template-columns: 1fr; } }
+
+    /* --- Glass Cards --- */
+    .glass-panel {
+      background: var(--glass-bg);
+      backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+      border: 1px solid var(--glass-border);
+      border-radius: 26px;
+      padding: 30px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+      position: relative; overflow: hidden;
     }
 
-    .title { margin-top: 18px; font-family: Orbitron, sans-serif; font-size: 34px; text-shadow: 0 0 10px #fff; }
-    .subtitle { margin-top: 8px; color: rgba(230,245,255,0.9); margin-bottom: 12px; }
-
-    .stage {
-      margin-top: 22px;
-      display: flex;
-      gap: 28px;
-      align-items: flex-start;
-      flex-wrap: wrap;
+    /* Left Card: Progress */
+    .progress-section {
+      display: flex; flex-direction: column; align-items: center; text-align: center;
+      justify-content: center; height: 100%; min-height: 350px;
     }
+    .progress-ring-container {
+      position: relative; width: 180px; height: 180px;
+      display: flex; justify-content: center; align-items: center;
+      margin-bottom: 25px;
+    }
+    svg { transform: rotate(-90deg); width: 100%; height: 100%; filter: drop-shadow(0 0 15px var(--sky-glow)); }
+    circle { fill: none; stroke-width: 12; stroke-linecap: round; }
+    .ring-track { stroke: rgba(255,255,255,0.05); }
+    .ring-progress { 
+      stroke: var(--sky-primary); 
+      stroke-dasharray: 502; /* 2 * PI * 80 */
+      stroke-dashoffset: 502; 
+      transition: stroke-dashoffset 1.5s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .percentage-label {
+      position: absolute; font-size: 2.8rem; font-weight: 800; color: #fff;
+      letter-spacing: -1px;
+    }
+    .course-meta h1 { font-size: 1.6rem; margin: 0 0 8px 0; font-weight: 700; }
+    .course-meta p { font-size: 0.95rem; color: rgba(255,255,255,0.5); margin: 0; line-height: 1.5; }
 
-    .module {
-      width: 420px;
-      min-height: 320px;
-      border-radius: 20px;
-      backdrop-filter: blur(8px);
-      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    /* Right Card: Syllabus */
+    .syllabus-header {
+      display: flex; justify-content: space-between; align-items: flex-end;
+      margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .syllabus-header h2 { font-size: 1.4rem; margin: 0; font-weight: 600; color: #fff; }
+    .syllabus-header span { font-size: 0.9rem; color: var(--sky-primary); font-weight: 600; }
+
+    .lesson-list {
+      display: flex; flex-direction: column; gap: 12px;
+      max-height: 400px; overflow-y: auto; padding-right: 5px;
+      scrollbar-width: none;
+    }
+    .lesson-list::-webkit-scrollbar { display: none; }
+
+    .lesson-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 18px 22px;
+      background: rgba(255,255,255,0.03);
       border: 1px solid rgba(255,255,255,0.03);
-      position: relative;
-      overflow: visible;
-      display: grid;
-      place-items: center;
-      box-shadow: 0 14px 40px rgba(0,0,0,0.6);
-      padding: 18px;
-    }
-
-    .card3d {
-      width: 92%;
-      height: 82%;
-      border-radius: 14px;
-      background: linear-gradient(160deg, #001428, #003a6b);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      color: #fff;
-      transform-style: preserve-3d;
-      transition: transform 600ms cubic-bezier(.2,.9,.3,1);
-      box-shadow: 0 10px 30px rgba(0,0,0,0.6), inset 0 -10px 40px rgba(0,0,0,0.2);
-      text-align: center;
-      padding: 18px;
-    }
-
-    .card3d h2 { font-family: Orbitron; margin-bottom: 6px; font-size: 20px; }
-    .card3d p { font-size: 14px; color: rgba(255,255,255,0.9); max-width: 360px; }
-
-    .ring { position: absolute; left: 50%; transform: translateX(-50%); bottom: 8px; width: 190px; height: 190px; pointer-events: none; display: grid; place-items: center; mix-blend-mode: screen; }
-    .ring svg { width: 100%; height: 100%; overflow: visible; }
-    .ring circle { stroke: rgba(0,229,255,0.12); stroke-width: 6; fill: none; filter: blur(6px); }
-
-    .lessons {
-      flex: 1;
-      min-width: 300px;
-      padding: 18px;
-      border-radius: 14px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-      border: 1px solid rgba(255,255,255,0.03);
-    }
-
-    .lesson {
-      padding: 12px 10px; margin-bottom: 10px; border-radius: 10px;
-      background: rgba(255,255,255,0.01);
-      display:flex; justify-content:space-between; align-items:center;
-    }
-    .lesson .play {
-      padding: 10px 14px;
-      border-radius: 12px;
-      background: linear-gradient(90deg, var(--primary-red), var(--primary-blue));
-      color: #fff;
-      font-weight: 800;
+      border-radius: 18px;
+      transition: all 0.2s ease;
       cursor: pointer;
-      letter-spacing: .3px;
-      border: none;
-      box-shadow: 0 8px 24px rgba(0,0,0,.45), 0 0 0 rgba(0,229,255,0);
-      transform: translateY(0);
-      transition: transform .15s, box-shadow .25s, filter .25s;
     }
-    .lesson .play:hover { transform: translateY(-1px); filter: saturate(1.1); box-shadow: 0 10px 28px rgba(0,0,0,.5), 0 0 16px rgba(0,229,255,.18); }
-    .lesson .play:active { transform: translateY(1px) scale(.99); }
-
-    /* Stepper */
-    #game-wrap { margin-top: 24px; max-width: 1000px; margin-left: auto; margin-right: auto; }
-    .game-stage { display:flex; flex-direction:column; gap:18px; align-items: center; }
-
-    .intro {
-      display:flex; gap:18px; align-items:center; justify-content:center; color:#eaf6ff; text-align:center;
-      padding: 16px; width:100%; max-width:900px; background: rgba(255,255,255,0.01); border-radius: 14px; border:1px solid rgba(255,255,255,0.03);
+    .lesson-item:hover {
+      background: rgba(255,255,255,0.06); transform: scale(1.01);
+      border-color: rgba(255,255,255,0.1);
     }
-
-    .intro-svg { width:210px; height:210px; }
-    .ring-bg { fill:none; stroke: rgba(255,255,255,0.05); stroke-width:12; }
-    .ring-anim { fill:none; stroke-width:12; stroke-linecap:round; stroke-dasharray:603; stroke-dashoffset:603; transition: stroke-dashoffset 1.5s ease, transform 1.2s linear; filter: drop-shadow(0 6px 18px rgba(0,0,0,.6)); }
-    .center-circle { fill: rgba(255,255,255,0.04); }
-    .intro-text { fill:#fff; font-family: Orbitron, sans-serif; font-size:20px; font-weight:700; }
-
-    .intro-copy { max-width: 480px; text-align:left; padding: 6px; }
-    .intro-copy h2 { font-family: Orbitron; font-size:20px; margin-bottom:6px; }
-    .intro-copy p { color: rgba(230,245,255,0.9); margin-bottom:12px; }
-    .intro-copy .cta {
-      padding:10px 16px; border-radius:12px; font-weight:700;
-      background: linear-gradient(90deg,var(--primary-red),var(--primary-blue));
-      color:white; border:none; cursor:pointer; box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+    .lesson-item.completed {
+      background: rgba(48, 209, 88, 0.08); border-color: rgba(48, 209, 88, 0.2);
     }
-
-    .stepper {
-      width:100%; max-width:1000px; display:flex; flex-direction:column; gap:16px; padding:22px;
-      border-radius:14px; border:1px solid rgba(255,255,255,0.06);
-      background: linear-gradient(135deg, rgba(255,45,85,0.03), rgba(0,102,255,0.03));
-      box-shadow: 0 14px 40px rgba(0,0,0,0.6), inset 0 -6px 24px rgba(0,0,0,0.18);
+    
+    .lesson-left { display: flex; gap: 15px; align-items: center; }
+    .status-dot {
+      width: 34px; height: 34px; border-radius: 50%;
+      background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.4);
+      display: grid; place-items: center; font-size: 0.85rem; font-weight: 700;
     }
-    .steps-track { display:flex; align-items:center; gap:16px; justify-content:space-between; padding:10px; }
-    .step { display:flex; flex-direction:column; align-items:center; gap:8px; width:130px; transition: transform .25s; opacity:.9; cursor:pointer; user-select:none; }
-    .step .num {
-      width:60px; height:60px; border-radius:999px; display:grid; place-items:center;
-      font-weight:800; font-family:Orbitron; background: rgba(255,255,255,0.06);
-      border: 3px solid rgba(255,255,255,0.08); color:#eaf6ff; font-size:18px;
+    .lesson-item.completed .status-dot {
+      background: var(--success-green); color: #fff; box-shadow: 0 0 10px rgba(48, 209, 88, 0.4);
     }
-    .step .label { font-weight:700; color: rgba(230,245,255,0.95); font-size:14px; }
-    .step-active { transform: translateY(-6px) scale(1.04); opacity:1; }
-    .step-active .num { background: linear-gradient(90deg,var(--primary-red),var(--primary-blue)); color:#fff; box-shadow:0 10px 24px rgba(0,0,0,0.45); border: none; }
+    .lesson-name { font-weight: 500; font-size: 1rem; color: rgba(255,255,255,0.9); }
 
-    .connector { flex:1; display:flex; align-items:center; padding:0 6px; }
-    .connector-bar { width:100%; height:12px; background: rgba(255,255,255,0.06); border-radius:999px; overflow:hidden; position:relative; box-shadow: inset 0 0 10px rgba(0,0,0,0.35); }
-    .connector-fill {
-      position:absolute; left:0; top:0; bottom:0; width:0%;
-      background: linear-gradient(90deg,var(--primary-red),var(--primary-blue));
-      border-radius:999px; transition: width .5s ease;
+    .play-btn {
+      padding: 8px 22px; border-radius: 30px; font-size: 0.85rem; font-weight: 600;
+      border: none; cursor: pointer; transition: 0.2s;
+      background: #fff; color: #000;
+    }
+    .play-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(255,255,255,0.2); }
+    
+    .lesson-item.completed .play-btn {
+      background: transparent; color: var(--success-green); border: 1px solid var(--success-green);
+    }
+    .lesson-item.completed .play-btn:hover { background: rgba(48, 209, 88, 0.1); }
+
+    /* --- Timeline Stepper --- */
+    .timeline-container {
+      margin-top: 30px; padding-top: 25px;
+      overflow-x: auto; scrollbar-width: none;
+    }
+    .timeline-container::-webkit-scrollbar { display: none; }
+
+    .timeline-track {
+      display: flex; align-items: center; min-width: max-content; 
+      padding: 0 20px; position: relative; gap: 70px;
+    }
+    
+    .track-line {
+      position: absolute; top: 19px; left: 45px; right: 45px; height: 2px;
+      background: rgba(255,255,255,0.1); z-index: 0; border-radius: 2px;
+    }
+    .track-fill {
+      position: absolute; top: 19px; left: 45px; height: 2px;
+      background: var(--sky-primary); z-index: 0; border-radius: 2px;
+      width: 0%; transition: width 1s cubic-bezier(0.22, 1, 0.36, 1);
+      box-shadow: 0 0 10px var(--sky-primary);
     }
 
-    .panel-wrap { display:flex; gap:14px; padding:14px; min-height:180px; }
-    .panel { flex:1; display:none; padding:14px 18px; border-radius:10px; background: rgba(255,255,255,0.02); color:#eaf6ff; box-shadow: inset 0 0 12px rgba(0,0,0,0.35); }
-    .panel-active { display:block; animation: fadeInUp .45s both; }
+    .step-node {
+      position: relative; z-index: 1; text-align: center; width: 130px;
+      opacity: 0.4; transition: 0.4s;
+    }
+    .step-node.active { opacity: 1; }
 
-    .controls { display:flex; gap:16px; align-items:center; justify-content:center; padding:10px; }
-    .controls .exit-btn {
-      background: rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08);
-      padding:10px 16px; border-radius:10px; cursor:pointer; color:#fff; font-weight:700;
+    .node-circle {
+      width: 40px; height: 40px; margin: 0 auto 12px;
+      border-radius: 50%; background: #15151a; border: 2px solid #333;
+      display: grid; place-items: center; font-size: 0.9rem; font-weight: 700;
+      transition: 0.4s;
     }
-    .controls .cta {
-      padding:10px 18px; border-radius:10px; border:none; cursor:pointer;
-      background: linear-gradient(90deg,var(--primary-red),var(--primary-blue));
-      color:#fff; font-weight:700;
+    .step-node.active .node-circle {
+      border-color: var(--sky-primary); background: var(--sky-primary);
+      color: #fff; transform: scale(1.15); box-shadow: 0 0 25px var(--sky-glow);
     }
-    .progress-display {
-      display:flex; align-items:center; gap:12px;
-      font-weight:800; color:var(--cyan); font-family: Orbitron, sans-serif;
-    }
-
-    /* Bottom circular progress styles */
-    #progressCircle { width:64px; height:64px; }
-    #progressCircle .ring-bg2 { fill:none; stroke: rgba(255,255,255,0.08); stroke-width:8; }
-    #progressArc {
-      fill:none; stroke: var(--cyan); stroke-width:8; stroke-linecap:round;
-      transform: rotate(-90deg); transform-origin: 50% 50%;
-      transition: stroke-dashoffset .45s ease;
-      filter: drop-shadow(0 4px 14px rgba(0,229,255,.25));
+    .step-node.completed .node-circle {
+      border-color: var(--success-green); background: var(--success-green);
+      color: #fff; box-shadow: 0 0 15px rgba(48, 209, 88, 0.4);
     }
 
-    @media (max-width:900px) {
-      .stage { flex-direction: column; align-items: stretch; }
-      .module { width:100%; height:auto; min-height: 360px; }
-      .steps-track { gap:10px; }
-      .step { width:100px; }
-      .connector { display:none; }
-    }
+    .node-label { font-size: 0.85rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: rgba(255,255,255,0.8); }
 
-    /* subtle intro animation */
-    .fade-in { animation: fadeInUp .6s ease both; }
-    @keyframes fadeInUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
   </style>
 </head>
 
 <body>
+
   <nav>
     <div class="logo">MindStep</div>
-    <div style="opacity:0.9;color:#cfeeff;font-weight:700;">Course Player</div>
+    <div class="user-pill" id="userBadge">Guest</div>
   </nav>
 
-  <div class="container fade-in">
-    <button class="back-btn" id="backBtn">← Back to Courses</button>
+  <div class="container">
+    <a href="MainPage.html" class="back-btn"><i class="fas fa-chevron-left"></i> Dashboard</a>
 
-    <div class="title" id="courseTitle">Course</div>
-    <div class="subtitle" id="courseSubtitle">Loading overview...</div>
-
-    <div class="stage">
-      <div class="module" aria-hidden="false">
-        <div class="card3d" id="card3d">
-          <h2 id="moduleHeading">Module 1</h2>
-          <p id="moduleDesc">Interactive lessons and hands-on tasks show here. Use the step flow below to progress.</p>
-        </div>
-
-        <!-- animated particle ring (decorative) -->
-        <div class="ring" aria-hidden="true">
-          <svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMid meet">
-            <circle cx="100" cy="100" r="80"></circle>
-            <g id="dots">
-              <circle class="dot" cx="100" cy="20" r="4" fill="var(--cyan)" opacity="0.95"></circle>
-              <circle class="dot" cx="180" cy="100" r="4" fill="var(--primary-red)" opacity="0.95"></circle>
-              <circle class="dot" cx="100" cy="180" r="4" fill="var(--primary-blue)" opacity="0.95"></circle>
-            </g>
+    <div class="dashboard-grid">
+      
+      <div class="glass-panel progress-section">
+        <div class="progress-ring-container">
+          <svg>
+            <circle cx="90" cy="90" r="80" class="ring-track"></circle>
+            <circle cx="90" cy="90" r="80" class="ring-progress" id="ringProgress"></circle>
           </svg>
+          <div class="percentage-label" id="percentText">0%</div>
+        </div>
+        <div class="course-meta">
+          <h1 id="courseTitle">Loading...</h1>
+          <p id="courseDesc">Fetching curriculum...</p>
         </div>
       </div>
 
-      <div class="lessons">
-        <h3 style="font-family:Orbitron;margin-bottom:8px;">Lesson Plan</h3>
-
-        <div class="lesson">
-          <div>Lesson 1: Introduction</div>
-          <button class="play">Start Lesson</button>
+      <div class="glass-panel">
+        <div class="syllabus-header">
+          <h2>Curriculum</h2>
+          <span id="lessonCount">0 Lessons</span>
         </div>
-
-        <div class="lesson">
-          <div>Lesson 2: Basics</div>
-          <button class="play">Start Lesson</button>
-        </div>
-
-        <div class="lesson">
-          <div>Lesson 3: Practice</div>
-          <button class="play">Start Lesson</button>
-        </div>
-
-        <div class="lesson">
-          <div>Lesson 4: Project</div>
-          <button class="play">Start Lesson</button>
-        </div>
+        <div class="lesson-list" id="lessonContainer">
+          </div>
       </div>
+
     </div>
 
-    <!-- === Step-by-step game flow area === -->
-    <div id="game-wrap">
-      <div class="game-stage">
-
-        <!-- Intro circular animation -->
-        <div class="intro" id="introScreen" role="region" aria-label="Introduction">
-          <svg viewBox="0 0 220 220" class="intro-svg" aria-hidden="true">
-            <defs>
-              <linearGradient id="g1" x1="0" x2="1">
-                <stop offset="0" stop-color="var(--primary-red)"/>
-                <stop offset="1" stop-color="var(--primary-blue)"/>
-              </linearGradient>
-            </defs>
-            <circle cx="110" cy="110" r="96" class="ring-bg" />
-            <circle cx="110" cy="110" r="96" class="ring-anim" stroke="url(#g1)"/>
-            <g class="center-content">
-              <circle cx="110" cy="110" r="48" class="center-circle"/>
-              <text x="110" y="116" text-anchor="middle" class="intro-text">PLAY</text>
-            </g>
-          </svg>
-
-          <div class="intro-copy">
-            <h2>Introduction</h2>
-            <p>Start with a visual introduction — the circle will animate to show the concept. Click <strong>Start</strong> to begin the interactive flow.</p>
-            <div style="display:flex;gap:12px;">
-              <button id="startGameBtn" class="cta" aria-label="Start flow">Start</button>
-            </div>
-          </div>
+    <div class="glass-panel timeline-container">
+      <div class="timeline-track" id="timelineTrack">
+        <div class="track-line"></div>
+        <div class="track-fill" id="trackFill"></div>
         </div>
-
-        <!-- Stepper (hidden initially) -->
-        <div class="stepper" id="stepper" aria-hidden="true" style="display:none;">
-          <div class="steps-track" role="tablist" aria-label="Progress steps">
-            <div class="step step-active" data-step="1" role="tab" tabindex="0" aria-selected="true"><span class="num">1</span><div class="label">Intro</div></div>
-            <div class="connector"><div class="connector-bar"><div class="connector-fill" id="connectorFill1"></div></div></div>
-            <div class="step" data-step="2" role="tab" tabindex="0"><span class="num">2</span><div class="label">Basic</div></div>
-            <div class="connector"><div class="connector-bar"><div class="connector-fill" id="connectorFill2"></div></div></div>
-            <div class="step" data-step="3" role="tab" tabindex="0"><span class="num">3</span><div class="label">Practice</div></div>
-            <div class="connector"><div class="connector-bar"><div class="connector-fill" id="connectorFill3"></div></div></div>
-            <div class="step" data-step="4" role="tab" tabindex="0"><span class="num">4</span><div class="label">Project</div></div>
-          </div>
-
-          <div class="panel-wrap">
-            <div class="panel panel-active" data-step="1">
-              <h3>Intro - Visual Circle</h3>
-              <p>This stage explained the core concept with a circular visual. Now you'll move on to the basic explanation and micro-challenges.</p>
-            </div>
-            <div class="panel" data-step="2">
-              <h3>Basic Concepts</h3>
-              <p>Short bite-sized explanation. Try clicking "Next" to reveal a tiny interactive example (below you can embed micro challenges later).</p>
-            </div>
-            <div class="panel" data-step="3">
-              <h3>Practice</h3>
-              <p>A small interactive practice to test understanding. Replace with a quiz or mini-game as desired.</p>
-            </div>
-            <div class="panel" data-step="4">
-              <h3>Project</h3>
-              <p>Finally, a mini project or challenge to apply what you've learned. You can redirect to a full project page here.</p>
-            </div>
-          </div>
-
-          <div class="controls" role="group" aria-label="Stepper controls">
-            <button id="prevStep" class="exit-btn" type="button">Prev</button>
-
-            <!-- Bottom circular progress + percent -->
-            <div class="progress-display">
-              <svg id="progressCircle" viewBox="0 0 64 64" aria-label="Course Progress">
-                <circle cx="32" cy="32" r="28" class="ring-bg2"></circle>
-                <circle cx="32" cy="32" r="28" id="progressArc"></circle>
-              </svg>
-              <span id="progressText">0%</span>
-            </div>
-
-            <button id="nextStep" class="cta" type="button">Next</button>
-          </div>
-        </div>
-
-      </div>
     </div>
+
   </div>
-  <script>
-/* =========================
-   course.html — 100% FIXED JS
-   ========================= */
 
-const API_BASE = window.location.origin;
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const API_BASE = window.location.origin;
+  const params = new URLSearchParams(window.location.search);
+  const courseSlug = params.get("course");
 
-// Get course slug
-const params = new URLSearchParams(window.location.search);
-const courseSlug = params.get("course");
+  // Auth Check
+  const savedUser = localStorage.getItem("mindstep_user");
+  if (!savedUser) { window.location.href = "LoginPage.html"; return; }
+  const user = JSON.parse(savedUser);
+  document.getElementById("userBadge").textContent = user.username;
 
-if (!courseSlug) {
-  alert("Course not found!");
-  window.location.href = "MainPage.html";
-}
+  if (!courseSlug) { window.location.href = "MainPage.html"; return; }
 
-document.addEventListener("DOMContentLoaded", async () => {
+  // --- MAIN LOAD FUNCTION ---
+  async function loadCourse() {
+    try {
+      // 1. Fetch Course Info
+      const courseRes = await fetch(`${API_BASE}/api/course/${courseSlug}`);
+      const courseData = await courseRes.json();
+      if (!courseData.success) throw new Error("Course not found");
 
-  /* ---------- AUTH ---------- */
-  const saved = localStorage.getItem("mindstep_user");
-  if (!saved) {
-    alert("Please login first");
-    window.location.href = "LoginPage.html";
-    return;
+      document.getElementById("courseTitle").textContent = courseData.course.title;
+      document.getElementById("courseDesc").textContent = courseData.course.description || "Master new skills.";
+
+      // 2. Fetch Lessons
+      const lessonRes = await fetch(`${API_BASE}/api/course/${courseSlug}/lessons`);
+      const lessonData = await lessonRes.json();
+      const lessons = lessonData.lessons || [];
+      document.getElementById("lessonCount").textContent = `${lessons.length} Lessons`;
+
+      // 3. Fetch User Progress (Mock/Real)
+      let completedIds = new Set();
+      try {
+        const progRes = await fetch(`${API_BASE}/api/course/${courseSlug}/progress/${user._id}`);
+        const progData = await progRes.json();
+        if (progData.completedLessonIds) completedIds = new Set(progData.completedLessonIds);
+      } catch(e) { console.warn("Progress sync skipped"); }
+
+      // 4. Render UI
+      renderUI(lessons, completedIds);
+
+    } catch (err) {
+      console.error(err);
+      // Demo Mode Fallback
+      const demoLessons = [
+        {_id:"1", title:"Introduction"}, {_id:"2", title:"Environment Setup"}, 
+        {_id:"3", title:"Core Concepts"}, {_id:"4", title:"Final Project"}
+      ];
+      renderUI(demoLessons, new Set(["1"])); 
+    }
   }
 
-  const user = JSON.parse(saved);
-  const userId = user._id;
+  function renderUI(lessons, completedIds) {
+    const listEl = document.getElementById("lessonContainer");
+    const trackEl = document.getElementById("timelineTrack");
+    const fillEl = document.getElementById("trackFill");
+    
+    // Reset
+    listEl.innerHTML = "";
+    trackEl.innerHTML = `<div class="track-line"></div><div class="track-fill" id="trackFill"></div>`; // Re-add lines
 
-  /* ---------- COURSE INFO ---------- */
-  try {
-    const res = await fetch(`${API_BASE}/api/course/${courseSlug}`);
-    const data = await res.json();
+    let completedCount = 0;
 
-    if (!data.success) {
-      alert("Course not found");
-      return;
-    }
+    lessons.forEach((lesson, index) => {
+      const isDone = completedIds.has(lesson._id);
+      if (isDone) completedCount++;
 
-    // ✅ FIXED SELECTORS
-    document.getElementById("courseTitle").textContent =
-      data.course.title;
-
-    document.getElementById("courseSubtitle").textContent =
-      data.course.description || "";
-
-  } catch (err) {
-    console.error("Course load error:", err);
-  }
-
-  /* ---------- LESSONS (🔥 MAIN FIX) ---------- */
-  try {
-    const res = await fetch(
-      `${API_BASE}/api/course/${courseSlug}/lessons`
-    );
-    const data = await res.json();
-
-    // ✅ FIXED TARGET
-    const lessonBox = document.querySelector(".lessons");
-
-    // Remove static demo lessons
-    lessonBox.innerHTML = `
-      <h3 style="font-family:Orbitron;margin-bottom:8px;">Lesson Plan</h3>
-    `;
-
-    if (!data.success || data.lessons.length === 0) {
-      lessonBox.innerHTML += `
-        <p style="opacity:.6">No lessons available</p>
+      // --- A. Render List Row ---
+      const item = document.createElement("div");
+      item.className = `lesson-item ${isDone ? 'completed' : ''}`;
+      item.innerHTML = `
+        <div class="lesson-left">
+          <div class="status-dot">${isDone ? '<i class="fas fa-check"></i>' : index + 1}</div>
+          <div class="lesson-name">${lesson.title}</div>
+        </div>
+        <button class="play-btn">
+          ${isDone ? 'Review' : 'Start'}
+        </button>
       `;
-      return;
-    }
+      item.onclick = () => window.location.href = `lesson.html?lesson=${lesson._id}`;
+      listEl.appendChild(item);
 
-    // Render lessons dynamically
-    data.lessons.forEach((lesson, index) => {
-      const div = document.createElement("div");
-      div.className = "lesson";
+      // --- B. Render Timeline Node ---
+      const node = document.createElement("div");
+      let nodeClass = "step-node";
+      if (isDone) nodeClass += " completed active";
+      else if (index === completedCount) nodeClass += " active"; // Current Lesson
 
-      div.innerHTML = `
-        <div>Lesson ${index + 1}: ${lesson.title}</div>
-        <button class="play">Start Lesson</button>
+      node.className = nodeClass;
+      node.innerHTML = `
+        <div class="node-circle">${isDone ? '<i class="fas fa-check"></i>' : index + 1}</div>
+        <div class="node-label">${lesson.title}</div>
       `;
-
-      div.querySelector(".play").onclick = async () => {
-        await fetch(`${API_BASE}/api/complete`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId,
-            lessonId: lesson._id
-          })
-        });
-
-        window.location.href =
-          `lesson.html?lesson=${lesson._id}`;
-      };
-
-      lessonBox.appendChild(div);
+      trackEl.appendChild(node);
     });
 
-  } catch (err) {
-    console.error("Lesson loading error:", err);
+    // --- C. Animate Progress ---
+    const total = lessons.length;
+    const percent = total > 0 ? Math.round((completedCount / total) * 100) : 0;
+
+    // 1. Text
+    document.getElementById("percentText").textContent = `${percent}%`;
+
+    // 2. Ring (502 is circumference for r=80)
+    const ring = document.getElementById("ringProgress");
+    const offset = 502 - (502 * percent / 100);
+    setTimeout(() => { ring.style.strokeDashoffset = offset; }, 100);
+
+    // 3. Timeline Bar
+    const barEl = document.getElementById("trackFill"); 
+    if(barEl) {
+        const stepWidth = 100 / (total - 1 || 1);
+        setTimeout(() => {
+            barEl.style.width = `${Math.min(100, completedCount * stepWidth)}%`;
+        }, 300);
+    }
   }
 
-  /* ---------- BACK BUTTON ---------- */
-  document.getElementById("backBtn").onclick = () => {
-    window.location.href = "MainPage.html";
-  };
+  loadCourse();
 });
 </script>
-
 </body>
 </html>
