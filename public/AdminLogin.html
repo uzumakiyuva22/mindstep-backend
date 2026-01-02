@@ -2,258 +2,232 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MindStep Admin Login</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>MindStep — Admin Console</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@600;800&display=swap" rel="stylesheet">
 
 <style>
-:root {
-  --cyan: #00eaff;
-  --blue: #4d7cff;
-  --pink: #ff3ea5;
-  --glass: rgba(255,255,255,0.08);
-  --border: rgba(255,255,255,0.15);
-}
+    :root {
+        --primary: #FF3B30; /* Admin Red Accent */
+        --primary-dim: rgba(255, 59, 48, 0.3);
+        --accent: #8A2BE2;
+        --bg-deep: #030305;
+        --glass-surface: rgba(255, 255, 255, 0.04);
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --glass-highlight: rgba(255, 255, 255, 0.15);
+        --text-main: #ffffff;
+        --text-muted: #94a3b8;
+        --ease-spring: cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
 
-*{
-  margin:0; padding:0; box-sizing:border-box;
-  font-family: Inter, sans-serif;
-}
+    * { margin: 0; padding: 0; box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
 
-body{
-  height:100vh;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  background:
-    radial-gradient(circle at 20% 20%, rgba(0,150,255,0.22), transparent 60%),
-    radial-gradient(circle at 70% 80%, rgba(255,0,150,0.22), transparent 60%),
-    linear-gradient(135deg, #02020d, #08081d, #04040e);
-  overflow:hidden;
-  animation: bgMove 18s ease infinite;
-}
+    body {
+        min-height: 100vh;
+        font-family: 'Inter', sans-serif;
+        background-color: var(--bg-deep);
+        color: var(--text-main);
+        display: flex; justify-content: center; align-items: center;
+        overflow: hidden;
+    }
 
-@keyframes bgMove {
-  0% { background-position: 0% 0%; }
-  50% { background-position: 100% 80%; }
-  100% { background-position: 0% 0%; }
-}
+    /* --- Cinematic Background --- */
+    .ambient-light {
+        position: absolute; width: 100%; height: 100%; top: 0; left: 0; z-index: -1;
+        overflow: hidden;
+    }
+    .blob {
+        position: absolute; border-radius: 50%;
+        filter: blur(80px); opacity: 0.3;
+        animation: float 20s infinite ease-in-out alternate;
+    }
+    .blob-1 { width: 500px; height: 500px; background: var(--primary); top: -10%; left: -10%; }
+    .blob-2 { width: 400px; height: 400px; background: var(--accent); bottom: -10%; right: -10%; animation-delay: -5s; }
+    
+    @keyframes float { 
+        0% { transform: translate(0, 0) scale(1); } 
+        100% { transform: translate(50px, 50px) scale(1.1); } 
+    }
 
-/* Floating particle glow */
-body::before{
-  content:"";
-  position:fixed; inset:0;
-  background-image:
-    radial-gradient(2px 2px at 30% 40%, rgba(0,229,255,0.6), transparent),
-    radial-gradient(2px 2px at 75% 65%, rgba(255,62,160,0.6), transparent),
-    radial-gradient(1px 1px at 50% 85%, rgba(255,255,255,0.5), transparent);
-  animation: float 25s infinite ease-in-out;
-  opacity:.4;
-}
+    .noise-overlay {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+        pointer-events: none; z-index: 0; opacity: 0.7;
+    }
 
-@keyframes float {
-  0% { transform: translateY(0); }
-  50% { transform: translateY(-50px); }
-  100% { transform: translateY(0); }
-}
+    /* --- Glass Card --- */
+    .container {
+        width: 480px;
+        padding: 50px 40px;
+        background: var(--glass-surface);
+        backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+        border: 1px solid var(--glass-border);
+        border-top: 1px solid var(--glass-highlight);
+        border-radius: 24px;
+        box-shadow: 0 40px 80px rgba(0,0,0,0.6);
+        position: relative; z-index: 10;
+        text-align: center;
+        animation: breathe 6s ease-in-out infinite alternate;
+    }
 
-/* MAIN CARD */
-.card{
-  width: 420px;
-  padding: 40px;
-  border-radius: 22px;
-  background: rgba(255,255,255,0.07);
-  backdrop-filter: blur(25px);
-  border: 1px solid rgba(255,255,255,0.2);
-  box-shadow: 0 10px 40px rgba(0,0,0,0.35);
-  animation: pop 0.5s ease;
-  text-align:center;
-  color:white;
-}
+    @keyframes breathe {
+        0% { box-shadow: 0 40px 80px rgba(0,0,0,0.6); border-color: var(--glass-border); }
+        100% { box-shadow: 0 45px 90px rgba(255, 59, 48, 0.15); border-color: rgba(255, 59, 48, 0.2); }
+    }
 
-@keyframes pop {
-  from{ transform:scale(.8); opacity:0; }
-  to{ transform:scale(1); opacity:1; }
-}
+    /* Header */
+    .brand {
+        display: flex; justify-content: center; align-items: center; gap: 12px; margin-bottom: 30px;
+        opacity: 0; animation: fadeDown 0.8s var(--ease-spring) forwards 0.2s;
+    }
+    .brand i { font-size: 2rem; color: var(--primary); filter: drop-shadow(0 0 15px var(--primary)); }
+    .brand span { font-family: 'Orbitron'; font-size: 1.6rem; font-weight: 800; letter-spacing: 1px; }
 
-/* HEADER */
-.card h1{
-  font-family: Orbitron;
-  font-size: 32px;
-  margin-bottom: 10px;
-  background: linear-gradient(90deg, var(--pink), var(--cyan));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
+    h2 { font-size: 1.5rem; font-weight: 600; margin-bottom: 10px; color: #fff; }
+    p.subtitle { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 30px; }
 
-.card p{
-  margin-bottom: 25px;
-  opacity: .7;
-}
+    /* Inputs */
+    .input-group { position: relative; margin-bottom: 18px; opacity: 0; animation: fadeUp 0.6s var(--ease-spring) forwards 0.3s; }
+    .input-group:nth-child(2) { animation-delay: 0.4s; }
+    
+    .input-group input {
+        width: 100%; padding: 16px 16px 16px 45px;
+        background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border);
+        border-radius: 14px; color: #fff; font-size: 0.95rem; font-family: 'Inter', sans-serif;
+        transition: all 0.3s var(--ease-spring);
+    }
+    
+    .input-group i {
+        position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+        color: var(--text-muted); font-size: 1rem; transition: 0.3s; pointer-events: none;
+    }
 
-/* INPUT BOX */
-.input-box{
-  text-align:left;
-  margin-bottom:22px;
-}
+    /* Focus State */
+    .input-group input:focus {
+        border-color: var(--primary); background: rgba(255,255,255,0.06);
+        box-shadow: 0 0 0 4px var(--primary-dim); transform: translateY(-2px);
+    }
+    .input-group input:focus + i { color: var(--primary); }
 
-.input-box label{
-  font-size:14px;
-  font-weight:600;
-  display:block;
-  margin-bottom:6px;
-}
+    /* Button */
+    .btn-main {
+        width: 100%; padding: 16px; border-radius: 14px; border: none;
+        background: linear-gradient(135deg, var(--primary), #D00000);
+        color: #fff; font-size: 1rem; font-weight: 700; cursor: pointer;
+        box-shadow: 0 10px 30px rgba(255, 59, 48, 0.2); margin-top: 10px;
+        position: relative; overflow: hidden; 
+        transition: all 0.3s var(--ease-spring);
+        opacity: 0; animation: fadeUp 0.6s var(--ease-spring) forwards 0.5s;
+    }
+    .btn-main:hover { transform: translateY(-3px); box-shadow: 0 20px 40px rgba(255, 59, 48, 0.4); }
+    .btn-main:active { transform: scale(0.96); }
 
-.input-box input{
-  width:100%;
-  padding:14px;
-  border-radius:12px;
-  border: 1px solid rgba(255,255,255,0.25);
-  background: rgba(255,255,255,0.08);
-  color:white;
-  outline:none;
-  font-size:15px;
-  transition:.3s;
-}
+    /* Loading Spinner */
+    .btn-main.loading { color: transparent; pointer-events: none; }
+    .btn-main.loading::after {
+        content: ""; position: absolute; left: 50%; top: 50%; width: 20px; height: 20px;
+        border: 2px solid #fff; border-top-color: transparent; border-radius: 50%;
+        animation: spin 0.8s linear infinite; transform: translate(-50%, -50%);
+    }
+    @keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
 
-.input-box input:focus{
-  border-color: var(--cyan);
-  box-shadow: 0 0 12px rgba(0,229,255,0.45);
-}
+    /* Back Link */
+    .back-link {
+        display: inline-block; margin-top: 25px;
+        color: var(--text-muted); text-decoration: none; font-size: 0.9rem;
+        transition: 0.3s; opacity: 0; animation: fadeUp 0.6s var(--ease-spring) forwards 0.6s;
+    }
+    .back-link:hover { color: #fff; transform: translateX(-5px); }
 
-/* LOGIN BUTTON */
-.btn{
-  width:100%;
-  padding:14px;
-  border-radius:12px;
-  background:linear-gradient(90deg, var(--pink), var(--blue));
-  border:none;
-  color:white;
-  cursor:pointer;
-  font-size:17px;
-  font-weight:700;
-  margin-top:10px;
-  box-shadow:0 0 15px rgba(0,229,255,0.5);
-  transition:.3s;
-}
+    /* Keyframes */
+    @keyframes fadeDown { from { opacity:0; transform:translateY(-20px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes shake { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-5px);} 75% {transform: translateX(5px);} }
 
-.btn:hover{
-  transform:scale(1.05);
-}
-
-/* BACK BUTTON */
-.back-btn {
-  margin-top: 18px;
-  font-size: 14px;
-  color: var(--cyan);
-  cursor:pointer;
-  opacity:.8;
-  transition:.3s;
-}
-.back-btn:hover{
-  opacity:1;
-  text-shadow:0 0 10px var(--cyan);
-}
-
-/* ERROR TOAST */
-.toast{
-  position:fixed;
-  left:50%;
-  bottom:25px;
-  transform:translateX(-50%);
-  background:rgba(0,0,0,0.8);
-  padding:12px 20px;
-  color:white;
-  border-radius:12px;
-  opacity:0;
-  transition:.4s;
-}
-
-.toast.show{
-  opacity:1;
-  bottom:40px;
-}
+    .error-shake { animation: shake 0.4s ease-in-out; border-color: var(--primary) !important; }
 
 </style>
 </head>
+
 <body>
 
-<div class="card">
+    <div class="ambient-light">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="noise-overlay"></div>
+    </div>
 
-  <h1>Admin Panel</h1>
-  <p>Sign in to access administrator controls</p>
+    <div class="container">
+        <div class="brand">
+            <i class="fas fa-shield-alt"></i>
+            <span>Admin</span>
+        </div>
 
-  <div class="input-box">
-    <label>Admin Name</label>
-    <input id="admin-email" type="email" placeholder="admin@mindstep.com">
-  </div>
+        <h2>Restricted Access</h2>
+        <p class="subtitle">Enter credentials to access the console.</p>
 
-  <div class="input-box">
-    <label>Password</label>
-    <input id="admin-pass" type="password" placeholder="••••••••">
-  </div>
+        <div class="input-group" id="group-user">
+            <input type="text" id="admin-user" placeholder="Admin Username">
+            <i class="fas fa-user-shield"></i>
+        </div>
 
-  <button class="btn" id="adminLoginBtn">Login</button>
+        <div class="input-group" id="group-pass">
+            <input type="password" id="admin-pass" placeholder="Secure Password">
+            <i class="fas fa-key"></i>
+        </div>
 
-  <div class="back-btn" onclick="location.href='LoginPage.html'">← Back to User Login</div>
+        <button class="btn-main" id="btnLogin">Access Console</button>
 
-</div>
-
-<div class="toast" id="toast"></div>
+        <a href="LoginPage.html" class="back-link"><i class="fas fa-arrow-left"></i> Return to User Login</a>
+    </div>
 
 <script>
-/// ===============================
-// ADMIN LOGIN — 100% FIXED VERSION
-// ===============================
+    const API_BASE = window.location.origin.includes("localhost") 
+      ? "http://localhost:10000" 
+      : window.location.origin;
 
-function showToast(msg) {
-    const t = document.getElementById("toast");
-    t.textContent = msg;
-    t.classList.add("show");
-    setTimeout(() => t.classList.remove("show"), 2500);
-}
+    document.getElementById('btnLogin').onclick = async () => {
+        const btn = document.getElementById('btnLogin');
+        const user = document.getElementById('admin-user');
+        const pass = document.getElementById('admin-pass');
+        
+        // Reset Errors
+        user.parentElement.classList.remove('error-shake');
+        pass.parentElement.classList.remove('error-shake');
 
-document.getElementById("adminLoginBtn").onclick = async () => {
-    const username = document.getElementById("admin-email").value.trim();
-    const password = document.getElementById("admin-pass").value.trim();
-
-    if (!username || !password) {
-        showToast("Enter admin username & password");
-        return;
-    }
-
-    try {
-        const res = await fetch("/api/auth/admin-login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username, password })
-        });
-
-        const data = await res.json();
-
-        if (!data.success) {
-            showToast(data.error || "Invalid admin login");
-            return;
+        if (!user.value.trim()) {
+            user.parentElement.classList.add('error-shake'); return;
+        }
+        if (!pass.value.trim()) {
+            pass.parentElement.classList.add('error-shake'); return;
         }
 
-        // Save admin token for dashboard pages
-        localStorage.setItem("admin_token", data.token);
-        localStorage.setItem("admin_name", data.admin.username);
+        // Optimistic Loading
+        btn.classList.add('loading');
+        
+        try {
+            const res = await fetch(`${API_BASE}/api/auth/admin-login`, {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username: user.value.trim(), password: pass.value.trim() })
+            });
+            const data = await res.json();
 
-        showToast("Admin login successful!");
-
-        setTimeout(() => {
-            window.location.href = "AdminDashboard.html";
-        }, 900);
-
-    } catch (err) {
-        console.error(err);
-        showToast("Server unreachable — check backend");
-    }
-};
-
+            if (data.success) {
+                localStorage.setItem("admin_token", data.token);
+                localStorage.setItem("admin_name", data.admin.username);
+                window.location.href = "AdminDashboard.html";
+            } else {
+                alert(data.error || "Access Denied");
+                pass.parentElement.classList.add('error-shake');
+            }
+        } catch (err) {
+            alert("Server Connection Failed");
+        } finally {
+            btn.classList.remove('loading');
+        }
+    };
 </script>
 
 </body>

@@ -3,20 +3,20 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
-  <title>MindStep — Sky Dashboard</title>
+  <title>MindStep — Course Center</title>
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=SF+Pro+Display:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@600;800&display=swap" rel="stylesheet">
 
   <style>
     :root {
       /* Sky Blue Palette */
       --sky-primary: #33A1FD;
-      --sky-glow: rgba(51, 161, 253, 0.5);
+      --sky-glow: rgba(51, 161, 253, 0.4);
       --sky-dark: #0072E5;
       --success-green: #30D158;
       
-      --glass-bg: rgba(20, 25, 35, 0.65);
+      --glass-bg: rgba(20, 25, 35, 0.75);
       --glass-border: rgba(255, 255, 255, 0.08);
       --bg-dark: #050505;
       
@@ -39,20 +39,28 @@
       overflow-x: hidden;
     }
 
+    /* Noise Overlay */
+    .noise {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 0;
+    }
+
     /* --- Navbar --- */
     nav {
       padding: 18px 40px;
       display: flex; justify-content: space-between; align-items: center;
-      background: rgba(10, 10, 15, 0.8);
+      background: rgba(10, 10, 15, 0.85);
       backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
       border-bottom: 1px solid var(--glass-border);
       position: sticky; top: 0; z-index: 100;
     }
-    .logo {
-      font-weight: 800; font-size: 1.3rem; letter-spacing: -0.5px;
-      background: linear-gradient(135deg, #fff, #bbb);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    .brand {
+      display: flex; align-items: center; gap: 10px;
     }
+    .brand i { font-size: 1.4rem; color: var(--sky-primary); filter: drop-shadow(0 0 10px var(--sky-glow)); }
+    .brand span { font-family: 'Orbitron'; font-size: 1.2rem; font-weight: 800; letter-spacing: 1px; }
+
     .user-pill {
       background: rgba(51, 161, 253, 0.1); padding: 6px 16px; border-radius: 30px;
       font-size: 0.85rem; font-weight: 600; color: var(--sky-primary);
@@ -63,6 +71,7 @@
     /* --- Container --- */
     .container {
       max-width: 1100px; margin: 0 auto; padding: 40px 24px;
+      position: relative; z-index: 1;
       animation: fadeIn 0.8s ease-out;
     }
 
@@ -112,8 +121,8 @@
       transition: stroke-dashoffset 1.5s cubic-bezier(0.22, 1, 0.36, 1);
     }
     .percentage-label {
-      position: absolute; font-size: 2.8rem; font-weight: 800; color: #fff;
-      letter-spacing: -1px;
+      position: absolute; font-size: 2.5rem; font-weight: 800; color: #fff;
+      letter-spacing: -1px; font-family: 'Orbitron';
     }
     .course-meta h1 { font-size: 1.6rem; margin: 0 0 8px 0; font-weight: 700; }
     .course-meta p { font-size: 0.95rem; color: rgba(255,255,255,0.5); margin: 0; line-height: 1.5; }
@@ -124,7 +133,7 @@
       margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05);
     }
     .syllabus-header h2 { font-size: 1.4rem; margin: 0; font-weight: 600; color: #fff; }
-    .syllabus-header span { font-size: 0.9rem; color: var(--sky-primary); font-weight: 600; }
+    .syllabus-header span { font-size: 0.9rem; color: var(--sky-primary); font-weight: 600; background: rgba(51, 161, 253, 0.1); padding: 4px 10px; border-radius: 12px; }
 
     .lesson-list {
       display: flex; flex-direction: column; gap: 12px;
@@ -226,8 +235,13 @@
 
 <body>
 
+  <div class="noise"></div>
+
   <nav>
-    <div class="logo">MindStep</div>
+    <div class="brand">
+      <i class="fas fa-brain"></i>
+      <span>MindStep</span>
+    </div>
     <div class="user-pill" id="userBadge">Guest</div>
   </nav>
 

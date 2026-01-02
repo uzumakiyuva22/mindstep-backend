@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
+  <title>MindStep — Ultimate Knowledge Hub</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      /* Advanced Sky Blue Palette */
+      --sky-primary: #33A1FD;
+      --sky-dark: #007AFF;
+      --sky-glow: rgba(51, 161, 253, 0.25);
+      --glass-bg: rgba(18, 20, 28, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --bg-dark: #020204;
+      --text-main: #eef1f6;
+      --text-muted: #9ca3af;
+      --code-bg: #0f1117;
+      
+      --font-main: "Inter", -apple-system, sans-serif;
+      --font-code: "JetBrains Mono", monospace;
+    }
+
+    * { box-sizing: border-box; outline: none; }
+
+    body {
+      margin: 0; padding: 0; font-family: var(--font-main);
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 10% 0%, rgba(51, 161, 253, 0.1) 0%, transparent 60%),
+        radial-gradient(circle at 90% 100%, rgba(48, 209, 88, 0.05) 0%, transparent 60%);
+      background-attachment: fixed; color: var(--text-main);
+      height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+    }
+
+    /* --- Navbar --- */
+    nav {
+      padding: 16px 30px; display: flex; justify-content: space-between; align-items: center;
+      background: rgba(10, 10, 15, 0.9); backdrop-filter: blur(30px);
+      border-bottom: 1px solid var(--glass-border); z-index: 100;
+    }
+    .logo-area { display: flex; align-items: center; gap: 10px; }
+    .logo {
+      font-weight: 800; font-size: 1.3rem; letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #fff 30%, var(--sky-primary));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    
+    .nav-actions { display: flex; gap: 15px; align-items: center; }
+
+    .lang-switch {
+      display: flex; background: rgba(255,255,255,0.05); border-radius: 20px;
+      border: 1px solid var(--glass-border); overflow: hidden;
+    }
+    .lang-btn {
+      padding: 6px 14px; border: none; background: transparent; color: var(--text-muted);
+      font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: 0.3s;
+    }
+    .lang-btn.active { background: var(--sky-primary); color: #fff; }
+
+    .nav-btn {
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.05);
+      color: #fff; padding: 8px 16px; border-radius: 30px; text-decoration: none;
+      font-size: 0.85rem; font-weight: 600; transition: 0.3s;
+    }
+    .nav-btn:hover { background: rgba(255,255,255,0.15); }
+
+    /* --- Layout --- */
+    .layout-container {
+      display: grid; grid-template-columns: 300px 1fr; 
+      height: 100%; overflow: hidden;
+    }
+    @media (max-width: 900px) { .layout-container { grid-template-columns: 1fr; } }
+
+    /* --- Sidebar --- */
+    .sidebar {
+      background: rgba(12, 14, 20, 0.7); border-right: 1px solid var(--glass-border);
+      padding: 25px 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px;
+    }
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+    .course-select-label { 
+      font-size: 0.7rem; text-transform: uppercase; color: var(--sky-primary); 
+      font-weight: 800; letter-spacing: 1px; margin-bottom: 8px; padding-left: 5px; 
+    }
+    .course-selector {
+      width: 100%; padding: 14px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border);
+      border-radius: 12px; color: #fff; font-family: var(--font-main); font-size: 0.95rem; cursor: pointer;
+      outline: none; transition: 0.3s;
+    }
+    .course-selector option { background: #0d0e12; color: #fff; }
+
+    /* Topics List */
+    .topics-list { display: flex; flex-direction: column; gap: 8px; }
+    
+    .level-header {
+      font-size: 0.7rem; font-weight: 800; color: var(--text-muted); 
+      text-transform: uppercase; margin: 20px 0 8px 5px; letter-spacing: 0.5px;
+      border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px;
+    }
+
+    .topic-btn {
+      width: 100%; padding: 12px 16px; border-radius: 12px;
+      background: transparent; border: 1px solid transparent;
+      color: rgba(255,255,255,0.8); text-align: left; font-size: 0.92rem; font-weight: 500;
+      cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 12px;
+    }
+    .topic-btn i { width: 20px; text-align: center; font-size: 0.9rem; opacity: 0.7; color: var(--sky-primary); }
+    .topic-btn:hover { background: rgba(255,255,255,0.05); color: #fff; }
+    
+    .topic-btn.active {
+      background: rgba(51, 161, 253, 0.15); border: 1px solid rgba(51, 161, 253, 0.3);
+      color: #fff; font-weight: 600; box-shadow: 0 4px 20px rgba(51, 161, 253, 0.1);
+    }
+    .topic-btn.active i { opacity: 1; }
+
+    /* --- Content Area --- */
+    .content-area {
+      padding: 0; position: relative; overflow-y: auto; scroll-behavior: smooth;
+    }
+    .content-area::-webkit-scrollbar { width: 8px; }
+    .content-area::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
+
+    .guide-wrapper {
+      max-width: 950px; margin: 0 auto; padding: 60px 80px 120px 80px;
+      animation: fadeIn 0.5s ease-out;
+    }
+    @media (max-width: 768px) { .guide-wrapper { padding: 30px 20px; } }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Typography - Deep Content Style */
+    .guide-header { border-bottom: 1px solid var(--glass-border); padding-bottom: 30px; margin-bottom: 40px; }
+    .guide-title { font-size: 2.8rem; font-weight: 800; margin: 0 0 15px 0; color: #fff; letter-spacing: -1px; line-height: 1.1; }
+    .guide-subtitle { font-size: 1.25rem; color: var(--text-muted); line-height: 1.6; font-weight: 300; }
+
+    .prose h2 { 
+      font-size: 1.8rem; margin-top: 50px; margin-bottom: 20px; color: #fff; font-weight: 700; 
+      display: flex; align-items: center; gap: 12px;
+    }
+    .prose h2::before { 
+      content: ''; width: 6px; height: 26px; background: var(--sky-primary); 
+      border-radius: 4px; display: inline-block; 
+    }
+    
+    .prose h3 { font-size: 1.4rem; margin-top: 35px; margin-bottom: 12px; color: #e0e0e0; font-weight: 600; }
+    
+    .prose p { font-size: 1.05rem; line-height: 1.8; color: #d1d5db; margin-bottom: 25px; }
+    
+    .prose ul, .prose ol { padding-left: 25px; margin-bottom: 30px; color: #d1d5db; }
+    .prose li { margin-bottom: 12px; line-height: 1.6; font-size: 1.05rem; }
+    .prose li::marker { color: var(--sky-primary); font-weight: bold; }
+
+    /* Concept Maps & Roadmaps */
+    .roadmap { 
+      position: relative; margin: 40px 0; border-left: 2px solid rgba(255,255,255,0.1); 
+      padding-left: 30px; 
+    }
+    .roadmap-item { position: relative; margin-bottom: 40px; }
+    .roadmap-item::before {
+      content: ''; position: absolute; left: -37px; top: 4px; width: 14px; height: 14px;
+      background: #000; border: 3px solid var(--sky-primary); border-radius: 50%;
+      box-shadow: 0 0 15px var(--sky-primary);
+    }
+    .roadmap-title { font-weight: 700; color: #fff; margin-bottom: 8px; font-size: 1.15rem; }
+    .roadmap-desc { font-size: 1rem; color: var(--text-muted); line-height: 1.6; }
+
+    /* Code Blocks */
+    .code-block {
+      background: var(--code-bg); border: 1px solid var(--glass-border);
+      border-radius: 14px; padding: 25px; font-family: var(--font-code);
+      font-size: 0.95rem; color: #a9b7c6; overflow-x: auto; margin: 30px 0;
+      position: relative; box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+    }
+    .code-block::after {
+      content: 'Example'; position: absolute; top: 10px; right: 15px; 
+      font-size: 0.7rem; text-transform: uppercase; color: rgba(255,255,255,0.2); font-weight: 800;
+    }
+    .kwd { color: #cc7832; } .str { color: #6a8759; } .num { color: #6897bb; } .cmt { color: #808080; }
+
+    /* Special Boxes */
+    .tip-box {
+      background: linear-gradient(90deg, rgba(51, 161, 253, 0.1), transparent);
+      border-left: 4px solid var(--sky-primary); padding: 25px; border-radius: 0 12px 12px 0; margin: 35px 0;
+    }
+    .tip-title { color: var(--sky-primary); font-weight: 800; margin-bottom: 10px; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 1px; }
+
+    .warn-box {
+      background: linear-gradient(90deg, rgba(255, 69, 58, 0.1), transparent);
+      border-left: 4px solid #FF453A; padding: 25px; border-radius: 0 12px 12px 0; margin: 35px 0;
+    }
+    .warn-title { color: #FF453A; font-weight: 800; margin-bottom: 10px; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 1px; }
+
+    @media (max-width: 900px) { .sidebar { display: none; } .guide-wrapper { padding: 20px; } }
+  </style>
+</head>
+
+<body>
+
+  <nav>
+    <div class="logo-area">
+      <i class="fas fa-graduation-cap" style="color:#33A1FD; font-size: 1.5rem;"></i>
+      <div class="logo">MindStep Guides</div>
+    </div>
+    
+    <div class="nav-actions">
+      <div class="lang-switch">
+        <button class="lang-btn active" id="btn-en" onclick="setLanguage('en')">English</button>
+        <button class="lang-btn" id="btn-ta" onclick="setLanguage('ta')">தமிழ் (AI)</button>
+      </div>
+      <a href="MainPage.html" class="nav-btn"><i class="fas fa-times"></i> Close</a>
+    </div>
+  </nav>
+
+  <div class="layout-container">
+    
+    <div class="sidebar">
+      <div>
+        <div class="course-select-label" id="lbl-course">Selected Guide</div>
+        <select id="courseSelector" class="course-selector">
+          <option value="java">Java Development</option>
+          <option value="python">Python Programming</option>
+          <option value="webdev">Full Stack (MERN)</option>
+          <option value="react">React.js Advanced</option>
+        </select>
+      </div>
+
+      <div class="topics-list" id="topicsList">
+        </div>
+    </div>
+
+    <div class="content-area">
+      <div id="guideContent" class="guide-wrapper">
+        </div>
+    </div>
+
+  </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  
+  let currentLang = 'en'; 
+  
+  // --- 🔥 MASSIVE CONTENT DATABASE (AI-STYLE DEPTH) ---
+  const contentDB = {
+    
+    // ================= JAVA (DEEP DIVE) =================
+    "java": {
+      en: {
+        title: "Java Masterclass: From Logic to Enterprise",
+        levels: [
+          {
+            name: "Phase 1: The Foundation",
+            topics: [
+              {
+                id: "j1", title: "Architecture & Setup", icon: "fas fa-server",
+                html: `
+                  <div class="guide-header">
+                    <h1 class="guide-title">Java Architecture & Setup</h1>
+                    <p class="guide-subtitle">Understanding the JVM, JRE, and JDK before writing a single line of code.</p>
+                  </div>
+                  <div class="prose">
+                    <h2>How Java Actually Works?</h2>
+                    <p>Java is unique because it is both <strong>Compiled</strong> and <strong>Interpreted</strong>. This makes it "Platform Independent" (Write Once, Run Anywhere).</p>
+                    <ul>
+                      <li><strong>Source Code (.java):</strong> What you write (human readable).</li>
+                      <li><strong>Compiler (javac):</strong> Converts source code into <em>Bytecode (.class)</em>. This is not binary; it's a special intermediate language.</li>
+                      <li><strong>JVM (Java Virtual Machine):</strong> This is the engine that reads Bytecode and translates it to native machine code for your specific computer (Windows/Mac/Linux).</li>
+                    </ul>
+                    
+                    <div class="tip-box">
+                      <div class="tip-title">Interview Question</div>
+                      "Why is Java platform independent?" Answer: Because of the Bytecode. The Bytecode is the same everywhere; only the JVM changes for each OS.
+                    </div>
+
+                    <h2>Professional Setup Guide</h2>
+                    <p>Do not use Notepad. Professional developers use IDEs. Here is the industry standard setup:</p>
+                    <div class="roadmap">
+                      <div class="roadmap-item">
+                        <div class="roadmap-title">Step 1: Install OpenJDK 21 (LTS)</div>
+                        <div class="roadmap-desc">Long Term Support versions are stable. Avoid "latest" beta versions.</div>
+                      </div>
+                      <div class="roadmap-item">
+                        <div class="roadmap-title">Step 2: Environment Variables</div>
+                        <div class="roadmap-desc">Set <code>JAVA_HOME</code> in Windows so your terminal knows where Java lives.</div>
+                      </div>
+                      <div class="roadmap-item">
+                        <div class="roadmap-title">Step 3: IntelliJ IDEA</div>
+                        <div class="roadmap-desc">Download the Community Edition. It has intelligent code completion that saves hours.</div>
+                      </div>
+                    </div>
+                  </div>`
+              },
+              {
+                id: "j2", title: "Memory & Variables", icon: "fas fa-memory",
+                html: `
+                  <div class="guide-header">
+                    <h1 class="guide-title">Memory Management & Variables</h1>
+                    <p class="guide-subtitle">Deep dive into Stack vs. Heap memory and Primitive Data Types.</p>
+                  </div>
+                  <div class="prose">
+                    <h2>Stack vs. Heap Memory</h2>
+                    <p>Understanding memory separates beginners from pros. Java uses two main memory areas:</p>
+                    <ul>
+                      <li><strong>Stack Memory:</strong> Stores temporary variables and method calls. It is fast but small. When a method ends, this memory is cleared immediately.</li>
+                      <li><strong>Heap Memory:</strong> Stores <strong>Objects</strong>. It is large but slower. Objects live here until the "Garbage Collector" removes them.</li>
+                    </ul>
+
+                    <h2>Primitive Types</h2>
+                    <p>Java defines 8 primitive types that store simple values directly in the Stack:</p>
+                    <div class="code-block">
+                      <span class="kwd">int</span> count = 100;       <span class="cmt">// 4 bytes</span><br>
+                      <span class="kwd">long</span> bigNum = 5000L;   <span class="cmt">// 8 bytes (Use 'L')</span><br>
+                      <span class="kwd">double</span> price = 19.99;  <span class="cmt">// Decimal values</span><br>
+                      <span class="kwd">boolean</span> isActive = <span class="kwd">true</span>;
+                    </div>
+                    
+                    <div class="warn-box">
+                      <div class="warn-title">Critical Mistake</div>
+                      Never use <code>float</code> or <code>double</code> for financial calculations (money). They have precision errors. Use <code>BigDecimal</code> class instead.
+                    </div>
+                  </div>`
+              }
+            ]
+          },
+          {
+            name: "Phase 2: Object Oriented Design",
+            topics: [
+              {
+                id: "j3", title: "Deep Dive into OOP", icon: "fas fa-cubes",
+                html: `
+                  <div class="guide-header">
+                    <h1 class="guide-title">Advanced OOP Principles</h1>
+                    <p class="guide-subtitle">Moving beyond simple classes to architectural design.</p>
+                  </div>
+                  <div class="prose">
+                    <h2>Thinking in Objects</h2>
+                    <p>Don't just write functions. Model the problem. If you are building a Bank App, you need classes for <code>User</code>, <code>Account</code>, and <code>Transaction</code>.</p>
+                    
+                    <h3>1. Encapsulation (Security)</h3>
+                    <p>Never make variables <code>public</code>. Always use <code>private</code> and provide access via Getters/Setters. This protects data from being corrupted.</p>
+                    
+                    <h3>2. Polymorphism (Flexibility)</h3>
+                    <p>This allows you to treat different objects as the same parent type.</p>
+                    <div class="code-block">
+                      <span class="cmt">// Parent Class Reference = Child Class Object</span><br>
+                      Animal myPet = <span class="kwd">new</span> Dog();<br>
+                      myPet.makeSound(); <span class="cmt">// Runs Dog's version of sound</span>
+                    </div>
+                    <p>This is crucial for building plugin systems or flexible APIs.</p>
+                  </div>`
+              }
+            ]
+          }
+        ]
+      },
+      
+      ta: {
+        title: "ஜாவா: முழுமையான வழிகாட்டி (AI Tutor)",
+        levels: [
+          {
+            name: "பகுதி 1: அடித்தளம்",
+            topics: [
+              {
+                id: "j1", title: "அறிமுகம் & கட்டமைப்பு", icon: "fas fa-server",
+                html: `
+                  <div class="guide-header">
+                    <h1 class="guide-title">ஜாவா கட்டமைப்பு & நிறுவல்</h1>
+                    <p class="guide-subtitle">JVM, JRE என்றால் என்ன? ஜாவா எப்படி இயங்குகிறது?</p>
+                  </div>
+                  <div class="prose">
+                    <h2>ஜாவா எப்படி இயங்குகிறது?</h2>
+                    <p>ஜாவா ஒரு தனித்துவமான மொழி. இது <strong>Compiler</strong> மற்றும் <strong>Interpreter</strong> இரண்டையும் பயன்படுத்துகிறது. இதனால் தான் "ஒரு முறை எழுதுங்கள், எங்கும் இயக்கலாம்" (Write Once, Run Anywhere) என்று கூறப்படுகிறது.</p>
+                    <ul>
+                      <li><strong>Source Code (.java):</strong> நீங்கள் எழுதும் ஆங்கில குறியீடு.</li>
+                      <li><strong>Bytecode (.class):</strong> கம்பைலர் (javac) இதை உருவாக்கும். இது இயந்திர மொழி அல்ல, ஆனால் JVM-க்கு புரியும் ஒரு இடைநிலை மொழி.</li>
+                      <li><strong>JVM (Java Virtual Machine):</strong> இது தான் உண்மையான ஹீரோ. Bytecode-ஐ எடுத்து, உங்கள் கணினிக்கு (Windows/Mac) ஏற்றவாறு மாற்றுகிறது.</li>
+                    </ul>
+                    
+                    <div class="tip-box">
+                      <div class="tip-title">நேர்முகத் தேர்வு கேள்வி</div>
+                      "ஜாவா ஏன் Platform Independent?" பதில்: Bytecode காரணமாக. Bytecode எல்லா இடத்திலும் ஒன்றுதான்; JVM மட்டுமே மாறுகிறது.
+                    </div>
+
+                    <h2>நிறுவல் முறை (Setup)</h2>
+                    <div class="roadmap">
+                      <div class="roadmap-item">
+                        <div class="roadmap-title">படி 1: OpenJDK 21 பதிவிறக்கம்</div>
+                        <div class="roadmap-desc">LTS (Long Term Support) பதிப்பை மட்டுமே பயன்படுத்தவும்.</div>
+                      </div>
+                      <div class="roadmap-item">
+                        <div class="roadmap-title">படி 2: IntelliJ IDEA</div>
+                        <div class="roadmap-desc">இதுவே சிறந்த மென்பொருள். Community Edition இலவசம்.</div>
+                      </div>
+                    </div>
+                  </div>`
+              },
+              {
+                id: "j2", title: "நினைவகம் & மாறிகள்", icon: "fas fa-memory",
+                html: `
+                  <div class="guide-header">
+                    <h1 class="guide-title">நினைவகம் & மாறிகள் (Memory & Variables)</h1>
+                  </div>
+                  <div class="prose">
+                    <h2>Stack மற்றும் Heap வித்தியாசம்</h2>
+                    <p>ஜாவாவில் நினைவகம் இரண்டு வகையாக பிரிக்கப்பட்டுள்ளது:</p>
+                    <ul>
+                      <li><strong>Stack Memory:</strong> சிறியது, வேகமானது. இங்குதான் <code>int</code>, <code>double</code> போன்ற சாதாரண மாறிகள் (Variables) சேமிக்கப்படும்.</li>
+                      <li><strong>Heap Memory:</strong> பெரியது. இங்குதான் அனைத்து <strong>Objects</strong> (பொருட்கள்) சேமிக்கப்படும்.</li>
+                    </ul>
+
+                    <h2>தரவு வகைகள் (Data Types)</h2>
+                    <div class="code-block">
+                      <span class="kwd">int</span> count = 100;       <span class="cmt">// முழு எண்</span><br>
+                      <span class="kwd">long</span> bigNum = 5000L;   <span class="cmt">// பெரிய எண் (L சேர்க்கவும்)</span><br>
+                      <span class="kwd">double</span> price = 19.99;  <span class="cmt">// தசம எண்</span><br>
+                      <span class="kwd">boolean</span> isActive = <span class="kwd">true</span>;
+                    </div>
+                    
+                    <div class="warn-box">
+                      <div class="warn-title">முக்கிய குறிப்பு</div>
+                      பணம் தொடர்பான கணக்கீடுகளுக்கு (Money) <code>double</code> பயன்படுத்த வேண்டாம். துல்லியமான கணக்கீட்டிற்கு <code>BigDecimal</code> பயன்படுத்தவும்.
+                    </div>
+                  </div>`
+              }
+            ]
+          }
+        ]
+      }
+    },
+
+    // ================= WEB DEV =================
+    "webdev": {
+      en: {
+        title: "Full Stack Roadmap (MERN)",
+        levels: [
+          {
+            name: "Phase 1: Frontend Engineering",
+            topics: [
+              {
+                id: "w1", title: "Advanced HTML/CSS", icon: "fab fa-html5",
+                html: `
+                  <div class="guide-header"><h1 class="guide-title">Modern HTML5 & CSS3</h1></div>
+                  <div class="prose">
+                    <h2>Semantic HTML</h2>
+                    <p>Stop using <code>&lt;div&gt;</code> for everything. It hurts accessibility and SEO.</p>
+                    <ul>
+                      <li>Use <code>&lt;nav&gt;</code> for menus.</li>
+                      <li>Use <code>&lt;main&gt;</code> for primary content.</li>
+                      <li>Use <code>&lt;article&gt;</code> for blog posts.</li>
+                    </ul>
+                    <h2>CSS Grid vs Flexbox</h2>
+                    <p><strong>Flexbox</strong> is for 1D layouts (rows OR columns). <strong>Grid</strong> is for 2D layouts (rows AND columns).</p>
+                  </div>`
+              },
+              {
+                id: "w2", title: "JavaScript Under the Hood", icon: "fab fa-js",
+                html: `
+                  <div class="guide-header"><h1 class="guide-title">JavaScript: How it Works</h1></div>
+                  <div class="prose">
+                    <h2>The Event Loop</h2>
+                    <p>JavaScript is <strong>Single Threaded</strong>. It can only do one thing at a time. So how does it fetch data without freezing?</p>
+                    <p>It uses the <strong>Event Loop</strong>. Heavy tasks (like API calls) are sent to the Web APIs, and JS continues running.</p>
+                    <div class="code-block">
+                      console.log("Start");<br>
+                      setTimeout(() => console.log("Timeout"), 0);<br>
+                      console.log("End");
+                    </div>
+                    <p>Output: Start -> End -> Timeout. Why? Because <code>setTimeout</code> goes to the queue!</p>
+                  </div>`
+              }
+            ]
+          }
+        ]
+      },
+      ta: {
+        title: "இணைய தள உருவாக்கம் (Full Stack)",
+        levels: [
+          {
+            name: "பகுதி 1: முகப்பு வடிவமைப்பு",
+            topics: [
+              {
+                id: "w1", title: "HTML & CSS ஆழமாக", icon: "fab fa-html5",
+                html: `
+                  <div class="guide-header"><h1 class="guide-title">நவீன HTML5 & CSS3</h1></div>
+                  <div class="prose">
+                    <h2>Semantic HTML</h2>
+                    <p>எல்லாவற்றிற்கும் <code>&lt;div&gt;</code> பயன்படுத்த வேண்டாம். அது கூகுள் தேடலுக்கு (SEO) உதவாது.</p>
+                    <ul>
+                      <li>மெனுக்களுக்கு <code>&lt;nav&gt;</code> பயன்படுத்தவும்.</li>
+                      <li>முக்கிய பகுதிக்கு <code>&lt;main&gt;</code> பயன்படுத்தவும்.</li>
+                    </ul>
+                    <h2>CSS Grid vs Flexbox</h2>
+                    <p><strong>Flexbox:</strong> ஒரு வரிசையில் உள்ள பொருட்களை சீரமைக்க சிறந்தது.<br><strong>Grid:</strong> முழு பக்கத்தின் கட்டமைப்பை (Layout) வடிவமைக்க சிறந்தது.</p>
+                  </div>`
+              }
+            ]
+          }
+        ]
+      }
+    }
+  };
+
+  // --- LOGIC ---
+  const selector = document.getElementById("courseSelector");
+  const topicsList = document.getElementById("topicsList");
+  const contentArea = document.getElementById("guideContent");
+  const btnEn = document.getElementById("btn-en");
+  const btnTa = document.getElementById("btn-ta");
+
+  const urlParams = new URLSearchParams(window.location.search);
+  let activeCourse = urlParams.get("course") || "java";
+  
+  // Ensure valid course selection
+  if(!contentDB[activeCourse]) activeCourse = "java";
+  selector.value = activeCourse;
+
+  // --- RENDER FUNCTIONS ---
+  
+  window.setLanguage = function(lang) {
+    currentLang = lang;
+    
+    if(lang === 'ta') {
+      btnTa.classList.add('active');
+      btnEn.classList.remove('active');
+      document.getElementById("lbl-course").innerText = "பாடத்தை தேர்வு செய்க";
+    } else {
+      btnEn.classList.add('active');
+      btnTa.classList.remove('active');
+      document.getElementById("lbl-course").innerText = "Selected Guide";
+    }
+
+    renderTopics();
+  };
+
+  function renderTopics() {
+    const data = contentDB[activeCourse][currentLang] || contentDB[activeCourse]['en'];
+    topicsList.innerHTML = "";
+
+    // Loop Levels
+    data.levels.forEach(level => {
+      const header = document.createElement("div");
+      header.className = "level-header";
+      header.innerText = level.name;
+      topicsList.appendChild(header);
+
+      // Loop Topics
+      level.topics.forEach((topic, idx) => {
+        const btn = document.createElement("button");
+        btn.className = "topic-btn";
+        btn.innerHTML = `<i class="${topic.icon}"></i> ${topic.title}`;
+        
+        btn.onclick = () => {
+          document.querySelectorAll(".topic-btn").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          showContent(topic.html);
+        };
+
+        // Auto-select first item
+        if(topicsList.querySelectorAll(".topic-btn").length === 0) {
+            btn.classList.add("active");
+            showContent(topic.html);
+        }
+        
+        topicsList.appendChild(btn);
+      });
+    });
+  }
+
+  function showContent(html) {
+    contentArea.style.opacity = 0;
+    setTimeout(() => {
+      contentArea.innerHTML = html;
+      contentArea.style.opacity = 1;
+    }, 200);
+  }
+
+  selector.addEventListener("change", (e) => {
+    activeCourse = e.target.value;
+    renderTopics();
+  });
+
+  // Init
+  renderTopics();
+
+});
+</script>
+</body>
+</html>
