@@ -1,232 +1,487 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
-  <title>MindStep — lessons</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>MindStep — Quantum Lab</title>
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@500;700&display=swap" rel="stylesheet">
   
-  <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
   <style>
     :root {
-      /* Sky Blue Apple Theme */
-      --sky-blue: #33A1FD; 
-      --sky-glow: rgba(51, 161, 253, 0.3);
-      --success: #30D158;
-      --error: #FF453A;
+      /* Theme Variables */
+      --bg-app: #0f111a;
+      --bg-panel: #1a1d2d;
+      --bg-editor: #131521;
+      --bg-gutter: #181a25;
       
-      /* Compact Glass Theme */
-      --glass-bg: rgba(20, 25, 35, 0.8);
-      --glass-border: rgba(255, 255, 255, 0.1);
-      --bg-dark: #050505;
+      --primary: #6366f1; 
+      --primary-hover: #4f46e5;
+      --accent: #06b6d4; 
       
-      --font-main: "Inter", -apple-system, sans-serif;
-      --font-code: "JetBrains Mono", monospace;
+      --success: #10b981;
+      --error: #ef4444;
+      --text-main: #e2e8f0;
+      --text-muted: #64748b;
+      
+      --border: rgba(255, 255, 255, 0.08);
+      
+      --font-ui: 'Inter', sans-serif;
+      --font-head: 'Outfit', sans-serif;
+      --font-code: 'JetBrains Mono', monospace;
     }
 
-    * { box-sizing: border-box; outline: none; }
+    * { box-sizing: border-box; outline: none; margin: 0; padding: 0; }
 
     body {
-      margin: 0; padding: 0; font-family: var(--font-main);
-      background-color: var(--bg-dark);
-      /* Subtle Sky Mesh Gradient */
-      background-image: 
-        radial-gradient(at 10% 10%, rgba(51, 161, 253, 0.12) 0px, transparent 60%),
-        radial-gradient(at 90% 90%, rgba(51, 161, 253, 0.08) 0px, transparent 60%);
-      background-attachment: fixed; color: #ffffff;
-      height: 100vh; display: flex; flex-direction: column; overflow: hidden;
-      font-size: 14px; /* Compact Base Font */
+      background-color: var(--bg-app);
+      color: var(--text-main);
+      font-family: var(--font-ui);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
 
-    /* --- Header (Compact) --- */
-    header {
-      padding: 10px 20px; background: rgba(15, 20, 30, 0.9);
-      backdrop-filter: blur(20px); border-bottom: 1px solid var(--glass-border);
-      display: flex; flex-direction: column; align-items: center; gap: 6px; z-index: 10;
+    /* --- TOP NAVIGATION --- */
+    .navbar {
+      height: 60px;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 20px;
+      z-index: 20;
     }
 
-    .ui-badge {
-      font-size: 0.65rem; font-weight: 700; letter-spacing: 1px;
-      color: var(--sky-blue); text-transform: uppercase;
-      background: rgba(51, 161, 253, 0.1); padding: 3px 10px; border-radius: 8px;
-      border: 1px solid rgba(51, 161, 253, 0.2);
+    .brand {
+      display: flex; align-items: center; gap: 12px;
+      font-family: var(--font-head); font-weight: 700; font-size: 1.1rem;
+      color: #fff; text-decoration: none;
+    }
+    .brand i { color: var(--primary); font-size: 1.3rem; }
+
+    .progress-pills { display: flex; gap: 6px; }
+    .pill {
+      width: 30px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 4px;
+      transition: 0.3s ease;
+    }
+    .pill.active { background: var(--primary); box-shadow: 0 0 10px rgba(99, 102, 241, 0.5); }
+    .pill.completed { background: var(--success); }
+
+    .status-badge {
+      font-size: 0.8rem; color: var(--text-muted); font-family: var(--font-code);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .status-dot {
+      width: 8px; height: 8px; background: var(--success); border-radius: 50%;
+      box-shadow: 0 0 8px var(--success); animation: pulse 2s infinite;
     }
 
-    .progress-track { display: flex; gap: 4px; width: 100%; max-width: 250px; }
-    .step-pill {
-      flex: 1; height: 3px; background: rgba(255,255,255,0.1); border-radius: 4px; transition: 0.3s;
+    /* --- MAIN WORKSPACE --- */
+    .workspace {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 350px 1fr;
+      overflow: hidden;
+      transition: 0.3s ease;
     }
-    .step-pill.completed { background: var(--success); }
-    .step-pill.active { background: var(--sky-blue); box-shadow: 0 0 8px var(--sky-blue); }
+    .workspace.focus-mode { grid-template-columns: 0px 1fr; }
 
-    /* --- Main Stage (Compact) --- */
-    #mainStage {
-      flex: 1; overflow-y: auto; padding: 15px; 
-      max-width: 1000px; width: 100%; margin: 0 auto;
-      scrollbar-width: none;
+    /* --- LEFT PANEL --- */
+    .guide-panel {
+      background: var(--bg-panel);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      overflow: hidden; position: relative;
     }
-    #mainStage::-webkit-scrollbar { display: none; }
-
-    /* --- Glass Cards (Compact) --- */
-    .glass-card {
-      background: var(--glass-bg); backdrop-filter: blur(40px);
-      border: 1px solid var(--glass-border); border-radius: 16px;
-      padding: 20px; margin-bottom: 15px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-      animation: fadeIn 0.5s ease forwards;
+    .guide-content {
+      padding: 30px; overflow-y: auto; flex: 1;
     }
-    @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-
-    h1 { font-size: 1.3rem; margin: 0 0 6px 0; font-weight: 700; color: #fff; }
-    h2 { font-size: 1.1rem; color: #fff; margin-top: 0; font-weight: 600; }
-    p { font-size: 0.9rem; line-height: 1.5; color: rgba(255,255,255,0.75); }
-    hr { border: 0; border-top: 1px solid var(--glass-border); margin: 12px 0; opacity: 0.5; }
-
-    /* --- Compiler Layout (Compact) --- */
-    .compiler-grid {
-      display: grid; grid-template-columns: 1fr; gap: 12px; height: 55vh; min-height: 350px;
-      animation: fadeIn 0.6s ease forwards; opacity: 0;
+    .guide-content h1 { font-family: var(--font-head); font-size: 1.8rem; margin-bottom: 15px; color: #fff; }
+    .guide-content p { line-height: 1.7; color: var(--text-muted); margin-bottom: 20px; font-size: 0.95rem; }
+    .guide-content code { 
+      background: rgba(99, 102, 241, 0.1); color: var(--accent); 
+      padding: 2px 6px; border-radius: 4px; font-family: var(--font-code); font-size: 0.85em; 
     }
-    @media (min-width: 900px) { .compiler-grid { grid-template-columns: 1.2fr 1fr; } }
 
-    .panel-container {
-      height: 100%; border-radius: 14px; overflow: hidden;
-      border: 1px solid var(--glass-border); box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    /* --- RIGHT PANEL (EDITOR) --- */
+    .editor-area {
+      display: flex; flex-direction: column;
+      background: var(--bg-app);
+      position: relative;
+    }
+
+    /* Editor Toolbar */
+    .toolbar {
+      height: 40px; background: #151824;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 15px;
+    }
+    .file-tab {
+      background: var(--bg-editor);
+      padding: 5px 15px; border-top: 2px solid var(--primary);
+      color: #fff; font-family: var(--font-code); font-size: 0.8rem;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .lang-tips {
+        font-family: var(--font-ui); font-size: 0.75rem; color: var(--text-muted);
+        display: flex; gap: 15px;
+    }
+    .tip-item i { margin-right: 5px; color: var(--accent); }
+
+    .tool-actions { display: flex; gap: 5px; }
+    .tool-btn {
+      background: transparent; border: 1px solid transparent; color: var(--text-muted);
+      width: 30px; height: 30px; border-radius: 6px; cursor: pointer;
+      display: grid; place-items: center; transition: 0.2s;
+    }
+    .tool-btn:hover { background: rgba(255,255,255,0.05); color: #fff; }
+    .tool-btn.active { color: var(--primary); background: rgba(99, 102, 241, 0.1); }
+
+    /* IDE Container */
+    .ide-container {
+        flex: 1; display: flex; position: relative; overflow: hidden;
+        background: var(--bg-editor);
+    }
+
+    /* Line Numbers */
+    .line-numbers {
+        width: 45px;
+        background: var(--bg-gutter);
+        border-right: 1px solid var(--border);
+        color: var(--text-muted);
+        font-family: var(--font-code);
+        font-size: 14px;
+        line-height: 1.6;
+        text-align: right;
+        padding: 20px 10px 20px 0;
+        user-select: none;
+        overflow: hidden;
+    }
+
+    /* The Actual Textarea */
+    .code-wrapper { flex: 1; position: relative; }
+    textarea.code-editor {
+      width: 100%; height: 100%;
+      background: transparent; color: #e0e0e0;
+      border: none; padding: 20px;
+      font-family: var(--font-code); font-size: 14px; line-height: 1.6;
+      resize: none; white-space: pre; overflow: auto;
+      tab-size: 4;
+    }
+    textarea.code-editor:focus { outline: none; }
+
+    /* Terminal */
+    .terminal-panel {
+      height: 180px; background: #0b0d14;
+      border-top: 1px solid var(--border);
       display: flex; flex-direction: column;
     }
-
-    .col-header {
-      padding: 8px 15px; font-size: 0.75rem; font-weight: 600;
-      text-transform: uppercase; color: rgba(255,255,255,0.5);
-      background: rgba(255,255,255,0.03); border-bottom: 1px solid var(--glass-border);
-      display: flex; align-items: center; gap: 6px;
+    .terminal-header {
+      padding: 8px 15px; background: rgba(255,255,255,0.02);
+      font-family: var(--font-code); font-size: 0.75rem; text-transform: uppercase;
+      color: var(--text-muted); display: flex; justify-content: space-between;
     }
-
-    textarea.code-editor {
-      flex: 1; width: 100%; background: rgba(10, 15, 20, 0.6);
-      border: none; padding: 15px; color: #e0e0e0;
-      font-family: var(--font-code); font-size: 13px; line-height: 1.5; resize: none; 
+    .terminal-body {
+      flex: 1; padding: 15px; overflow-y: auto;
+      font-family: var(--font-code); font-size: 0.85rem; color: var(--success);
     }
-    textarea:focus { background: rgba(15, 20, 25, 0.8); }
+    .web-preview { width: 100%; height: 100%; background: #fff; border:none; display:none; }
 
-    .preview-box { flex: 1; position: relative; width: 100%; }
-    iframe { width: 100%; height: 100%; border: none; display: block; }
-    
-    .console-box {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      background: #0d0d0d; color: var(--success); padding: 15px;
-      font-family: var(--font-code); font-size: 12.5px; line-height: 1.4;
-      overflow-y: auto; white-space: pre-wrap; display: none;
-    }
-
-    /* --- Footer --- */
-    .footer-nav {
-      position: fixed; bottom: 0; left: 0; right: 0;
-      background: rgba(15, 20, 30, 0.95); backdrop-filter: blur(20px);
-      border-top: 1px solid var(--glass-border); padding: 12px;
-      display: flex; justify-content: center; gap: 15px; z-index: 100;
+    /* --- FOOTER --- */
+    .action-bar {
+      height: 70px; background: var(--bg-panel);
+      border-top: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 30px; z-index: 20;
     }
 
     .btn {
-      padding: 10px 24px; border-radius: 50px; font-weight: 600; cursor: pointer; border: none; font-size: 0.9rem;
-      transition: 0.2s; display: flex; align-items: center; gap: 8px;
+      padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer;
+      font-weight: 600; font-family: var(--font-head); letter-spacing: 0.5px;
+      transition: all 0.2s; display: flex; align-items: center; gap: 8px;
     }
-    .btn:active { transform: scale(0.96); }
-    .btn-back { background: rgba(255,255,255,0.08); color: #fff; }
     
-    /* Sky Blue Button */
-    .btn-primary { 
-      background: var(--sky-blue); color: #fff; 
-      box-shadow: 0 4px 15px var(--sky-glow); 
+    .btn-back { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+    .btn-back:hover { border-color: var(--text-main); color: #fff; }
+
+    .btn-run {
+      background: var(--primary); color: #fff;
+      box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
     }
-    .btn-primary:hover { box-shadow: 0 6px 20px var(--sky-glow); transform: translateY(-1px); }
+    .btn-run:hover { background: var(--primary-hover); transform: translateY(-2px); }
+    .btn-run:disabled { opacity: 0.6; cursor: wait; transform: none; }
 
-    .btn-success { background: var(--success); color: #fff; box-shadow: 0 4px 15px rgba(48, 209, 88, 0.4); }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; transform: none; }
+    .btn-next {
+      background: var(--success); color: #000;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+    }
 
-    /* Custom Toast */
+    /* --- TOAST & LOADERS --- */
     #customToast {
-      position: fixed; top: 30px; left: 50%; transform: translateX(-50%) translateY(-150%);
-      background: rgba(30, 35, 45, 0.95); backdrop-filter: blur(12px);
-      border: 1px solid rgba(255,255,255,0.1); padding: 12px 20px; border-radius: 30px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5); color: #fff; font-weight: 500; font-size: 0.85rem;
-      display: flex; align-items: center; gap: 10px; z-index: 9999; 
-      transition: 0.4s cubic-bezier(0.19, 1, 0.22, 1); opacity: 0; pointer-events: none;
+      position: fixed; top: 80px; right: 20px;
+      background: #1e293b; border-left: 4px solid var(--primary);
+      padding: 15px 25px; border-radius: 4px; color: #fff;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      transform: translateX(120%); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 9999; display: flex; align-items: center; gap: 12px; font-weight: 500;
     }
-    #customToast.active { transform: translateX(-50%) translateY(0); opacity: 1; }
-    #customToast.error { border-left: 3px solid var(--error); }
-    #customToast.success { border-left: 3px solid var(--success); }
+    #customToast.active { transform: translateX(0); }
+    #customToast.success { border-color: var(--success); }
+    #customToast.error { border-color: var(--error); }
 
-    .finish-screen { text-align: center; margin-top: 80px; animation: fadeIn 0.6s ease; }
-    .big-icon { font-size: 4rem; margin-bottom: 20px; display: block; filter: drop-shadow(0 0 15px var(--sky-blue)); }
+    .loader-overlay {
+      position: absolute; top:0; left:0; width:100%; height:100%;
+      background: var(--bg-app); z-index: 50;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    
+    .finish-screen { text-align: center; animation: popIn 0.5s ease; }
+    @keyframes popIn { from{transform:scale(0.9); opacity:0;} to{transform:scale(1); opacity:1;} }
+    @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(16,185,129,0.7);} 70%{box-shadow:0 0 0 6px rgba(16,185,129,0);} 100%{box-shadow:0 0 0 0 rgba(16,185,129,0);} }
 
+    /* Responsive */
+    @media (max-width: 900px) {
+      .workspace { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+      .guide-panel { height: auto; max-height: 30vh; border-right: none; border-bottom: 1px solid var(--border); }
+      .terminal-panel { height: 150px; }
+      .line-numbers { display: none; } /* Hide numbers on small screens */
+    }
   </style>
 </head>
-
 <body>
 
-  <div id="customToast"></div>
+  <div id="customToast"><i class="fas fa-info-circle"></i> <span>Notification</span></div>
 
-  <header>
-    <div class="ui-badge">Mind Step</div>
-    <div id="progressTrack" class="progress-track"></div>
-  </header>
-  
-  <div id="mainStage">
-    <div style="text-align: center; margin-top: 100px; color: rgba(255,255,255,0.4);">
-      <i class="fas fa-circle-notch fa-spin fa-2x"></i><br><br>Loading...
+  <nav class="navbar">
+    <a href="#" class="brand" onclick="window.history.back()">
+      <i class="fas fa-cube"></i> MindStep
+    </a>
+    <div id="progressTrack" class="progress-pills"></div>
+    <div class="status-badge">
+      <div class="status-dot"></div> Connected
     </div>
+  </nav>
+
+  <div id="mainStage" style="flex:1; display:flex; flex-direction:column; position:relative;">
+    
+    <div class="loader-overlay" id="globalLoader">
+      <i class="fas fa-circle-notch fa-spin fa-3x" style="color:var(--primary); margin-bottom:20px;"></i>
+      <p style="color:var(--text-muted); font-family:var(--font-code);">INITIALIZING LAB ENVIRONMENT...</p>
+    </div>
+
+    <div class="workspace" id="workspaceContainer" style="opacity:0;">
+      <div class="guide-panel" id="guidePanel">
+        <div class="guide-content" id="guideContent">
+          </div>
+      </div>
+
+      <div class="editor-area">
+        <div class="toolbar">
+          <div class="file-tab">
+             <i id="langIcon" class="fas fa-code"></i> <span id="langName">SCRIPT</span>
+          </div>
+          <div class="lang-tips" id="langTips">
+             </div>
+          <div class="tool-actions">
+            <button class="tool-btn" onclick="toggleFocus()" title="Focus Mode"><i class="fas fa-expand-alt"></i></button>
+            <button class="tool-btn" onclick="adjustFont(1)" title="Zoom In"><i class="fas fa-search-plus"></i></button>
+            <button class="tool-btn" onclick="adjustFont(-1)" title="Zoom Out"><i class="fas fa-search-minus"></i></button>
+            <button class="tool-btn" onclick="copyCode()" title="Copy Code"><i class="far fa-copy"></i></button>
+            <button class="tool-btn" onclick="resetCode()" title="Reset Code"><i class="fas fa-undo-alt"></i></button>
+          </div>
+        </div>
+
+        <div class="ide-container">
+            <div class="line-numbers" id="lineNumbers">1</div>
+            <div class="code-wrapper">
+              <textarea id="editor" class="code-editor" spellcheck="false" placeholder="// Start typing..."></textarea>
+            </div>
+        </div>
+
+        <div class="terminal-panel">
+          <div class="terminal-header">
+            <span>Terminal Output</span>
+            <span id="statusText">Ready</span>
+          </div>
+          <div class="terminal-body">
+            <iframe id="preview" class="web-preview"></iframe>
+            <div id="console" style="white-space: pre-wrap;">> Waiting for code execution...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
-  <div class="footer-nav">
-    <button id="backBtn" class="btn btn-back" disabled><i class="fas fa-chevron-left"></i> Back</button>
-    <button id="actionBtn" class="btn btn-primary" disabled>Loading...</button>
+  <div class="action-bar">
+    <button id="backBtn" class="btn btn-back" disabled><i class="fas fa-arrow-left"></i> Previous</button>
+    <div style="font-size:0.8rem; color:var(--text-muted); display:none;" id="shortcutHint">Press Ctrl + Enter to Run</div>
+    <button id="actionBtn" class="btn btn-run">Run Code <i class="fas fa-play"></i></button>
   </div>
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-  let pyodideReadyPromise = loadPyodide();
+  // --- STATE ---
   const state = {
     steps: [], currentIndex: 0, userCode: {}, 
-    passedTasks: new Set(), user: null, lessonId: null, pyodide: null
+    passedTasks: new Set(), user: null, lessonId: null,
+    currentFontSize: 14,
+    initialTaskCode: {},
+    currentLang: 'text'
   };
 
   const params = new URLSearchParams(window.location.search);
   state.lessonId = params.get("lesson");
+  const courseSlug = params.get("course"); 
   const savedUser = localStorage.getItem("mindstep_user");
   state.user = savedUser ? JSON.parse(savedUser) : { _id: "guest" };
 
-  async function initPython() { try { state.pyodide = await pyodideReadyPromise; } catch(e){} }
-  initPython();
+  // --- EDITOR INTELLIGENCE LOGIC (FIXED) ---
+  function setupEditorBehavior() {
+    const textarea = document.getElementById('editor');
+    const lineNumbers = document.getElementById('lineNumbers');
 
-  function showToast(msg, type="error") {
+    const updateLineNumbers = () => {
+        const lines = textarea.value.split('\n').length;
+        lineNumbers.innerHTML = Array(lines).fill(0).map((_, i) => i + 1).join('<br>');
+    };
+
+    textarea.addEventListener('input', updateLineNumbers);
+    textarea.addEventListener('scroll', () => { lineNumbers.scrollTop = textarea.scrollTop; });
+
+    textarea.addEventListener('keydown', (e) => {
+        // Tab Handling
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            document.execCommand('insertText', false, '    ');
+        }
+        
+        // Smart Enter
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const cursorPos = textarea.selectionStart;
+            const currentLine = textarea.value.substr(0, cursorPos).split('\n').pop();
+            const indentation = currentLine.match(/^\s*/)[0];
+            
+            let extraIndent = "";
+            const lastChar = currentLine.trim().slice(-1);
+            
+            if ([':', '{', '('].includes(lastChar)) {
+                extraIndent = "    ";
+            }
+            
+            document.execCommand('insertText', false, '\n' + indentation + extraIndent);
+        }
+
+        // Auto-Close Brackets & Quotes
+        const pairs = { '(':')', '{':'}', '[':']', '"':'"', "'":"'" };
+        if (pairs[e.key]) {
+            e.preventDefault();
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const text = textarea.value;
+            
+            textarea.value = text.substring(0, start) + e.key + pairs[e.key] + text.substring(end);
+            textarea.selectionStart = textarea.selectionEnd = start + 1;
+            updateLineNumbers();
+        }
+    });
+  }
+
+  setupEditorBehavior();
+
+  // --- UI HELPER: Update Lang Context ---
+  function updateLanguageContext(lang) {
+      state.currentLang = lang.toLowerCase();
+      const iconMap = {
+          'python': 'fab fa-python', 'java': 'fab fa-java', 
+          'javascript': 'fab fa-js', 'html': 'fab fa-html5', 'css': 'fab fa-css3-alt'
+      };
+      const tipsMap = {
+          'python': '<span class="tip-item"><i class="fas fa-indent"></i> Use 4 spaces for indentation</span>',
+          'java': '<span class="tip-item"><i class="fas fa-code"></i> Use { } for blocks</span> <span class="tip-item"><i class="fas fa-semicolon"></i> End lines with ;</span>',
+          'javascript': '<span class="tip-item"><i class="fas fa-code"></i> Use { } for blocks</span>',
+          'html': '<span class="tip-item"><i class="fas fa-code"></i> Use < > tags</span>'
+      };
+
+      document.getElementById('langIcon').className = iconMap[state.currentLang] || 'fas fa-code';
+      document.getElementById('langName').innerText = lang.toUpperCase() + " SCRIPT";
+      document.getElementById('langTips').innerHTML = tipsMap[state.currentLang] || '';
+  }
+
+  // --- STANDARD FUNCTIONS ---
+  function showToast(msg, type="info") {
     const t = document.getElementById('customToast');
     t.className = type; 
-    const icon = type === 'error' ? '<i class="fas fa-exclamation-circle" style="color:#FF453A"></i>' : '<i class="fas fa-check-circle" style="color:#30D158"></i>';
+    let icon = type === 'success' ? '<i class="fas fa-check-circle"></i>' : (type === 'error' ? '<i class="fas fa-times-circle"></i>' : '<i class="fas fa-info-circle"></i>');
     t.innerHTML = `${icon} <span>${msg}</span>`;
     t.classList.add('active');
     setTimeout(() => t.classList.remove('active'), 3500);
   }
 
+  window.adjustFont = (delta) => {
+    state.currentFontSize += delta;
+    if(state.currentFontSize < 10) state.currentFontSize = 10;
+    if(state.currentFontSize > 24) state.currentFontSize = 24;
+    document.getElementById("editor").style.fontSize = `${state.currentFontSize}px`;
+    document.getElementById("lineNumbers").style.fontSize = `${state.currentFontSize}px`;
+  }
+
+  window.toggleFocus = () => {
+    document.querySelector(".workspace").classList.toggle("focus-mode");
+    document.querySelector(".tool-btn[onclick='toggleFocus()']").classList.toggle("active");
+  }
+
+  window.copyCode = () => {
+    navigator.clipboard.writeText(document.getElementById("editor").value).then(() => showToast("Code copied!", "success"));
+  }
+
+  window.resetCode = () => {
+    const step = state.steps[state.currentIndex];
+    if(step.type === 'task') {
+      const original = state.initialTaskCode[step.data._id] || "";
+      const editor = document.getElementById("editor");
+      editor.value = original;
+      editor.dispatchEvent(new Event('input')); // Force line number update
+      state.userCode[step.data._id] = original;
+      showToast("Code reset", "info");
+    }
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      const btn = document.getElementById('actionBtn');
+      if (!btn.disabled && btn.offsetParent !== null) btn.click();
+    }
+  });
+
+  // --- BOOT LOGIC ---
   async function boot() {
-    if(!state.lessonId) { buildDemo(); return; }
+    if(!state.lessonId) { 
+        console.warn("No Lesson ID.");
+        mockBoot(); return; 
+    }
     try {
       const res = await fetch(`/api/lesson/${state.lessonId}/details`);
       const data = await res.json();
       if(!data.success) throw new Error("API Error");
       buildSteps(data);
-    } catch(err) { buildDemo(); }
+    } catch(err) { 
+        console.error(err);
+        showToast("Error loading lesson", "error");
+    }
   }
 
-  function buildDemo() {
-    buildSteps({
-      lesson: { title: "Demo", intro: "Testing Mode", deepExplanation: [] },
-      tasks: [ { _id: "d1", title: "Test", description: "Test", language: "java", exampleCode: "" } ]
-    });
+  function mockBoot() {
+      buildSteps({
+          lesson: { title: "Demo Mode", content: "Server disconnected." },
+          tasks: [{ _id:"t1", title:"Demo Task", description:"Connect server.", language:"python", code:"print('Hello')" }]
+      });
   }
 
   function buildSteps(data) {
@@ -234,10 +489,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const theory = data.lesson.lesson || data.lesson || { title: "Lesson", intro: "Welcome" };
     state.steps.push({ type: 'theory', data: theory });
     if (data.tasks && Array.isArray(data.tasks)) {
-      data.tasks.forEach(t => state.steps.push({ type: 'task', data: t, code: t.exampleCode || "" }));
+      data.tasks.forEach(t => {
+        state.steps.push({ type: 'task', data: t });
+        state.initialTaskCode[t._id] = t.code || ""; 
+      });
     }
     state.steps.push({ type: 'finish' });
-    renderProgress(); renderStage(0);
+    renderProgress();
+    document.getElementById("globalLoader").style.display = 'none';
+    document.getElementById("workspaceContainer").style.opacity = '1';
+    renderStage(0);
   }
 
   function renderProgress() {
@@ -245,7 +506,7 @@ document.addEventListener("DOMContentLoaded", () => {
     track.innerHTML = '';
     state.steps.forEach((_, i) => {
       const p = document.createElement('div');
-      p.className = 'step-pill';
+      p.className = 'pill';
       p.id = `pill-${i}`;
       track.appendChild(p);
     });
@@ -255,226 +516,153 @@ document.addEventListener("DOMContentLoaded", () => {
     state.currentIndex = index;
     state.steps.forEach((_, i) => {
       const p = document.getElementById(`pill-${i}`);
-      if(p) {
-        p.className = 'step-pill';
-        if(i < index) p.classList.add('completed');
-        if(i === index) p.classList.add('active');
-      }
+      p.className = 'pill';
+      if(i < index) p.classList.add('completed');
+      else p.classList.remove('completed');
+      if(i === index) p.classList.add('active');
+      else p.classList.remove('active');
     });
 
     document.getElementById('backBtn').disabled = index === 0;
     document.getElementById('backBtn').onclick = () => renderStage(Math.max(0, index - 1));
 
-    const stage = document.getElementById('mainStage');
-    const btn = document.getElementById('actionBtn');
     const step = state.steps[index];
+    const ws = document.getElementById("workspaceContainer");
+    const editorWrapper = document.querySelector(".editor-area");
 
-    stage.innerHTML = '';
-    let newBtn = btn.cloneNode(true);
-    btn.parentNode.replaceChild(newBtn, btn);
-    const safeBtn = document.getElementById('actionBtn');
+    ws.style.display = "grid"; 
+    editorWrapper.style.display = "flex"; 
 
-    if(step.type === 'theory') renderTheory(step.data, stage, safeBtn);
-    else if(step.type === 'task') renderTask(step.data, stage, safeBtn);
-    else renderFinish(stage, safeBtn);
+    if(step.type === 'theory') renderTheory(step.data);
+    else if(step.type === 'task') renderTask(step.data);
+    else renderFinish();
   }
 
-  function renderTheory(data, container, btn) {
-    container.innerHTML = `<div class="glass-card"><h1>${data.title||"Topic"}</h1><hr><p>${data.intro||""}</p>${(data.deepExplanation||[]).map(p=>`<p>${p}</p>`).join("")}</div>`;
-    btn.innerHTML = `Start <i class="fas fa-arrow-right"></i>`; btn.className = "btn btn-primary"; btn.disabled = false;
+  function renderTheory(data) {
+    const guideBox = document.getElementById("guideContent");
+    const deepEx = (data.deepExplanation||[]).map(p=>`<p>${p}</p>`).join("");
+    guideBox.innerHTML = `<div style="padding-bottom:50px;"><span style="color:var(--accent); font-weight:700; font-size:0.8rem; letter-spacing:1px;">KNOWLEDGE BASE</span><h1>${data.title||"Topic"}</h1><p>${data.intro || data.description || ""}</p>${deepEx}</div>`;
+    document.querySelector(".editor-area").style.display = "none";
+    document.getElementById("workspaceContainer").style.display = "block"; 
+    const btn = document.getElementById('actionBtn');
+    btn.innerHTML = `Start Coding <i class="fas fa-arrow-right"></i>`;
+    btn.className = "btn btn-run"; btn.disabled = false;
     btn.onclick = () => goNext();
   }
 
-  function renderTask(task, container, btn) {
+  function renderTask(task) {
+    const guideBox = document.getElementById("guideContent");
     const lang = (task.language || "text").toLowerCase();
     const isWeb = lang === 'html' || lang === 'css';
-    const isConsole = !isWeb;
     
-    container.innerHTML = `
-      <div class="glass-card"><h2>${task.title}</h2><p>${task.description}</p></div>
-      <div class="compiler-grid">
-        <div class="panel-container">
-          <div class="col-header"><i class="fas fa-code"></i> Code (${lang})</div>
-          <textarea id="editor" class="code-editor" spellcheck="false">${state.userCode[task._id]||task.code||""}</textarea>
-        </div>
-        <div class="panel-container">
-          <div class="col-header"><i class="fas fa-terminal"></i> Output</div>
-          <div class="preview-box" style="background:${isWeb?'#fff':'#0d0d0d'}">
-            <iframe id="preview" style="display:${isWeb?'block':'none'}"></iframe>
-            <div id="console" class="console-box" style="display:${isConsole?'block':'none'}">Ready to run...</div>
-          </div>
-        </div>
-      </div>`;
+    updateLanguageContext(lang);
 
-    document.getElementById('editor').addEventListener('input', (e) => state.userCode[task._id] = e.target.value);
+    guideBox.innerHTML = `<span style="color:var(--accent); font-weight:700; font-size:0.8rem; letter-spacing:1px;">OBJECTIVE</span><h1>${task.title}</h1><hr style="border:0; border-top:1px solid var(--border); margin:15px 0;"><p>${task.description}</p>`;
 
-    btn.disabled = false;
+    document.querySelector(".editor-area").style.display = "flex";
+    document.getElementById("workspaceContainer").style.display = "grid";
+    
+    const editor = document.getElementById("editor");
+    editor.value = state.userCode[task._id] || task.code || "";
+    editor.dispatchEvent(new Event('input')); 
+    
+    editor.oninput = (e) => {
+        state.userCode[task._id] = e.target.value;
+    };
+
+    document.getElementById("preview").style.display = isWeb ? 'block' : 'none';
+    document.getElementById("console").style.display = isWeb ? 'none' : 'block';
+    document.getElementById("console").innerText = "> Waiting for execution...";
+    document.getElementById("statusText").innerText = "Idle";
+    document.getElementById("statusText").style.color = "var(--text-muted)";
+
+    const btn = document.getElementById('actionBtn');
     if(state.passedTasks.has(task._id)) setSuccessState(btn);
     else {
-      btn.innerHTML = `<i class="fas fa-play"></i> Run`; btn.className = "btn btn-primary";
+      btn.innerHTML = `Run Code <i class="fas fa-play"></i>`; 
+      btn.className = "btn btn-run"; 
       btn.onclick = () => runCode(task);
+      document.getElementById("shortcutHint").style.display = "block";
     }
   }
 
-  function renderFinish(container, btn) {
-    container.innerHTML = `<div class="finish-screen"><span class="big-icon">🎉</span><h1>Completed!</h1><p>Great Job.</p></div>`;
-    confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-    btn.innerHTML = `<i class="fas fa-bars"></i> Menu`; btn.className = "btn btn-primary";
-    btn.onclick = () => { if(document.referrer.includes("course.html")) window.history.back(); else window.location.href="course.html"; };
-  }
-
-  // --- 🔥 FIXED VALIDATION: "Context Aware" ---
-  function validateLogic(task, code) {
-    const c = code.toLowerCase().replace(/\s+/g, ' '); 
-    const d = (task.description || "").toLowerCase();
-    const lang = (task.language || "").toLowerCase();
-
-    if(!code.trim()) return { passed: false, msg: "Code cannot be empty!" };
-
-    // 1. JAVA: Only enforce types if specifically asked
-    if (lang === 'java') {
-        // If task asks for 'Class', don't check for 'int'
-        if (d.includes("class") && !c.includes("class")) {
-             return { passed: false, msg: "Missing 'class' keyword." };
-        }
-        
-        // If task explicitly asks for an 'Integer' (and not a class/string task)
-        if (d.includes("integer") && !d.includes("class") && !c.match(/int\s+\w+\s*=/)) {
-            return { passed: false, msg: "Task requires an Integer (e.g. int x=10;)" };
-        }
-
-        // If task asks for Boolean
-        if (d.includes("boolean") && !c.match(/boolean\s+\w+\s*=/)) {
-            return { passed: false, msg: "Task requires a Boolean (true/false)." };
-        }
-    }
-
-    // 2. HTML Checks
-    if (lang === 'html') {
-        if (d.includes("button") && !c.includes("<button")) return { passed: false, msg: "Missing <button> tag." };
-    }
-
-    return { passed: true };
-  }
-
-  // --- 🔥 SMART SIMULATOR (Outputs Variables & Strings) ---
   async function runCode(task) {
     const btn = document.getElementById('actionBtn');
-    const code = state.userCode[task._id] || "";
+    const code = document.getElementById("editor").value;
+    const consoleBox = document.getElementById("console");
+    const preview = document.getElementById("preview");
+    const statusText = document.getElementById("statusText");
     const lang = (task.language || "text").toLowerCase();
-    const preview = document.getElementById('preview');
-    const consoleBox = document.getElementById('console');
 
-    // 1. Validate
-    const validation = validateLogic(task, code);
-    if (!validation.passed) { showToast(validation.msg, "error"); return; }
+    if(!code.trim()) { showToast("Type some code first!", "error"); return; }
 
-    btn.disabled = true; btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Running...`;
+    btn.disabled = true; btn.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> Checking...`;
+    statusText.innerText = "Evaluating..."; statusText.style.color = "var(--accent)";
     
-    if(lang !== 'html' && lang !== 'css') consoleBox.innerText = "Compiling...";
+    if(lang !== 'html' && lang !== 'css') consoleBox.innerText = "> Sending to server...\n> Verifying output...";
 
     try {
-      if (lang === 'java' || lang === 'cpp') {
-        await new Promise(r => setTimeout(r, 800)); 
-        
-        let outputText = "";
-        let variables = {};
+      const res = await fetch("/api/task/submit", { 
+          method: "POST", headers: {"Content-Type":"application/json"}, 
+          body: JSON.stringify({ userId: state.user._id, lessonId: state.lessonId, taskId: task._id, code }) 
+      });
+      const data = await res.json();
 
-        // Parse ALL Variables (int, double, boolean, String)
-        const lines = code.split(/;|\n/);
-        lines.forEach(line => {
-            line = line.trim();
-            // Match: type name = "value" OR type name = value
-            const declMatch = line.match(/(int|double|boolean|String)\s+(\w+)\s*=\s*(.*)/);
-            if (declMatch) {
-                let val = declMatch[3].trim();
-                // Store cleaned value (remove quotes if string)
-                if (val.startsWith('"')) val = val.replace(/"/g, ''); 
-                variables[declMatch[2]] = val;
-            }
-        });
+      if (data.output) consoleBox.innerText = data.output;
 
-        // Parse Prints (System.out.println)
-        // Matches: System.out.println( ... );
-        const printRegex = /System\.out\.print(?:ln|f)?\s*\((.*)\)/g;
-        let match;
-        let hasOutput = false;
+      if ((lang === 'html' || lang === 'css') && data.passed) {
+          const doc = preview.contentDocument || preview.contentWindow.document;
+          doc.open(); doc.write(code); doc.close();
+          preview.style.display = 'block'; consoleBox.style.display = 'none';
+      }
 
-        while ((match = printRegex.exec(code)) !== null) {
-            let content = match[1].trim(); 
-            try {
-                // Case 1: Variable Property access (e.g. myStudent.name) -> Hacky fix for object sim
-                if (content.includes(".")) {
-                    // Try to find any string variable that looks like a name
-                    let found = false;
-                    for (let key in variables) {
-                       // If variable value is a string, print it (simulation heuristic)
-                       if (isNaN(variables[key]) && variables[key] !== 'true' && variables[key] !== 'false') {
-                           outputText += "> " + variables[key] + "\n";
-                           found = true; break;
-                       }
-                    }
-                    if(!found) outputText += "> [Object Value]\n";
-                }
-                // Case 2: Direct String "Hello"
-                else if (content.startsWith('"')) {
-                    outputText += "> " + content.replace(/"/g, '') + "\n";
-                } 
-                // Case 3: Variable 'x'
-                else if (variables[content] !== undefined) {
-                    outputText += "> " + variables[content] + "\n";
-                }
-                // Case 4: Concatenation "Sum: " + sum
-                else {
-                    let temp = content;
-                    Object.keys(variables).forEach(v => {
-                        temp = temp.replace(new RegExp("\\b"+v+"\\b", "g"), variables[v]);
-                    });
-                    outputText += "> " + temp.replace(/"/g,'').replace(/\+/g,'') + "\n";
-                }
-                hasOutput = true;
-            } catch (e) { outputText += "> " + content + "\n"; }
+      if (data.passed === true) {
+        statusText.innerText = "Correct"; statusText.style.color = "var(--success)";
+        state.passedTasks.add(task._id);
+        confetti({ particleCount: 150, spread: 70, origin: { y: 0.8 }, colors: ['#6366f1', '#10b981'] });
+        showToast("Perfect Match! Task Completed.", "success");
+        setSuccessState(btn);
+      } else {
+        statusText.innerText = "Incorrect"; statusText.style.color = "var(--error)";
+        if(data.output && (data.output.includes("Logic Error") || data.output.includes("Required"))) {
+             // Logic error shown by backend
         }
-
-        if (!hasOutput && code.includes("class")) outputText = "> Class created successfully (No print output).";
-        
-        consoleBox.innerText = "Compilation Successful.\n\n" + outputText;
+        throw new Error("Answer does not match expected output.");
       }
-      else if (lang === 'python') {
-        if(!state.pyodide) state.pyodide = await loadPyodide();
-        let out = "";
-        state.pyodide.setStdout({ batched: (s) => out += s + "\n" });
-        await state.pyodide.runPythonAsync(code);
-        consoleBox.innerText = out.trim() === "" ? "> (No output)" : out;
-      }
-      else if (lang === 'html' || lang === 'css' || lang === 'javascript') {
-        const doc = preview.contentDocument || preview.contentWindow.document;
-        doc.open();
-        const customScript = `<style>.t{position:fixed;top:30px;left:50%;transform:translateX(-50%);background:rgba(30,30,30,0.9);backdrop-filter:blur(20px);color:#fff;padding:12px 24px;border-radius:50px;z-index:99;box-shadow:0 15px 40px rgba(0,0,0,0.4);font-family:sans-serif;font-weight:600;border:1px solid rgba(255,255,255,0.1);animation:popIn 0.4s forwards;}@keyframes popIn{from{opacity:0;transform:translate(-50%,-100%);}to{opacity:1;transform:translate(-50%,0);}}</style><script>window.alert=function(m){const d=document.createElement('div');d.className='t';d.innerHTML="🔔&nbsp; "+m;document.body.appendChild(d);setTimeout(()=>d.remove(),3000)}<\/script>`;
-        doc.write(customScript + (lang==='html'?code: (lang==='css'?`<style>${code}</style>` : `<script>${code}<\/script>`)));
-        doc.close();
-      }
-
-      state.passedTasks.add(task._id);
-      fetch("/api/task/submit", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ userId: state.user._id, lessonId: state.lessonId, taskId: task._id, code }) }).catch(e=>{});
-      confetti({ particleCount: 50, spread: 50, origin: { y: 0.8 }, colors: ['#34C759'] });
-      showToast("Correct Answer!", "success");
-      setSuccessState(btn);
-
     } catch(e) {
-      consoleBox.innerText = "Runtime Error:\n" + e.message;
-      btn.disabled = false; btn.innerHTML = `<i class="fas fa-play"></i> Run`;
+      if (!consoleBox.innerText.includes(e.message) && !consoleBox.innerText.includes("Logic Error")) {
+          consoleBox.innerText += "\n\n[SYSTEM ERROR]: " + e.message;
+      }
+      btn.disabled = false; btn.innerHTML = `Run Code <i class="fas fa-play"></i>`;
+      showToast("Incorrect Answer. Try again!", "error");
     }
   }
 
   function setSuccessState(btn) {
-    btn.innerHTML = `Next <i class="fas fa-arrow-right"></i>`; btn.className = "btn btn-success"; btn.disabled = false;
-    let newBtn = btn.cloneNode(true); btn.parentNode.replaceChild(newBtn, btn);
-    newBtn.onclick = () => goNext();
+    btn.innerHTML = `Next Step <i class="fas fa-arrow-right"></i>`; 
+    btn.className = "btn btn-next"; btn.disabled = false;
+    btn.onclick = () => goNext();
+    document.getElementById("shortcutHint").style.display = "none";
   }
 
   function goNext() {
     if(state.currentIndex < state.steps.length - 1) renderStage(state.currentIndex + 1);
+  }
+
+  async function renderFinish() {
+    document.getElementById("workspaceContainer").style.display = "none";
+    document.querySelector(".action-bar").style.display = "none"; 
+    const taskSteps = state.steps.filter(s => s.type === 'task');
+    if (state.passedTasks.size < taskSteps.length) {
+       showToast("Complete all tasks first!", "error");
+       renderStage(state.currentIndex - 1); return;
+    }
+    document.getElementById("mainStage").innerHTML = `<div style="flex:1; display:flex; align-items:center; justify-content:center;"><div class="finish-screen"><i class="fas fa-trophy" style="font-size:6rem; color:var(--success); margin-bottom:30px; filter:drop-shadow(0 0 30px rgba(16,185,129,0.4));"></i><h1 style="font-family:var(--font-head); font-size:2.5rem; margin-bottom:15px;">Module Complete!</h1><p style="color:var(--text-muted); margin-bottom:30px;">All systems nominal. Experience data saved.</p><button id="finishBtn" class="btn btn-run" style="margin:0 auto; padding:15px 40px;"><i class="fas fa-th"></i> Return to Hub</button></div></div>`;
+    if(state.lessonId && state.user._id !== "guest") {
+        try { await fetch("/api/complete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: state.user._id, lessonId: state.lessonId }) }); } catch(e) { console.error("Sync Error", e); }
+    }
+    confetti({ particleCount: 200, spread: 120, origin: { y: 0.6 } });
+    document.getElementById("finishBtn").onclick = () => { if(courseSlug) window.location.href = `course.html?course=${courseSlug}&ts=${Date.now()}`; else window.history.back(); };
   }
 
   boot();

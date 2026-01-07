@@ -184,9 +184,8 @@
     </div>
 
 <script>
-    const API_BASE = window.location.origin.includes("localhost") 
-      ? "http://localhost:10000" 
-      : window.location.origin;
+    // Automatically detect server URL (works for localhost & deployed)
+    const API_BASE = window.location.origin;
 
     document.getElementById('btnLogin').onclick = async () => {
         const btn = document.getElementById('btnLogin');
@@ -197,6 +196,7 @@
         user.parentElement.classList.remove('error-shake');
         pass.parentElement.classList.remove('error-shake');
 
+        // Validation
         if (!user.value.trim()) {
             user.parentElement.classList.add('error-shake'); return;
         }
@@ -204,31 +204,38 @@
             pass.parentElement.classList.add('error-shake'); return;
         }
 
-        // Optimistic Loading
+        // Optimistic Loading State
         btn.classList.add('loading');
         
         try {
-            const res = await fetch(`${API_BASE}/api/auth/admin-login`, {
-                method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username: user.value.trim(), password: pass.value.trim() })
+            // ✅ FIX: Use the correct endpoint matching server.js
+            const res = await fetch(`${API_BASE}/api/admin/login`, {
+                method: "POST", 
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    username: user.value.trim(), 
+                    password: pass.value.trim() 
+                })
             });
+
             const data = await res.json();
 
             if (data.success) {
-                localStorage.setItem("admin_token", data.token);
-                localStorage.setItem("admin_name", data.admin.username);
-                window.location.href = "AdminDashboard.html";
+                // ✅ Store Token Correctly
+                localStorage.setItem("mindstep_admin_token", data.token);
+                // Redirect to the Admin Dashboard root route (handled by server.js)
+                window.location.href = "/admin"; 
             } else {
                 alert(data.error || "Access Denied");
                 pass.parentElement.classList.add('error-shake');
             }
         } catch (err) {
-            alert("Server Connection Failed");
+            console.error(err);
+            alert("Server Connection Failed. Is the backend running?");
         } finally {
             btn.classList.remove('loading');
         }
     };
 </script>
-
 </body>
 </html>

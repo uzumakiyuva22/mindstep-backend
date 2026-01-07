@@ -28,7 +28,6 @@
       min-height: 100vh;
       font-family: 'Inter', sans-serif;
       background-color: var(--bg-dark);
-      /* Matching Login Page Background */
       background-image: 
         radial-gradient(circle at 10% 20%, rgba(51, 161, 253, 0.1) 0%, transparent 50%),
         radial-gradient(circle at 90% 80%, rgba(138, 43, 226, 0.08) 0%, transparent 50%);
@@ -37,7 +36,6 @@
       overflow-x: hidden;
     }
 
-    /* Noise Texture Overlay */
     .noise {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
@@ -53,9 +51,7 @@
       display: flex; justify-content: space-between; align-items: center;
     }
 
-    .brand {
-      display: flex; align-items: center; gap: 10px;
-    }
+    .brand { display: flex; align-items: center; gap: 10px; }
     .brand i { font-size: 1.5rem; color: var(--primary); filter: drop-shadow(0 0 10px var(--primary-glow)); }
     .brand span { font-family: 'Orbitron'; font-size: 1.2rem; font-weight: 800; letter-spacing: 1px; }
 
@@ -66,7 +62,6 @@
     }
     .nav-link:hover, .nav-link.active { color: #fff; text-shadow: 0 0 10px var(--primary-glow); }
     
-    /* User Profile Chip */
     .user-chip {
       display: flex; align-items: center; gap: 12px;
       padding: 6px 12px 6px 6px;
@@ -125,7 +120,6 @@
       min-height: 280px;
     }
     
-    /* Hover Glow Effect */
     .course-card::before {
       content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
       background: linear-gradient(90deg, transparent, var(--primary), transparent);
@@ -188,7 +182,6 @@
     }
     .btn-confirm:hover { transform: scale(1.05); }
 
-    /* Footer */
     footer {
       text-align: center; padding: 40px; border-top: 1px solid var(--glass-border);
       color: var(--text-muted); font-size: 0.9rem; margin-top: 50px;
@@ -196,7 +189,7 @@
 
     @media (max-width: 768px) {
       nav { padding: 15px 20px; }
-      .nav-link { display: none; } /* Hide links on mobile, keep profile/exit */
+      .nav-link { display: none; }
       .hero h1 { font-size: 2.2rem; }
     }
   </style>
@@ -280,7 +273,12 @@ document.addEventListener("DOMContentLoaded", () => {
   // 2. Populate UI
   document.getElementById("userName").textContent = user.username;
   document.getElementById("heroName").textContent = user.username;
-  document.getElementById("userImg").src = user.image || "https://ui-avatars.com/api/?name=" + user.username + "&background=33A1FD&color=fff";
+  
+  // 🔥 FIX 3: Safe Image Fallback
+  document.getElementById("userImg").src = 
+    (user.image && user.image.trim() !== "") 
+      ? user.image 
+      : "https://ui-avatars.com/api/?name=" + user.username + "&background=33A1FD&color=fff";
 
   // 3. Load Data
   loadCourses(user._id);
@@ -309,11 +307,15 @@ async function loadCourses(userId) {
       try {
         const pRes = await fetch(`${API_BASE}/api/course/${course.slug}/progress/${userId}`);
         const pData = await pRes.json();
-        progress = pData.percent || 0;
+        // 🔥 FIX 2: Logic Safety Check
+        progress = pData.success ? (pData.percent || 0) : 0;
       } catch(e) {}
 
       totalProg += progress;
       count++;
+
+      // 🔥 FIX 1: Description Safety Check (Prevents Crash)
+      const description = (course.description || "No description available.").substring(0, 80) + "...";
 
       // Create Card
       const card = document.createElement("div");
@@ -325,7 +327,7 @@ async function loadCourses(userId) {
             <span class="badge"><i class="fas fa-book-open"></i> ${lessonCount} Lessons</span>
           </div>
           <h3>${course.title}</h3>
-          <p>${course.description.substring(0, 80)}...</p>
+          <p>${description}</p>
         </div>
         
         <div>
