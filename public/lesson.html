@@ -12,24 +12,20 @@
   <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
 
   <style>
-    /* --- CORE THEME --- */
     :root {
       --bg-root: #09090b;
       --bg-sidebar: #121214;
       --bg-editor: #1e1e1e;
       --bg-terminal: #0c0c0c;
       --border: #27272a;
-      
       --primary: #6366f1;
       --primary-hover: #4f46e5;
       --accent: #38bdf8;
-      
       --success: #22c55e;
       --error: #ef4444;
       --warning: #f59e0b;
       --text: #e4e4e7;
       --text-dim: #a1a1aa;
-      
       --font-main: 'Plus Jakarta Sans', sans-serif;
       --font-code: 'JetBrains Mono', monospace;
     }
@@ -51,13 +47,16 @@
       color: var(--text);
       font-family: var(--font-main);
       height: 100vh;
-      display: flex; flex-direction: column; overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
 
     /* NAVBAR */
     .navbar {
       height: 60px; flex-shrink: 0;
-      background: var(--bg-sidebar); border-bottom: 1px solid var(--border);
+      background: var(--bg-sidebar);
+      border-bottom: 1px solid var(--border);
       display: flex; align-items: center; justify-content: space-between;
       padding: 0 25px; z-index: 50;
     }
@@ -100,6 +99,24 @@
     .badge-theory { background: rgba(99, 102, 241, 0.1); color: var(--primary); border: 1px solid rgba(99,102,241,0.2); }
     .badge-task { background: rgba(56, 189, 248, 0.1); color: var(--accent); border: 1px solid rgba(56, 189, 248, 0.2); }
 
+    /* File Input UI */
+    .file-input-group {
+        background: rgba(0,0,0,0.2); border: 1px solid var(--border);
+        padding: 15px; border-radius: 8px; margin-bottom: 20px;
+    }
+    .file-input-group label {
+        display: block; font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; margin-bottom: 8px; font-weight: 700;
+    }
+    .file-input-wrapper {
+        display: flex; align-items: center; gap: 10px; background: var(--bg-editor);
+        padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border);
+    }
+    .file-input-wrapper i { color: var(--primary); }
+    #fileNameInput {
+        background: transparent; border: none; color: var(--text); font-family: var(--font-code);
+        font-size: 0.9rem; flex: 1;
+    }
+
     .hint-box {
       margin-top: 20px; padding: 15px; border-radius: 8px; display: none;
       background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3);
@@ -131,14 +148,14 @@
     .editor-container { flex: 1; position: relative; overflow: hidden; min-height: 0; }
     #monaco-editor { width: 100%; height: 100%; }
 
-    /* Terminal */
+    /* Terminal & Interactive Area */
     .terminal {
       height: 40px; min-height: 40px; flex-shrink: 0; 
       background: var(--bg-terminal); border-top: 1px solid var(--border);
-      display: flex; flex-direction: column; transition: height 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-      position: absolute; bottom: 0; width: 100%; z-index: 60;
+      display: flex; flex-direction: column; transition: height 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+      position: absolute; bottom: 0; width: 100%; z-index: 20;
     }
-    .terminal.expanded { height: 85% !important; border-top: 2px solid var(--primary); box-shadow: 0 -10px 40px rgba(0,0,0,0.5); }
+    .terminal.expanded { height: 60% !important; border-top: 2px solid var(--primary); box-shadow: 0 -10px 40px rgba(0,0,0,0.5); }
 
     .term-header {
       padding: 0 15px; height: 40px; background: #27272a;
@@ -147,14 +164,45 @@
       display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; cursor: pointer;
     }
     .term-body {
-      flex: 1; padding: 15px; 
-      font-family: 'JetBrains Mono', monospace; font-size: 0.95rem; color: #fff;
+      flex: 1; padding: 20px; 
+      font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; color: #ccc;
       overflow-y: auto; white-space: pre-wrap; scroll-behavior: smooth;
+      display: flex; flex-direction: column; cursor: text;
     }
-    .term-line { margin-bottom: 6px; display: flex; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 2px; }
-    .term-time { color: var(--text-dim); font-size: 0.8em; min-width: 60px; user-select: none; }
+    .term-log { flex: 1; }
+    .term-line { margin-bottom: 6px; display: flex; gap: 10px; line-height: 1.5; }
+    
+    .term-input-line {
+        display: flex; align-items: center; gap: 10px; margin-top: 10px;
+    }
     .term-prompt { color: var(--success); font-weight: bold; }
-    .web-preview { width: 100%; height: 100%; border:none; background:#fff; display:none; }
+    #termInput {
+        background: transparent; border: none; color: #fff; 
+        font-family: 'JetBrains Mono', monospace; font-size: 0.9rem;
+        flex: 1; outline: none;
+    }
+
+    /* API PREVIEW & ACTION BUTTONS */
+    .api-preview {
+        background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+        border-radius: 6px; margin: 15px 0; overflow: hidden;
+        animation: fadeIn 0.5s;
+    }
+    .api-header {
+        background: rgba(255,255,255,0.05); padding: 8px 12px; border-bottom: 1px solid var(--border);
+        display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem;
+    }
+    .method-badge { background: var(--success); color: #000; padding: 2px 6px; border-radius: 4px; font-weight: 700; margin-right: 8px; }
+    .api-body { padding: 12px; font-family: 'JetBrains Mono', monospace; color: #a5b4fc; }
+    
+    .action-btn {
+        background: var(--primary); color: #fff; border:none; padding: 6px 14px;
+        border-radius: 4px; font-family: var(--font-main); cursor: pointer;
+        display: inline-flex; align-items: center; gap: 8px; margin-top: 10px;
+        font-size: 0.85rem; transition: 0.2s;
+    }
+    .action-btn:hover { background: var(--primary-hover); }
+    .action-btn:disabled { opacity: 0.7; cursor: not-allowed; }
 
     /* Footer */
     .footer {
@@ -190,6 +238,7 @@
       transition: 0.3s; z-index: 200; box-shadow: 0 10px 40px rgba(0,0,0,0.5); 
       border: 1px solid var(--border);
     }
+    @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
 
     @media (max-width: 900px) {
       .workspace.mode-coding { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
@@ -202,7 +251,7 @@
 
   <div id="loadingOverlay">
     <i class="fas fa-cube fa-spin fa-3x" style="color:var(--primary); margin-bottom:20px;"></i>
-    <p style="color:var(--text-dim); font-family:var(--font-code);">INITIALIZING...</p>
+    <p style="color:var(--text-dim); font-family:var(--font-code);">INITIALIZING DEV ENV...</p>
   </div>
 
   <div id="customToast"></div>
@@ -234,7 +283,7 @@
       <div class="guide-content" id="guideContent"></div>
       <div style="padding: 0 30px 30px 30px;">
           <div id="hintBox" class="hint-box">
-              <div style="color:var(--warning); font-weight:700; margin-bottom:5px;"><i class="fas fa-lightbulb"></i> AI Hint</div>
+              <div style="color:var(--warning); font-weight:700; margin-bottom:5px;"><i class="fas fa-lightbulb"></i> Concept Hint</div>
               <div id="hintText" style="color:var(--text);"></div>
           </div>
       </div>
@@ -243,7 +292,7 @@
     <div class="ide-panel">
       <div class="toolbar">
         <div class="file-tab">
-          <i class="fas fa-code" id="langIcon" style="color:var(--primary);"></i> <span id="langName">SCRIPT</span>
+          <i class="fas fa-file-code" id="langIcon" style="color:var(--primary);"></i> <span id="langName">server.js</span>
         </div>
         <div class="toolbar-actions">
           <button class="icon-btn" onclick="copyCode()" title="Copy Code"><i class="far fa-copy"></i></button>
@@ -257,18 +306,24 @@
 
       <div class="terminal" id="terminalArea">
         <div class="term-header" onclick="toggleTerminal()">
-          <span><i class="fas fa-terminal" style="margin-right:8px; opacity:0.5;"></i> Console Output</span>
+          <span><i class="fas fa-terminal" style="margin-right:8px; opacity:0.7;"></i> TERMINAL / PREVIEW</span>
           <div style="display:flex; gap:10px;">
-              <button class="icon-btn" style="width:auto; padding:0 10px; font-size:0.8rem;" onclick="event.stopPropagation(); toggleTerminal()">
+              <button class="icon-btn" style="width:auto; padding:0 10px; font-size:0.8rem;">
                   <i class="fas fa-expand" id="termExpandIcon"></i> <span id="termExpandText">Expand</span>
               </button>
               <button class="icon-btn" onclick="event.stopPropagation(); clearTerminal()" title="Clear"><i class="fas fa-trash"></i></button>
           </div>
         </div>
-        <div class="term-body" id="termBody">
-          <iframe id="webPreview" class="web-preview"></iframe>
-          <div id="termOutput">
-            <div style="color:var(--text-dim);">> Ready to code...</div>
+        <div class="term-body" id="termBody" onclick="document.getElementById('termInput').focus()">
+          <div id="termLog" class="term-log">
+            <div style="color:var(--text-dim); margin-bottom:10px; font-style:italic;">
+                # Welcome to MindStep Shell v1.0 <br>
+                # Step 1: Write Code. Step 2: Check Logic. Step 3: Action.
+            </div>
+          </div>
+          <div class="term-input-line">
+            <span class="term-prompt">user@mindstep:~$</span>
+            <input type="text" id="termInput" autocomplete="off" spellcheck="false">
           </div>
         </div>
       </div>
@@ -277,8 +332,8 @@
 
   <div class="footer">
     <button class="btn btn-secondary" id="prevBtn" disabled><i class="fas fa-arrow-left"></i> Previous</button>
-    <div style="font-size:0.8rem; color:var(--text-dim); font-family:var(--font-code);">Ctrl + Enter to Run</div>
-    <button class="btn btn-run" id="runBtn">Start Coding <i class="fas fa-arrow-right"></i></button>
+    <div style="font-size:0.8rem; color:var(--text-dim); font-family:var(--font-code);">Write Code & Check Logic</div>
+    <button class="btn btn-run" id="runBtn">Check Logic <i class="fas fa-check-circle"></i></button>
   </div>
 
 <script>
@@ -291,11 +346,18 @@ document.addEventListener("DOMContentLoaded", () => {
     userId: JSON.parse(localStorage.getItem("mindstep_user") || '{"_id":"guest"}')._id,
     defaults: {}, mockMode: false, failCounts: {},
     xp: parseInt(localStorage.getItem("mindstep_xp") || "0"),
-    editorInstance: null
+    editorInstance: null,
+    
+    // STATE FOR 2-STEP VALIDATION
+    fileName: "server.js",
+    isLogicValid: false,
+    cmdHistory: [],
+    cmdHistoryIdx: -1
   };
 
   const els = {
-    term: document.getElementById("termOutput"),
+    termLog: document.getElementById("termLog"),
+    termInput: document.getElementById("termInput"),
     termBody: document.getElementById("termBody"),
     terminalArea: document.getElementById("terminalArea"),
     termExpandIcon: document.getElementById("termExpandIcon"),
@@ -310,26 +372,20 @@ document.addEventListener("DOMContentLoaded", () => {
     lvlDisplay: document.getElementById("levelDisplay"),
     hintBox: document.getElementById("hintBox"),
     hintText: document.getElementById("hintText"),
-    webPreview: document.getElementById("webPreview")
+    langName: document.getElementById("langName")
   };
 
-  // --- LISTEN FOR LOGS ---
-  window.addEventListener('message', (e) => {
-      if(e.data && e.data.t === 'log') {
-          const time = new Date().toLocaleTimeString('en-US', {hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'});
-          els.term.innerHTML += `<div class="term-line"><span class="term-time">[${time}]</span> <span>${e.data.m}</span></div>`;
-          scrollToBottom();
-      }
-  });
-
+  // --- TERMINAL UI ---
   window.toggleTerminal = (forceState) => {
       const isCurrentlyExpanded = els.terminalArea.classList.contains('expanded');
       const shouldExpand = forceState !== undefined ? forceState : !isCurrentlyExpanded;
+
       if(shouldExpand) {
           els.terminalArea.classList.add('expanded');
           els.termExpandIcon.className = "fas fa-compress";
           els.termExpandText.innerText = "Minimize";
           scrollToBottom();
+          els.termInput.focus();
       } else {
           els.terminalArea.classList.remove('expanded');
           els.termExpandIcon.className = "fas fa-expand";
@@ -338,14 +394,20 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   window.clearTerminal = () => {
-      els.term.innerHTML = `<div style="color:var(--text-dim);">> Console cleared.</div>`;
+      els.termLog.innerHTML = `<div style="color:var(--text-dim); font-style:italic;"># Terminal cleared.</div>`;
   };
 
   function scrollToBottom() {
       els.termBody.scrollTop = els.termBody.scrollHeight;
-      requestAnimationFrame(() => els.termBody.scrollTop = els.termBody.scrollHeight);
   }
 
+  function addLog(msg, type='log') {
+      const color = type === 'error' ? 'var(--error)' : (type === 'success' ? 'var(--success)' : (type==='warning'?'var(--warning)':'var(--text-dim)'));
+      els.termLog.innerHTML += `<div class="term-line" style="color:${color};">${msg}</div>`;
+      scrollToBottom();
+  }
+
+  // --- INIT & MOCK DATA ---
   function initMonaco() {
     return new Promise((resolve) => {
         require(['vs/editor/editor.main'], function () {
@@ -358,11 +420,19 @@ document.addEventListener("DOMContentLoaded", () => {
             state.editorInstance.onDidChangeModelContent(() => {
                 const code = state.editorInstance.getValue();
                 const step = state.steps[state.idx];
+                
+                // RESET VALIDATION IF CODE CHANGES
+                if (state.isLogicValid) {
+                   state.isLogicValid = false;
+                   els.runBtn.className = "btn btn-run";
+                   els.runBtn.innerHTML = `Check Logic <i class="fas fa-check-circle"></i>`;
+                   els.runBtn.disabled = false;
+                }
+
                 if(step && step.type === 'task') {
                     state.userCode[step.data._id] = code;
                     localStorage.setItem(`draft_${state.userId}_${step.data._id}`, code);
                 }
-                monaco.editor.setModelMarkers(state.editorInstance.getModel(), "owner", []);
             });
             state.editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => els.runBtn.click());
             resolve();
@@ -374,6 +444,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if(localStorage.getItem("theme") === "neon") document.body.classList.add("theme-neon");
     updateXP();
     await initMonaco();
+    setupTerminalInput();
+    
     try {
       if(!state.lessonId) throw new Error("No ID");
       const res = await fetch(`/api/lesson/${state.lessonId}/details`);
@@ -381,31 +453,81 @@ document.addEventListener("DOMContentLoaded", () => {
       if(!data.success) throw new Error("API Fail");
       loadData(data);
     } catch(e) {
-      state.mockMode = true; loadMockData();
+      state.mockMode = true; 
+      loadMockData();
     }
   }
 
   function loadMockData() {
-    loadData({ lesson: { title: "Error", description: "Offline" }, tasks: [] });
+    loadData({
+      lesson: { 
+          title: "Express Basics", 
+          description: "Learn to create a server and API endpoints.",
+          deepExplanation: [
+            "Part 1: Start the server.",
+            "Part 2: Create a route to send data.",
+            "Part 3: Handle POST requests."
+          ]
+      },
+      tasks: [
+        { 
+            _id: "demo_task_1", 
+            title: "1. Setup Server", 
+            description: "Initialize an Express app and listen on port 3000.\n\nType: Server Task", 
+            type: "server",
+            validation: { 
+                patterns: ["express", "app\\.listen", "3000"], 
+                hints: ["Use app.listen(3000)"] 
+            },
+            language: "javascript"
+        },
+        { 
+            _id: "demo_task_2", 
+            title: "2. Create GET /api/products", 
+            description: "Create a route '/api/products' that returns a JSON list of products.\n\nRequirements:\n1. Define a 'products' array.\n2. Create GET route '/api/products' that sends this array.", 
+            type: "route",
+            validation: { 
+                patterns: ["app\\.get", "/api/products", "res\\.json"], 
+                hints: ["Use app.get('/api/products', ...)", "res.json(products)"] 
+            },
+            language: "javascript"
+        },
+        { 
+            _id: "demo_task_3", 
+            title: "3. Add New Product (POST)", 
+            description: "Create a POST route at '/products' that accepts product data.\n\nResponse should return the created product with Status 201.", 
+            type: "route",
+            validation: { 
+                patterns: ["app\\.post", "/products", "res\\.status\\(201\\)"], 
+                hints: ["Use app.post()", "res.status(201).json(...)"] 
+            },
+            language: "javascript"
+        }
+      ]
+    });
   }
 
   function loadData(data) {
     state.steps = [];
     let theory = data.lesson.lesson || data.lesson || {};
     if(Array.isArray(theory)) theory = theory[0];
+    
     state.steps.push({ 
         type: 'theory', 
         data: { title: theory.title || "Module", html: `<p>${theory.description || ""}</p>${(theory.deepExplanation||[]).map(p=>`<p>${p}</p>`).join("")}` } 
     });
+
     (data.tasks || []).forEach(t => {
         state.steps.push({ type: 'task', data: t });
-        state.defaults[t._id] = t.starterCode || "";
+        state.defaults[t._id] = "";
         state.failCounts[t._id] = 0;
         const draft = localStorage.getItem(`draft_${state.userId}_${t._id}`);
         if (draft) state.userCode[t._id] = draft;
     });
+
     state.steps.push({ type: 'finish' });
     renderStep(0);
+    
     document.getElementById("loadingOverlay").style.opacity = '0';
     setTimeout(()=>document.getElementById("loadingOverlay").style.display='none', 500);
     els.ws.style.opacity = '1';
@@ -415,7 +537,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (i > 0 && state.steps[i-1].type === 'task' && !state.passed.has(state.steps[i-1].data._id)) {
         showToast("Complete previous task first!", "error"); return;
     }
-    toggleTerminal(false);
+
+    toggleTerminal(false); 
+    state.isLogicValid = false;
+    els.termLog.innerHTML = `<div style="color:var(--text-dim); font-style:italic;"># Ready.</div>`;
+
     state.idx = i;
     const step = state.steps[i];
     
@@ -440,154 +566,303 @@ document.addEventListener("DOMContentLoaded", () => {
     else if(step.type === 'task') {
         els.ws.className = "workspace mode-coding";
         els.terminalArea.style.display = 'flex';
-        els.guide.innerHTML = `<div class="badge badge-task"><i class="fas fa-code"></i> Task ${i}</div><h1>${step.data.title}</h1><hr><p>${step.data.description}</p>`;
+        
+        const fileInputHtml = `
+            <div class="file-input-group">
+                <label>1. File Name</label>
+                <div class="file-input-wrapper">
+                    <i class="fas fa-file-code"></i>
+                    <input type="text" id="fileNameInput" value="${state.fileName}" placeholder="e.g. server.js">
+                </div>
+            </div>
+        `;
+
+        els.guide.innerHTML = `
+            <div class="badge badge-task"><i class="fas fa-code"></i> Task ${i}</div>
+            <h1>${step.data.title}</h1>
+            <hr>
+            ${fileInputHtml}
+            <p style="white-space:pre-wrap;">${step.data.description}</p>
+        `;
+
+        const fnInput = document.getElementById("fileNameInput");
+        fnInput.addEventListener("input", (e) => {
+            state.fileName = e.target.value.trim() || "untitled";
+            els.langName.innerText = state.fileName;
+        });
         
         const lang = (step.data.language || "javascript").toLowerCase();
-        document.getElementById("langName").innerText = lang.toUpperCase();
-        
-        const isDomTask = /dom|select|html|element|event|listener|click/i.test(step.data.title);
-        
-        if(isDomTask) {
-             monaco.editor.setModelLanguage(state.editorInstance.getModel(), "html");
-             if(!state.userCode[step.data._id]) state.userCode[step.data._id] = state.defaults[step.data._id] || `\n<button id="btn">Click Me</button>\n\n<script>\n  // Script here\n<\/script>`;
-        } else {
-             monaco.editor.setModelLanguage(state.editorInstance.getModel(), lang==='text'?'plaintext':lang);
-        }
-        state.editorInstance.setValue(state.userCode[step.data._id] || state.defaults[step.data._id]);
-        
-        const isWeb = lang === 'html' || lang === 'css' || isDomTask;
-        els.webPreview.style.display = isWeb ? 'block' : 'none';
-        els.term.style.display = isWeb ? 'none' : 'block';
+        els.langName.innerText = state.fileName;
+        monaco.editor.setModelLanguage(state.editorInstance.getModel(), lang);
+        state.editorInstance.setValue(state.userCode[step.data._id] || "");
 
         if(state.passed.has(step.data._id)) setSuccessBtn();
         else {
-            els.runBtn.innerHTML = `Run Code <i class="fas fa-play"></i>`;
+            els.runBtn.innerHTML = `Check Logic <i class="fas fa-check-circle"></i>`;
             els.runBtn.className = "btn btn-run";
             els.runBtn.onclick = () => runCode(step.data);
+            els.runBtn.disabled = false;
         }
     }
     else if(step.type === 'finish') finishLesson();
   };
 
+  // --- LOGIC CHECK (Step 1) ---
   async function runCode(task) {
     const code = state.editorInstance.getValue();
     if(!code.trim()) return showToast("Code is empty!", "error");
 
     toggleTerminal(true);
-    els.term.innerHTML = ''; 
+    els.termLog.innerHTML = ''; 
 
-    // --- 🚀 FAKE CMD SIMULATION (AUTO-DETECTS SERVER TASK) ---
-    const isServerTask = /server|express|port|listen/i.test(task.title + task.description);
-    if (isServerTask) {
-        await typeWriter("> npm init -y", 300);
-        await typeWriter("> npm install express", 800);
-        await typeWriter("> node server.js", 600);
-    }
-
-    const addLog = (msg, type='log') => {
-        const time = new Date().toLocaleTimeString('en-US', {hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'});
-        els.term.innerHTML += `<div class="term-line"><span class="term-time">[${time}]</span> <span>${msg}</span></div>`;
-        scrollToBottom();
-    };
-
-    let patternsPassed = true;
-    if (task.validation && task.validation.patterns) {
-        for (const pattern of task.validation.patterns) {
-            if (!new RegExp(pattern, 'm').test(code)) {
-                patternsPassed = false;
-                addLog(`Error: Missing pattern '${pattern}'`, "error");
-                handleFailure(task, "Logic Incorrect");
-                return;
-            }
-        }
-    }
-
+    addLog("[SYSTEM] Analyzing code structure...", "log");
     els.runBtn.disabled = true;
-    els.runBtn.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> Processing...`;
+    els.runBtn.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> Checking...`;
 
-    // DOM/HTML Task
-    const isDomTask = /dom|select|html|element|event|listener|click/i.test(task.title);
-    if (isDomTask) {
-        const doc = els.webPreview.contentDocument || els.webPreview.contentWindow.document;
-        doc.open();
-        doc.write(`<script>const o=console.log;console.log=function(...a){window.parent.postMessage({t:'log',m:a.join(' ')},'*');o.apply(console,a)};<\/script>${code}`);
-        doc.close();
-        if (patternsPassed) {
-            setTimeout(() => {
-                handleResult({ passed: true, output: "Browser Event Verified." }, task);
-                fetch("/api/task/submit", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({userId:state.userId, lessonId:state.lessonId, taskId:task._id, code:code}) });
-            }, 800);
-            return;
-        }
-    }
+    setTimeout(() => {
+        const analysis = validateLogic(code, task);
 
-    // Server/Logic Task
-    try {
-        const res = await fetch("/api/task/submit", {
-            method:"POST", headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({userId:state.userId, lessonId:state.lessonId, taskId:task._id, code:code})
-        });
-        const data = await res.json();
-        
-        // 🔥 SIMULATE SERVER START SUCCESS
-        if (isServerTask && patternsPassed) {
-             const link = `http://localhost:${Math.floor(Math.random() * 1000) + 3000}`;
-             setTimeout(() => {
-                 els.term.innerHTML += `<div class="term-line" style="color:var(--success); font-weight:bold; margin-top:10px;">> Server Started! <a href="#" style="color:var(--accent); text-decoration:underline;">${link}</a></div>`;
-                 handleResult({ passed: true, output: "" }, task);
-             }, 500);
-             return; 
-        }
+        if (analysis.passed) {
+             state.isLogicValid = true; 
+             addLog("[SUCCESS] Logic Verified.", "success");
+             
+             els.runBtn.className = "btn btn-secondary";
+             els.runBtn.innerHTML = "Logic OK - Wait for Action";
+             els.runBtn.disabled = true;
 
-        handleResult(data, task);
-    } catch(e) {
-        if(isServerTask && patternsPassed) {
-             addLog("Server verified (Mock)", "system");
-             handleResult({ passed: true, output: "Server Configured" }, task);
+             if (task.type === 'route' || task.title.toLowerCase().includes("route") || task.title.toLowerCase().includes("api")) {
+                 const match = code.match(/app\.(get|post)\(['"]([^'"]+)['"]/);
+                 const method = match ? match[1].toUpperCase() : "GET";
+                 const url = match ? match[2] : "/";
+
+                 addLog(`[INFO] Route defined: ${method} ${url}`, "log");
+                 addLog(`[ACTION REQUIRED] Click "Simulate Request" below to test this POST API.`, "warning");
+                 
+                 const btnId = `simBtn_${Date.now()}`;
+                 const html = `
+                    <div style="margin-top:10px;">
+                        <button id="${btnId}" class="action-btn" onclick="triggerRouteAction('${method}', '${url}')">
+                            <i class="fas fa-play"></i> Simulate Request
+                        </button>
+                    </div>
+                 `;
+                 els.termLog.innerHTML += html;
+             } 
+             else {
+                 addLog(`[ACTION REQUIRED] Type 'node ${state.fileName}' below to start the server.`, "warning");
+                 els.termInput.focus();
+             }
         } else {
-             els.runBtn.disabled = false;
-             els.runBtn.innerHTML = `Run Code <i class="fas fa-play"></i>`;
-             addLog("Connection Failed: Backend unreachable", "error");
+             state.isLogicValid = false;
+             addLog(`[ERROR] Logic Check Failed:\n${analysis.message}`, "error");
+             handleFailure(task);
         }
-    }
+    }, 500);
   }
 
-  function typeWriter(text, delay) {
-      return new Promise(resolve => {
-          setTimeout(() => {
-              els.term.innerHTML += `<div class="term-line"><span class="term-prompt">user@mindstep:~$</span> ${text}</div>`;
-              scrollToBottom();
-              resolve();
-          }, delay);
+  function validateLogic(code, task) {
+      let missing = [];
+      const patterns = task.validation?.patterns || [];
+      patterns.forEach(p => {
+          if (!new RegExp(p, 'i').test(code)) missing.push(p);
+      });
+      if (missing.length > 0) return { passed: false, message: "Missing concepts: " + missing.join(", ") };
+      return { passed: true, message: "OK" };
+  }
+
+  // --- ACTION HANDLERS (Step 2) ---
+  window.triggerRouteAction = (method, url) => {
+    const btn = event.target.closest('button');
+    if(btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fas fa-check"></i> Request Sent`;
+    }
+
+    const task = state.steps[state.idx].data;
+    const code = state.editorInstance.getValue();
+    
+    let json;
+    let status = "200 OK";
+
+    // --- NEW LOGIC: POST vs GET ---
+    if (method === "POST") {
+        status = "201 Created";
+        // OPTION A: Hardcoded Simulated POST Response
+        json = JSON.stringify({
+            id: 1,
+            name: "New Product",
+            price: 500,
+            category: "Demo",
+            createdAt: new Date().toISOString()
+        }, null, 2);
+    } else {
+        // GET: Use smart extraction with Regex Fix
+        json = extractJsonFromCode(code);
+    }
+
+    addApiPreview(method, url, json, status); 
+    handleSuccess(task); 
+  };
+
+  function setupTerminalInput() {
+      els.termInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+              const cmd = els.termInput.value.trim();
+              if(!cmd) return;
+              
+              state.cmdHistory.push(cmd);
+              state.cmdHistoryIdx = state.cmdHistory.length;
+              
+              els.termInput.value = "";
+              addLog(`user@mindstep:~$ ${cmd}`, "log");
+              processCommand(cmd);
+          } else if (e.key === "ArrowUp") {
+              e.preventDefault();
+              if(state.cmdHistoryIdx > 0) {
+                  state.cmdHistoryIdx--;
+                  els.termInput.value = state.cmdHistory[state.cmdHistoryIdx];
+              }
+          } else if (e.key === "ArrowDown") {
+              e.preventDefault();
+              if(state.cmdHistoryIdx < state.cmdHistory.length - 1) {
+                  state.cmdHistoryIdx++;
+                  els.termInput.value = state.cmdHistory[state.cmdHistoryIdx];
+              } else {
+                  state.cmdHistoryIdx = state.cmdHistory.length;
+                  els.termInput.value = "";
+              }
+          }
       });
   }
 
-  function handleResult(data, task) {
-    if (data.output && !data.preview) {
-        const style = data.passed ? 'color:#fff' : 'color:var(--error)';
-        if(data.output.trim()) els.term.innerHTML += `<div style="${style}; margin-top:5px; white-space:pre-wrap;">${data.output}</div>`;
-    }
+  function processCommand(cmd) {
+      const parts = cmd.split(" ");
+      const task = state.steps[state.idx].data;
 
-    if(data.passed === true) {
-        state.passed.add(task._id);
-        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
-        setSuccessBtn();
-        updateXP(25);
-        showToast("Task Passed!", "success");
-    } else {
-        handleFailure(task, "Check output.");
-    }
-    scrollToBottom();
+      // FRIENDLY WARNING: If trying to run server during Route Task
+      if (task.type !== 'server') {
+           addLog(`[TIP] This is a Route task. Please click the "Simulate Request" button instead of running the server manually.`, "warning");
+           return;
+      }
+      
+      if (parts[0] !== "node") {
+          addLog(`[ERROR] bash: ${parts[0]}: command not found`, "error");
+          return;
+      }
+      if (parts[1] !== state.fileName) {
+          addLog(`[ERROR] File '${parts[1]}' not found. Did you mean '${state.fileName}'?`, "error");
+          return;
+      }
+      if (!state.isLogicValid) {
+          addLog(`[ERROR] Logic errors detected. Click 'Check Logic' first.`, "error");
+          return;
+      }
+
+      addLog(`[INFO] Starting ${state.fileName}...`, "log");
+      setTimeout(() => {
+          addLog(`[SUCCESS] Server running on port 3000`, "success");
+          handleSuccess(task); 
+      }, 800);
   }
 
-  function handleFailure(task, msg) {
+  // --- REVISED EXTRACTOR: SUPPORTS METHOD CHAINING ---
+  function extractJsonFromCode(code) {
+      const methodPattern = /res(?:\.status\(\s*\d+\s*\))?\.json/;
+
+      const directRegex = new RegExp(methodPattern.source + '\\s*([\\s\\S])'); 
+      const directMatch = code.match(directRegex);
+      
+      if (directMatch) {
+          const firstChar = directMatch[1];
+          if (firstChar === '[' || firstChar === '{') {
+             const openParenIndex = code.indexOf('(', directMatch.index);
+             const contentStartIndex = code.indexOf(firstChar, openParenIndex);
+             
+             if (contentStartIndex !== -1) {
+                 const content = extractBalancedBlock(code, contentStartIndex);
+                 if (content) return content;
+             }
+          }
+      }
+
+      const varRegex = new RegExp('(?:' + methodPattern.source + ')\\(\\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\\s*\\)');
+      const varMatch = code.match(varRegex);
+
+      if (varMatch && varMatch[1]) {
+          const varName = varMatch[1];
+          const defRegex = new RegExp(`(?:const|let|var)\\s+${varName}\\s*=\\s*`, 'g');
+          const defMatch = defRegex.exec(code);
+          
+          if (defMatch) {
+              const valueStartIndex = defMatch.index + defMatch[0].length;
+              const content = extractBalancedBlock(code, valueStartIndex);
+              if (content) return content;
+          }
+          return `[INFO] Response uses variable '${varName}'.\nSimulating resolved output:\n[\n  { "id": 1, "name": "Laptop", "category": "Electronics" },\n  { "id": 2, "name": "Coffee Mug", "category": "Kitchenware" }\n]`;
+      }
+      return "{ \"status\": \"success\" }";
+  }
+
+  function extractBalancedBlock(code, startIndex) {
+      let open = 0;
+      let startFound = false;
+      let blockStart = -1;
+      
+      for (let i = startIndex; i < code.length; i++) {
+          const char = code[i];
+          if (!startFound) {
+              if (/\s/.test(char)) continue;
+              if (char === '[' || char === '{') {
+                  startFound = true;
+                  blockStart = i;
+                  open++;
+              } else {
+                  return null;
+              }
+          } else {
+              if (char === '[' || char === '{') open++;
+              if (char === ']' || char === '}') open--;
+              if (open === 0) return code.substring(blockStart, i + 1);
+          }
+      }
+      return null;
+  }
+
+  function addApiPreview(method, url, body, status = "200 OK") {
+      const html = `
+        <div class="api-preview">
+            <div class="api-header">
+                <div><span class="method-badge">${method}</span> <span style="color:#a1a1aa">${url}</span></div>
+                <div style="color:var(--success); font-weight:bold;">${status}</div>
+            </div>
+            <div class="api-body">${body}</div>
+        </div>
+      `;
+      els.termLog.innerHTML += html;
+      scrollToBottom();
+  }
+
+  function handleSuccess(task) {
+    if(state.passed.has(task._id)) return;
+    state.passed.add(task._id);
+    confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+    setSuccessBtn();
+    updateXP(25);
+    if(!state.mockMode) {
+        fetch("/api/task/submit", { 
+            method: "POST", headers: {"Content-Type":"application/json"}, 
+            body: JSON.stringify({userId:state.userId, lessonId:state.lessonId, taskId:task._id, code:state.editorInstance.getValue(), passed:true}) 
+        }).catch(err => console.log("Sync skipped"));
+    }
+  }
+
+  function handleFailure(task) {
       els.runBtn.disabled = false;
-      els.runBtn.innerHTML = `Run Code <i class="fas fa-play"></i>`;
-      showToast(msg, "error");
+      els.runBtn.innerHTML = `Check Logic <i class="fas fa-check-circle"></i>`;
       state.failCounts[task._id] = (state.failCounts[task._id] || 0) + 1;
       if(state.failCounts[task._id] >= 2) {
           els.hintBox.style.display = 'block';
-          els.hintText.innerHTML = (task.validation && task.validation.hints && task.validation.hints[0]) || "Check syntax.";
+          els.hintText.innerHTML = (task.validation && task.validation.hints && task.validation.hints[0]) || "Check the requirements.";
       }
   }
 
@@ -613,13 +888,12 @@ document.addEventListener("DOMContentLoaded", () => {
     els.ws.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; text-align:center;"><i class="fas fa-trophy" style="font-size:5rem; color:var(--warning); margin-bottom:20px;"></i><h1 style="color:#fff;">Module Completed</h1><button class="btn btn-run" onclick="window.history.back()">Return</button></div>`;
     updateXP(50);
     confetti({ particleCount: 300, spread: 100, origin: { y: 0.6 } });
-    if(state.userId!=="guest" && !state.mockMode) fetch("/api/complete", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({userId:state.userId, lessonId:state.lessonId})});
+    if(!state.mockMode) fetch("/api/complete", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({userId:state.userId, lessonId:state.lessonId})});
   }
 
   window.toggleTheme = () => { document.body.classList.toggle("theme-neon"); localStorage.setItem("theme", document.body.classList.contains("theme-neon") ? "neon" : "standard"); };
   window.copyCode = () => { navigator.clipboard.writeText(state.editorInstance.getValue()); showToast("Copied", "success"); };
-  window.resetCode = () => { if(state.steps[state.idx].type==='task') state.editorInstance.setValue(state.defaults[state.steps[state.idx].data._id] || ""); };
-  
+  window.resetCode = () => { if(state.steps[state.idx].type==='task') state.editorInstance.setValue(""); };
   function showToast(msg, type) { const t = document.getElementById("customToast"); t.innerHTML = `<i class="fas ${type==='success'?'fa-check-circle':'fa-triangle-exclamation'}" style="color:${type==='success'?'var(--success)':'var(--error)'}"></i> ${msg}`; t.style.borderColor = type==='success'?'var(--success)':'var(--error)'; t.style.transform = "translateX(0)"; setTimeout(()=>t.style.transform="translateX(150%)", 3000); }
 
   init();
