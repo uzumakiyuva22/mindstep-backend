@@ -1,10 +1,10 @@
 /**
- * server.js — MindStep FINAL (Concept-Based Validation Logic)
- * Features:
- * 1. Checks CONCEPT (int, double, string) instead of strict values.
- * 2. Allows ANY value (10, 42, 99.9) as long as the variable type is correct.
- * 3. Enforces HTML tags (<button>, <h1>) if required.
- * 4. Secure Admin & Lesson Logic.
+ * server.js — MindStep FINAL (Production-Grade & Secured)
+ * * Features:
+ * 1. MongoDB Isolation (User/Task specific).
+ * 2. Execution Timeouts (Prevents infinite loops).
+ * 3. Enhanced Language Validation (Java Main method, Python syntax).
+ * 4. Static React/JSX Validation.
  */
 
 require("dotenv").config();
@@ -41,7 +41,9 @@ const ADMIN_SECRET = process.env.ADMIN_SECRET;
 
 /* ---------------- DB CONNECTION ---------------- */
 mongoose.set("strictQuery", false);
-mongoose.connect(process.env.MONGO_URI).then(() => console.log("✔ MongoDB connected"));
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("✔ MongoDB connected"))
+  .catch(err => console.error("❌ MongoDB Connection Error:", err));
 
 /* ---------------- CLOUDINARY ---------------- */
 const CLOUDINARY_ENABLED = Boolean(process.env.CLOUDINARY_CLOUD_NAME);
@@ -63,19 +65,59 @@ app.use(express.static(PUBLIC_DIR));
 const upload = multer({ dest: TEMP_DIR });
 
 /* ---------------- MODELS ---------------- */
-const userSchema = new mongoose.Schema({ _id: { type: String, default: uuidv4 }, username: String, email: { type: String, unique: true }, password: String, image: String, created_at: { type: Date, default: Date.now } });
+const userSchema = new mongoose.Schema({ 
+    _id: { type: String, default: uuidv4 }, 
+    username: String, 
+    email: { type: String, unique: true }, 
+    password: String, 
+    image: String, 
+    created_at: { type: Date, default: Date.now } 
+});
 const UserModel = mongoose.models.User || mongoose.model("User", userSchema);
 
-const adminSchema = new mongoose.Schema({ _id: { type: String, default: uuidv4 }, username: String, password: String });
+const adminSchema = new mongoose.Schema({ 
+    _id: { type: String, default: uuidv4 }, 
+    username: String, 
+    password: String 
+});
 const AdminModel = mongoose.models.Admin || mongoose.model("Admin", adminSchema);
 
-const taskProgressSchema = new mongoose.Schema({ user_id: String, lesson_id: mongoose.Schema.Types.ObjectId, task_id: mongoose.Schema.Types.ObjectId, passed: Boolean, output: String, submittedAt: Date });
+const taskProgressSchema = new mongoose.Schema({ 
+    user_id: String, 
+    lesson_id: mongoose.Schema.Types.ObjectId, 
+    task_id: mongoose.Schema.Types.ObjectId, 
+    passed: Boolean, 
+    output: String, 
+    submittedAt: Date 
+});
 taskProgressSchema.index({ user_id: 1, task_id: 1 }, { unique: true });
 const TaskProgress = mongoose.models.TaskProgress || mongoose.model("TaskProgress", taskProgressSchema);
 
-const completionSchema = new mongoose.Schema({ user_id: String, course_id: String, lesson_id: mongoose.Schema.Types.ObjectId, completed_at: Date });
+const completionSchema = new mongoose.Schema({ 
+    user_id: String, 
+    course_id: String, 
+    lesson_id: mongoose.Schema.Types.ObjectId, 
+    completed_at: Date 
+});
 completionSchema.index({ user_id: 1, lesson_id: 1 }, { unique: true });
 const Completion = mongoose.models.Completion || mongoose.model("Completion", completionSchema);
+
+// 🔥 Practical MongoDB Schema (Scoped & Secured)
+const practiceUserSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    email: { type: String, required: true, match: /.+@.+\..+/ },
+    age: { type: Number, min: 1 },
+    
+    // Metadata for Isolation
+    _userId: { type: String, required: true },
+    _lessonId: { type: mongoose.Schema.Types.ObjectId, required: true },
+    _taskId: { type: mongoose.Schema.Types.ObjectId, required: true },
+    createdAt: { type: Date, default: Date.now }
+});
+// Prevent duplicates PER TASK
+practiceUserSchema.index({ email: 1, _taskId: 1 }, { unique: true });
+
+const PracticeUser = mongoose.models.PracticeUser || mongoose.model("PracticeUser", practiceUserSchema);
 
 const Task = require("./models/Task");
 const Course = require("./models/Course");
@@ -95,7 +137,7 @@ app.get("/admin", (req, res) => res.sendFile(path.join(PUBLIC_DIR, "AdminDashboa
 app.get("/admin/login", (req, res) => res.sendFile(path.join(PUBLIC_DIR, "AdminLogin.html")));
 app.get("/health", (req, res) => res.status(200).send("OK"));
 
-/* ---------------- 🔥 SMART CONCEPT VALIDATION (THE FIX) 🔥 ---------------- */
+/* ---------------- 🔥 CORE TASK EXECUTION ENGINE 🔥 ---------------- */
 app.post("/api/task/submit", async (req, res) => {
   try {
     const { userId, lessonId, taskId, code } = req.body;
@@ -104,156 +146,196 @@ app.post("/api/task/submit", async (req, res) => {
         return res.status(400).json({ success: false, error: "Invalid ID format" });
     }
     const lessonObjectId = new mongoose.Types.ObjectId(lessonId);
+    const taskObjectId = new mongoose.Types.ObjectId(taskId);
 
     const user = await UserModel.findById(userId);
-    const task = await Task.findById(taskId);
+    const task = await Task.findById(taskObjectId);
+    
     if (!user || !task) return res.status(404).json({ success: false, error: "Not Found" });
 
-    // Ensure Task belongs to Lesson
     if (task.lesson_id.toString() !== lessonId) {
         return res.status(403).json({ success: false, error: "Task mismatches lesson." });
     }
 
     const lang = (task.language || "").toLowerCase();
-    
-    // --- 1. HTML & CSS Validation ---
-    if (lang === "html" || lang === "css") {
-        if (!code || code.trim().length < 5) return res.json({ success: false, passed: false, output: "Code too short" });
-        
-        let webPassed = true;
-        let webFeedback = "";
+    const rule = task.validation || {}; 
+    const concept = rule.concept || "generic"; 
 
-        // Check for specific tags/properties defined in DB validation rule
-        // If DB has "mustContain": "button", check for <button
-        const required = task.validation?.mustContain || "";
+    // -------------------------------------------------------------
+    // 1. REACT / JSX VALIDATION (Static Check - No Runtime)
+    // -------------------------------------------------------------
+    if (lang === "react" || lang === "jsx") {
+        let reactPassed = true;
+        let reactFeedback = "";
         
-        if (required) {
-            if (lang === 'html') {
-                const tagRegex = new RegExp(`<${required}\\b`, "i");
-                if (!tagRegex.test(code)) {
-                    webPassed = false;
-                    webFeedback = `Missing required tag: <${required}>`;
-                }
-            } else {
-                if (!code.includes(required)) {
-                    webPassed = false;
-                    webFeedback = `Missing required CSS property: '${required}'`;
-                }
-            }
+        // Basic JSX Structure Check
+        if (!code.includes("return") || (!code.includes("(") && !code.includes("<"))) {
+            reactPassed = false;
+            reactFeedback = "Missing 'return' statement or JSX structure.";
+        }
+        if (rule.mustContain && !code.includes(rule.mustContain)) {
+            reactPassed = false;
+            reactFeedback = `Missing required Hook/Component: ${rule.mustContain}`;
         }
 
         await TaskProgress.findOneAndUpdate(
-            { user_id: userId, task_id: taskId },
-            { user_id: userId, lesson_id: lessonObjectId, task_id: taskId, passed: webPassed, output: "Preview", submittedAt: new Date() },
+            { user_id: userId, task_id: taskObjectId },
+            { 
+                user_id: userId, lesson_id: lessonObjectId, task_id: taskObjectId, 
+                passed: reactPassed, output: "React Logic Validated", submittedAt: new Date() 
+            },
             { upsert: true }
         );
-        
-        return res.json({ 
-            success: true, 
-            passed: webPassed, 
-            output: webPassed ? code : `[ERROR]: ${webFeedback}`, 
-            preview: true 
-        });
+        return res.json({ success: true, passed: reactPassed, output: reactPassed ? "✅ JSX Structure Valid" : reactFeedback });
     }
 
-    // --- 2. Code Execution ---
+    // -------------------------------------------------------------
+    // 2. MONGODB PRACTICAL (Secure & Isolated)
+    // -------------------------------------------------------------
+    if (task.type === "mongodb" || concept === "mongodb") {
+        let dbPassed = true;
+        let dbFeedback = "";
+        let savedDoc = null;
+
+        try {
+            let data;
+            try { data = JSON.parse(code); } catch { throw new SyntaxError("Invalid JSON Format."); }
+
+            // Spam Check
+            const existing = await TaskProgress.findOne({ user_id: userId, task_id: taskObjectId, passed: true });
+            if (existing) {
+                return res.json({ success: true, passed: true, output: `✅ Document already saved previously.` });
+            }
+
+            // Sanitization (Allowlist)
+            const allowed = ["name", "email", "age"];
+            const cleanData = {};
+            for (const key of allowed) { if (data[key] !== undefined) cleanData[key] = data[key]; }
+
+            // Save
+            savedDoc = await PracticeUser.create({
+                ...cleanData,
+                _userId: userId,
+                _lessonId: lessonObjectId,
+                _taskId: taskObjectId
+            });
+            
+            const displayDoc = savedDoc.toObject();
+            delete displayDoc._userId; delete displayDoc._lessonId; delete displayDoc._taskId; delete displayDoc.__v;
+
+            dbFeedback = "✅ Document Stored in MongoDB Atlas:\n" + JSON.stringify(displayDoc, null, 2);
+
+        } catch (err) {
+            dbPassed = false;
+            if (err.name === 'ValidationError') dbFeedback = "❌ Validation Error: " + Object.values(err.errors).map(e => e.message).join(", ");
+            else if (err.code === 11000) dbFeedback = "❌ Duplicate Error: Email already exists for this task.";
+            else if (err instanceof SyntaxError) dbFeedback = "❌ Invalid JSON Format.";
+            else dbFeedback = "❌ Database Error: " + err.message;
+        }
+
+        await TaskProgress.findOneAndUpdate(
+            { user_id: userId, task_id: taskObjectId },
+            { user_id: userId, lesson_id: lessonObjectId, task_id: taskObjectId, passed: dbPassed, output: dbFeedback, submittedAt: new Date() },
+            { upsert: true }
+        );
+        return res.json({ success: true, passed: dbPassed, output: dbFeedback });
+    }
+
+    // -------------------------------------------------------------
+    // 3. GENERIC JSON CHECK
+    // -------------------------------------------------------------
+    if (concept === "json") {
+        let jsonPassed = true;
+        let jsonFeedback = "";
+        try { JSON.parse(code); } catch (e) { jsonPassed = false; jsonFeedback = "Invalid JSON format."; }
+
+        await TaskProgress.findOneAndUpdate(
+            { user_id: userId, task_id: taskObjectId },
+            { user_id: userId, lesson_id: lessonObjectId, task_id: taskObjectId, passed: jsonPassed, output: jsonPassed ? "Valid JSON" : jsonFeedback, submittedAt: new Date() },
+            { upsert: true }
+        );
+        return res.json({ success: true, passed: jsonPassed, output: jsonPassed ? "Valid JSON" : jsonFeedback });
+    }
+
+    // -------------------------------------------------------------
+    // 4. HTML / CSS VALIDATION
+    // -------------------------------------------------------------
+    if (lang === "html" || lang === "css") {
+        if (!code || code.trim().length < 5) return res.json({ success: false, passed: false, output: "Code too short" });
+        let webPassed = true;
+        let webFeedback = "";
+        const required = rule.mustContain || "";
+        
+        if (required) {
+            if (lang === 'html') {
+                const tagRegex = new RegExp(`<${required}(\\s|>)`, "i");
+                if (!tagRegex.test(code)) { webPassed = false; webFeedback = `Missing tag: <${required}>`; }
+            } else {
+                if (!code.includes(required)) { webPassed = false; webFeedback = `Missing CSS: '${required}'`; }
+            }
+        }
+        await TaskProgress.findOneAndUpdate({ user_id: userId, task_id: taskObjectId }, { user_id: userId, lesson_id: lessonObjectId, task_id: taskObjectId, passed: webPassed, output: "Preview", submittedAt: new Date() }, { upsert: true });
+        return res.json({ success: true, passed: webPassed, output: webPassed ? code : `[ERROR]: ${webFeedback}`, preview: true });
+    }
+
+    // -------------------------------------------------------------
+    // 5. RUNTIME EXECUTION (Java, Python, JS) + SECURITY TIMEOUT
+    // -------------------------------------------------------------
     let result;
     try {
-      if (lang === "java") result = await runJava(code);
-      else if (lang === "python") result = await runPython(code);
-      else if (lang === "javascript") result = await runJavaScript(code);
-      else return res.json({ success: false, passed: false, error: "Unsupported Language" });
+        const EXECUTION_TIMEOUT = 3000; // 3 Seconds Timeout
+        
+        // Wrapper Promise
+        const executionPromise = (async () => {
+             if (lang === "java") return await runJava(code);
+             if (lang === "python") return await runPython(code);
+             if (lang === "javascript") return await runJavaScript(code);
+             throw new Error("Unsupported Language");
+        })();
+
+        // Race: Code Execution vs Timeout
+        result = await Promise.race([
+            executionPromise,
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Execution Timed Out (Possible Infinite Loop)")), EXECUTION_TIMEOUT))
+        ]);
+
     } catch (runErr) { 
         return res.json({ success: false, passed: false, output: "Runtime Error: " + runErr.message }); 
     }
 
     const outputString = result?.output?.toString().replace(/\r/g, "").trim() || "";
-    
-    // -------------------------------------------------------------
-    // 🔥 CONCEPT VALIDATION LOGIC (INTELLIGENT CHECK)
-    // -------------------------------------------------------------
     let passed = true;
     let feedback = "";
-    
-    // We check the "concept" field in the DB (schema based) OR infer from title (fallback)
-    const rule = task.validation || {}; 
-    const concept = rule.concept || (task.title.toLowerCase().includes("integer") ? "integer" : 
-                                     task.title.toLowerCase().includes("decimal") ? "decimal" : 
-                                     task.title.toLowerCase().includes("string") ? "string" : "generic");
 
-    // --- JAVA RULES ---
+    // 🧠 IMPROVED LOGIC CHECKS
     if (lang === "java") {
-        if (concept === "integer") {
-            // Must have 'int'
-            if (!code.match(/\bint\s+/)) {
-                passed = false;
-                feedback = "Incorrect Logic: You must declare an 'int' variable.";
-            } else if (code.match(/\bdouble\s+/)) {
-                passed = false;
-                feedback = "Incorrect Logic: Do not use 'double' for integers.";
-            }
-        }
-        else if (concept === "decimal") {
-            // Must have 'double' or 'float'
-            if (!code.match(/\b(double|float)\s+/)) {
-                passed = false;
-                feedback = "Incorrect Logic: You must declare a 'double' or 'float' variable.";
-            }
-        }
-        else if (concept === "string") {
-            // Must have 'String'
-            if (!code.match(/\bString\s+/)) {
-                passed = false;
-                feedback = "Incorrect Logic: You must declare a 'String' variable.";
-            }
-        }
-    }
-
-    // --- PYTHON RULES ---
-    if (lang === "python") {
-        if (concept === "decimal") {
-            // Python needs assignment like x = 10.5
-            if (!code.match(/=\s*\d+\.\d+/)) {
-                passed = false;
-                feedback = "Incorrect Logic: You must assign a decimal value (e.g., 10.5).";
-            }
-        }
-    }
-
-    // --- JAVASCRIPT RULES ---
-    if (lang === "javascript") {
-        if (concept === "decimal" && !code.match(/=\s*\d+\.\d+/)) {
+        if (concept === "integer" && !code.match(/\bint\s+/)) passed = false;
+        // Fix: Ensure class has main method
+        if (concept === "class" && !code.match(/public\s+static\s+void\s+main\s*\(/)) { 
             passed = false; 
-            feedback = "Incorrect Logic: You must store a decimal number.";
+            feedback = "Missing 'public static void main' method.";
         }
     }
-
-    // --- FINAL DECISION ---
-    if (passed) {
-        // If concept is correct, check output presence
-        if (outputString.length > 0) {
-            passed = true; // SUCCESS! Value doesn't matter (10 or 42 is fine)
-            feedback = "";
-        } else {
+    if (lang === "python") {
+        if (concept === "print" && !code.includes("print(")) passed = false;
+        // Fix: Simple syntax check for control flow
+        if ((code.includes("if ") || code.includes("def ") || code.includes("for ")) && !code.includes(":")) {
             passed = false;
-            feedback = "Logic correct, but nothing was printed to the output.";
+            feedback = "Missing colon ':' in statement.";
+        }
+    }
+    if (lang === "javascript" && concept === "decimal" && !code.match(/=\s*\d+\.\d+/)) passed = false;
+
+    if (passed) {
+        // Route/API tasks don't need console output
+        const requiresOutput = rule.requiresOutput !== false && concept !== "route" && concept !== "api";
+        if (requiresOutput && outputString.length === 0) {
+            passed = false;
+            feedback = "Logic correct, but nothing was printed.";
         }
     }
 
-    // Save Result
-    await TaskProgress.findOneAndUpdate(
-      { user_id: userId, task_id: taskId },
-      { 
-          user_id: userId, 
-          lesson_id: lessonObjectId, 
-          task_id: taskId, 
-          passed, 
-          output: passed ? outputString : "", 
-          submittedAt: new Date() 
-      },
-      { upsert: true }
-    );
-
+    await TaskProgress.findOneAndUpdate({ user_id: userId, task_id: taskObjectId }, { user_id: userId, lesson_id: lessonObjectId, task_id: taskObjectId, passed, output: passed ? outputString : "", submittedAt: new Date() }, { upsert: true });
     res.json({ success: true, passed, output: passed ? outputString : `${outputString}\n\n[ERROR]: ${feedback}` });
 
   } catch (err) { console.error(err); res.status(500).json({ success: false, error: "Server Error" }); }
@@ -275,7 +357,7 @@ app.post("/api/signup", upload.single("image"), async (req, res) => {
       }
       if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
     }
-    const user = await UserModel.create({ username, email, password: bcrypt.hashSync(password, 10), image });
+    const user = await UserModel.create({ username, email, password: bcrypt.hashSync(password, 12), image });
     res.json({ success: true, user });
   } catch (err) { res.status(500).json({ success: false }); }
 });
@@ -344,7 +426,7 @@ app.get("/api/course/:slug/progress/:userId", async (req, res) => {
 app.post("/api/admin/login", async (req, res) => {
     const { username, password } = req.body;
     if (password === ADMIN_SECRET) {
-        await AdminModel.updateOne({ username }, { $setOnInsert: { username, password: bcrypt.hashSync(password, 10) } }, { upsert: true });
+        await AdminModel.updateOne({ username }, { $setOnInsert: { username, password: bcrypt.hashSync(password, 12) } }, { upsert: true });
         return res.json({ success: true, token: ADMIN_SECRET, admin: { username } });
     }
     const admin = await AdminModel.findOne({ username });

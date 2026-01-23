@@ -145,7 +145,8 @@
     }
     .icon-btn:hover { color: var(--text); background: rgba(255,255,255,0.1); }
 
-    .editor-container { flex: 1; position: relative; overflow: hidden; min-height: 0; }
+    /* ✅ EDITOR CONTAINER: Flex growth & Min-height for Mobile */
+    .editor-container { flex: 1; position: relative; overflow: hidden; min-height: 200px; }
     #monaco-editor { width: 100%; height: 100%; }
 
     /* Terminal & Interactive Area */
@@ -240,10 +241,60 @@
     }
     @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
 
+    /* ✅ MOBILE & TABLET OPTIMIZATIONS (The Fix) */
     @media (max-width: 900px) {
-      .workspace.mode-coding { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
-      .guide-panel { max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
-      .terminal { height: 220px; }
+      /* Stack layout vertically */
+      .workspace.mode-coding { 
+        grid-template-columns: 1fr; 
+        grid-template-rows: auto 1fr; 
+      }
+      
+      /* Constrain Guide Height so Editor is visible */
+      .guide-panel { 
+        max-height: 35vh; 
+        border-right: none; 
+        border-bottom: 1px solid var(--border); 
+      }
+      
+      /* Editor takes remaining space */
+      .ide-panel { 
+        height: auto; 
+        min-height: 0; 
+      }
+
+      /* Fix Terminal to Bottom Sheet (Drawer Style) */
+      .terminal { 
+        position: fixed; 
+        bottom: 0; 
+        left: 0; 
+        width: 100%; 
+        height: 40px; /* Collapsed default */
+        z-index: 999;
+        transition: height 0.3s ease;
+      }
+      .terminal.expanded { 
+        height: 60vh !important; /* Slide up nicely */
+      }
+
+      /* Ensure Monaco Editor has height */
+      #monaco-editor { 
+        height: 100% !important; 
+        min-height: 300px; 
+      }
+    }
+
+    /* ✅ SMALL PHONE OPTIMIZATIONS */
+    @media (max-width: 600px) {
+      .navbar { padding: 0 12px; }
+      .xp-container { display: none; } /* Hide XP on small phones */
+      
+      /* Stack buttons in footer */
+      .footer { padding: 10px; gap: 10px; height: auto; }
+      .footer .btn { flex: 1; justify-content: center; }
+      
+      /* Stack input fields */
+      .file-input-wrapper { flex-direction: column; align-items: stretch; }
+      #fileNameInput { width: 100%; }
     }
   </style>
 </head>
@@ -406,6 +457,15 @@ document.addEventListener("DOMContentLoaded", () => {
       els.termLog.innerHTML += `<div class="term-line" style="color:${color};">${msg}</div>`;
       scrollToBottom();
   }
+
+  // --- ADDED FOR MOBILE UX: Auto Expand Terminal ---
+  window.addEventListener("focusin", (e) => {
+      if (window.innerWidth < 900 && e.target.id === "termInput") {
+          els.terminalArea.classList.add('expanded');
+          els.termExpandIcon.className = "fas fa-compress";
+          els.termExpandText.innerText = "Minimize";
+      }
+  });
 
   // --- INIT & MOCK DATA ---
   function initMonaco() {
@@ -591,8 +651,17 @@ document.addEventListener("DOMContentLoaded", () => {
             els.langName.innerText = state.fileName;
         });
         
+        // --- AUTO-SET FILENAME FOR UX ---
         const lang = (step.data.language || "javascript").toLowerCase();
+        if(lang === 'react' || lang === 'jsx') state.fileName = "App.jsx";
+        else if(lang === 'java') state.fileName = "Main.java";
+        else if(lang === 'python') state.fileName = "script.py";
+        else if(lang === 'html') state.fileName = "index.html";
+        else state.fileName = "server.js";
+
         els.langName.innerText = state.fileName;
+        document.getElementById("fileNameInput").value = state.fileName;
+
         monaco.editor.setModelLanguage(state.editorInstance.getModel(), lang);
         state.editorInstance.setValue(state.userCode[step.data._id] || "");
 
@@ -630,13 +699,16 @@ document.addEventListener("DOMContentLoaded", () => {
              els.runBtn.innerHTML = "Logic OK - Wait for Action";
              els.runBtn.disabled = true;
 
-             if (task.type === 'route' || task.title.toLowerCase().includes("route") || task.title.toLowerCase().includes("api")) {
+             const title = task.title.toLowerCase();
+             const hasListen = code.includes("app.listen");
+
+             if (!hasListen && (task.type === 'route' || title.includes("route") || title.includes("api"))) {
                  const match = code.match(/app\.(get|post)\(['"]([^'"]+)['"]/);
                  const method = match ? match[1].toUpperCase() : "GET";
                  const url = match ? match[2] : "/";
 
                  addLog(`[INFO] Route defined: ${method} ${url}`, "log");
-                 addLog(`[ACTION REQUIRED] Click "Simulate Request" below to test this POST API.`, "warning");
+                 addLog(`[ACTION REQUIRED] Click "Simulate Request" below to test this API.`, "warning");
                  
                  const btnId = `simBtn_${Date.now()}`;
                  const html = `
@@ -648,8 +720,27 @@ document.addEventListener("DOMContentLoaded", () => {
                  `;
                  els.termLog.innerHTML += html;
              } 
+             else if (title.includes("mongodb") || title.includes("json") || title.includes("object") || title.includes("data")) {
+                 addLog(`[INFO] Data structure detected.`, "log");
+                 addLog(`[ACTION REQUIRED] Click "Preview Data" to verify format.`, "warning");
+                 
+                 const btnId = `dataBtn_${Date.now()}`;
+                 const html = `
+                    <div style="margin-top:10px;">
+                        <button id="${btnId}" class="action-btn" onclick="triggerDataAction()">
+                            <i class="fas fa-database"></i> Preview Data
+                        </button>
+                    </div>
+                 `;
+                 els.termLog.innerHTML += html;
+             }
+             else if (task.language === 'java' || task.language === 'python') {
+                 // Explicit runtime languages
+                 addLog(`[ACTION REQUIRED] Type 'run' or 'python/java filename' to execute.`, "warning");
+                 els.termInput.focus();
+             }
              else {
-                 addLog(`[ACTION REQUIRED] Type 'node ${state.fileName}' below to start the server.`, "warning");
+                 addLog(`[ACTION REQUIRED] Type 'node ${state.fileName}' below to run.`, "warning");
                  els.termInput.focus();
              }
         } else {
@@ -671,20 +762,19 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // --- ACTION HANDLERS (Step 2) ---
+  
+  // 1. ROUTE ACTION
   window.triggerRouteAction = (method, url) => {
     const btn = event.target.closest('button');
-    if(btn) {
-        btn.disabled = true;
-        btn.innerHTML = `<i class="fas fa-check"></i> Request Sent`;
-    }
+    if(btn) { btn.disabled = true; btn.innerHTML = `<i class="fas fa-check"></i> Request Sent`; }
 
     const task = state.steps[state.idx].data;
     const code = state.editorInstance.getValue();
     
+    // --- UPDATED EXTRACTION LOGIC (COMMENTS REMOVED) ---
     let json;
     let status = "200 OK";
 
-    // --- NEW LOGIC: POST vs GET ---
     if (method === "POST") {
         status = "201 Created";
         // OPTION A: Hardcoded Simulated POST Response
@@ -696,7 +786,7 @@ document.addEventListener("DOMContentLoaded", () => {
             createdAt: new Date().toISOString()
         }, null, 2);
     } else {
-        // GET: Use smart extraction with Regex Fix
+        // GET: Use smart extraction
         json = extractJsonFromCode(code);
     }
 
@@ -704,15 +794,61 @@ document.addEventListener("DOMContentLoaded", () => {
     handleSuccess(task); 
   };
 
+  // 2. DATA ACTION (NEW!)
+  window.triggerDataAction = async () => {
+    const btn = event.target.closest('button');
+    if(btn) { btn.disabled = true; btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Saving...`; }
+
+    const task = state.steps[state.idx].data;
+    const code = state.editorInstance.getValue();
+    
+    // IF MONGODB TASK -> CALL BACKEND
+    if (!state.mockMode && (task.type === 'mongodb' || task.title.toLowerCase().includes('mongo'))) {
+        try {
+            const res = await fetch("/api/task/submit", { 
+                method: "POST", headers: {"Content-Type":"application/json"}, 
+                body: JSON.stringify({userId:state.userId, lessonId:state.lessonId, taskId:task._id, code:code}) 
+            });
+            const data = await res.json();
+            
+            if(data.passed) {
+                addLog(data.output, "success");
+                handleSuccess(task);
+            } else {
+                addLog(data.output, "error");
+                handleFailure(task);
+            }
+        } catch(e) {
+            addLog("Network Error: " + e.message, "error");
+        }
+        return;
+    }
+
+    // IF GENERIC JSON TASK -> EXTRACT & SHOW
+    const start = code.indexOf('{');
+    const content = extractBalancedBlock(code, start);
+    const html = `
+        <div class="api-preview">
+            <div class="api-header">
+                <div><span class="method-badge" style="background:var(--accent)">DATA</span> Object Preview</div>
+                <div style="color:var(--success); font-weight:bold;">Valid</div>
+            </div>
+            <div class="api-body" style="white-space: pre-wrap;">${content || "{}"}</div>
+        </div>
+    `;
+    els.termLog.innerHTML += html;
+    scrollToBottom();
+    handleSuccess(task);
+  };
+
+  // 3. SERVER ACTION (Type)
   function setupTerminalInput() {
       els.termInput.addEventListener("keydown", (e) => {
           if (e.key === "Enter") {
               const cmd = els.termInput.value.trim();
               if(!cmd) return;
-              
               state.cmdHistory.push(cmd);
               state.cmdHistoryIdx = state.cmdHistory.length;
-              
               els.termInput.value = "";
               addLog(`user@mindstep:~$ ${cmd}`, "log");
               processCommand(cmd);
@@ -738,68 +874,91 @@ document.addEventListener("DOMContentLoaded", () => {
   function processCommand(cmd) {
       const parts = cmd.split(" ");
       const task = state.steps[state.idx].data;
+      const code = state.editorInstance.getValue();
+      const hasListen = code.includes("app.listen");
 
-      // FRIENDLY WARNING: If trying to run server during Route Task
-      if (task.type !== 'server') {
+      // FRIENDLY WARNING
+      if (!hasListen && task.type !== 'server' && task.language === 'javascript') {
            addLog(`[TIP] This is a Route task. Please click the "Simulate Request" button instead of running the server manually.`, "warning");
            return;
       }
       
-      if (parts[0] !== "node") {
+      // BASIC COMMAND CHECK
+      const validCmds = ["node", "python", "java", "javac", "run"];
+      if (!validCmds.includes(parts[0])) {
           addLog(`[ERROR] bash: ${parts[0]}: command not found`, "error");
           return;
       }
-      if (parts[1] !== state.fileName) {
-          addLog(`[ERROR] File '${parts[1]}' not found. Did you mean '${state.fileName}'?`, "error");
-          return;
-      }
+      
       if (!state.isLogicValid) {
           addLog(`[ERROR] Logic errors detected. Click 'Check Logic' first.`, "error");
           return;
       }
 
-      addLog(`[INFO] Starting ${state.fileName}...`, "log");
-      setTimeout(() => {
-          addLog(`[SUCCESS] Server running on port 3000`, "success");
-          handleSuccess(task); 
-      }, 800);
-  }
-
-  // --- REVISED EXTRACTOR: SUPPORTS METHOD CHAINING ---
-  function extractJsonFromCode(code) {
-      const methodPattern = /res(?:\.status\(\s*\d+\s*\))?\.json/;
-
-      const directRegex = new RegExp(methodPattern.source + '\\s*([\\s\\S])'); 
-      const directMatch = code.match(directRegex);
+      addLog(`[INFO] Executing ${state.fileName}...`, "log");
       
-      if (directMatch) {
-          const firstChar = directMatch[1];
-          if (firstChar === '[' || firstChar === '{') {
-             const openParenIndex = code.indexOf('(', directMatch.index);
-             const contentStartIndex = code.indexOf(firstChar, openParenIndex);
-             
-             if (contentStartIndex !== -1) {
-                 const content = extractBalancedBlock(code, contentStartIndex);
-                 if (content) return content;
-             }
-          }
+      // IF FAKE TERMINAL (Node)
+      if(parts[0] === 'node' && hasListen) {
+          setTimeout(() => {
+              // Try to extract port
+              const portMatch = code.match(/app\.listen\(\s*(\d+)/);
+              const port = portMatch ? portMatch[1] : "3000";
+              addLog(`[SUCCESS] Server running on port ${port}`, "success");
+              handleSuccess(task); 
+          }, 800);
+          return;
       }
 
-      const varRegex = new RegExp('(?:' + methodPattern.source + ')\\(\\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\\s*\\)');
-      const varMatch = code.match(varRegex);
+      // IF REAL BACKEND EXECUTION (Java/Python)
+      if(!state.mockMode) {
+          fetch("/api/task/submit", { 
+                method: "POST", headers: {"Content-Type":"application/json"}, 
+                body: JSON.stringify({userId:state.userId, lessonId:state.lessonId, taskId:task._id, code:code}) 
+          })
+          .then(res => res.json())
+          .then(data => {
+              if(data.passed) {
+                  addLog(data.output, "success");
+                  handleSuccess(task);
+              } else {
+                  addLog(data.output, "error");
+                  handleFailure(task);
+              }
+          })
+          .catch(e => addLog("Execution Error: " + e.message, "error"));
+      } else {
+          addLog("[MOCK] Execution success.", "success");
+          handleSuccess(task);
+      }
+  }
 
+  // --- REVISED EXTRACTOR: IGNORES COMMENTS & FINDS STRINGS ---
+  function extractJsonFromCode(code) {
+      const cleanCode = code.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
+      
+      const textMatch = cleanCode.match(/res\.send\s*\(\s*(['"`])([\s\S]*?)\1\s*\)/);
+      if (textMatch) return textMatch[2];
+
+      const jsonStartIndex = cleanCode.search(/res(?:\.status\(\s*\d+\s*\))?\.json\s*\(\s*[\[\{]/);
+      if (jsonStartIndex !== -1) {
+          const start = cleanCode.indexOf('(', jsonStartIndex) + 1;
+          const content = extractBalancedBlock(cleanCode, start);
+          if (content) return content;
+      }
+
+      const varMatch = cleanCode.match(/res(?:\.status\(\s*\d+\s*\))?\.json\s*\(\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\)/);
       if (varMatch && varMatch[1]) {
           const varName = varMatch[1];
           const defRegex = new RegExp(`(?:const|let|var)\\s+${varName}\\s*=\\s*`, 'g');
-          const defMatch = defRegex.exec(code);
-          
+          const defMatch = defRegex.exec(cleanCode);
           if (defMatch) {
               const valueStartIndex = defMatch.index + defMatch[0].length;
-              const content = extractBalancedBlock(code, valueStartIndex);
+              const content = extractBalancedBlock(cleanCode, valueStartIndex);
               if (content) return content;
           }
-          return `[INFO] Response uses variable '${varName}'.\nSimulating resolved output:\n[\n  { "id": 1, "name": "Laptop", "category": "Electronics" },\n  { "id": 2, "name": "Coffee Mug", "category": "Kitchenware" }\n]`;
+          return `[INFO] Response uses variable '${varName}'.\nSimulating resolved output:\n[ { "id": 1, "data": "Sample" } ]`;
       }
+
       return "{ \"status\": \"success\" }";
   }
 
@@ -835,7 +994,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div><span class="method-badge">${method}</span> <span style="color:#a1a1aa">${url}</span></div>
                 <div style="color:var(--success); font-weight:bold;">${status}</div>
             </div>
-            <div class="api-body">${body}</div>
+            <div class="api-body" style="white-space: pre-wrap;">${body}</div>
         </div>
       `;
       els.termLog.innerHTML += html;
