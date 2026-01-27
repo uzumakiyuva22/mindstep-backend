@@ -1,10 +1,10 @@
 /**
- * server.js — MindStep FINAL (Production-Grade & Secured)
- * * Features:
- * 1. MongoDB Isolation (User/Task specific).
- * 2. Execution Timeouts (Prevents infinite loops).
- * 3. Enhanced Language Validation (Java Main method, Python syntax).
- * 4. Static React/JSX Validation.
+ * server.js — MindStep FINAL (Gold Standard Production-Grade)
+ * Features:
+ * 1. MongoDB Isolation with Smart Upsert (Update/Insert).
+ * 2. Execution Timeouts for Java/Python security.
+ * 3. Static React/JSX Validation.
+ * 4. Production Error Handling & Sanitization.
  */
 
 require("dotenv").config();
@@ -102,20 +102,25 @@ const completionSchema = new mongoose.Schema({
 completionSchema.index({ user_id: 1, lesson_id: 1 }, { unique: true });
 const Completion = mongoose.models.Completion || mongoose.model("Completion", completionSchema);
 
-// 🔥 Practical MongoDB Schema (Scoped & Secured)
+// 🔥 Practical MongoDB Schema (Gold Standard)
 const practiceUserSchema = new mongoose.Schema({
+    // Content Fields (Validated)
     name: { type: String, required: true },
     email: { type: String, required: true, match: /.+@.+\..+/ },
     age: { type: Number, min: 1 },
     
-    // Metadata for Isolation
+    // Isolation Fields (Hidden from student output)
     _userId: { type: String, required: true },
     _lessonId: { type: mongoose.Schema.Types.ObjectId, required: true },
     _taskId: { type: mongoose.Schema.Types.ObjectId, required: true },
-    createdAt: { type: Date, default: Date.now }
+    
+    // Audit Field
+    submittedAt: { type: Date, default: Date.now }
 });
-// Prevent duplicates PER TASK
-practiceUserSchema.index({ email: 1, _taskId: 1 }, { unique: true });
+
+// ✅ Index Fix: Ensure 1 Document per User per Task (Upsert friendly)
+// We removed the email unique index so multiple students can use "john@example.com"
+practiceUserSchema.index({ _userId: 1, _taskId: 1 }, { unique: true });
 
 const PracticeUser = mongoose.models.PracticeUser || mongoose.model("PracticeUser", practiceUserSchema);
 
@@ -142,6 +147,7 @@ app.post("/api/task/submit", async (req, res) => {
   try {
     const { userId, lessonId, taskId, code } = req.body;
     
+    // ID Validation
     if (!mongoose.Types.ObjectId.isValid(lessonId) || !mongoose.Types.ObjectId.isValid(taskId)) {
         return res.status(400).json({ success: false, error: "Invalid ID format" });
     }
@@ -153,6 +159,7 @@ app.post("/api/task/submit", async (req, res) => {
     
     if (!user || !task) return res.status(404).json({ success: false, error: "Not Found" });
 
+    // Security: Integrity Check
     if (task.lesson_id.toString() !== lessonId) {
         return res.status(403).json({ success: false, error: "Task mismatches lesson." });
     }
@@ -168,7 +175,7 @@ app.post("/api/task/submit", async (req, res) => {
         let reactPassed = true;
         let reactFeedback = "";
         
-        // Basic JSX Structure Check
+        // Static Syntax Checks
         if (!code.includes("return") || (!code.includes("(") && !code.includes("<"))) {
             reactPassed = false;
             reactFeedback = "Missing 'return' statement or JSX structure.";
@@ -190,7 +197,7 @@ app.post("/api/task/submit", async (req, res) => {
     }
 
     // -------------------------------------------------------------
-    // 2. MONGODB PRACTICAL (Secure & Isolated)
+    // 2. MONGODB PRACTICAL (Production Grade Upsert)
     // -------------------------------------------------------------
     if (task.type === "mongodb" || concept === "mongodb") {
         let dbPassed = true;
@@ -201,34 +208,32 @@ app.post("/api/task/submit", async (req, res) => {
             let data;
             try { data = JSON.parse(code); } catch { throw new SyntaxError("Invalid JSON Format."); }
 
-            // Spam Check
-            const existing = await TaskProgress.findOne({ user_id: userId, task_id: taskObjectId, passed: true });
-            if (existing) {
-                return res.json({ success: true, passed: true, output: `✅ Document already saved previously.` });
-            }
-
-            // Sanitization (Allowlist)
+            // Security: Allowlist Sanitization
             const allowed = ["name", "email", "age"];
             const cleanData = {};
             for (const key of allowed) { if (data[key] !== undefined) cleanData[key] = data[key]; }
 
-            // Save
-            savedDoc = await PracticeUser.create({
-                ...cleanData,
-                _userId: userId,
-                _lessonId: lessonObjectId,
-                _taskId: taskObjectId
-            });
+            // ✅ SMART UPSERT: Update if exists, Insert if new
+            // Prevents spam while allowing corrections
+            savedDoc = await PracticeUser.findOneAndUpdate(
+                { _userId: userId, _taskId: taskObjectId }, // Filter
+                { 
+                    ...cleanData, 
+                    _lessonId: lessonObjectId,
+                    submittedAt: new Date() 
+                }, 
+                { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+            );
             
+            // Format output (Hide internal fields)
             const displayDoc = savedDoc.toObject();
             delete displayDoc._userId; delete displayDoc._lessonId; delete displayDoc._taskId; delete displayDoc.__v;
 
-            dbFeedback = "✅ Document Stored in MongoDB Atlas:\n" + JSON.stringify(displayDoc, null, 2);
+            dbFeedback = "✅ Document successfully stored and verified in MongoDB Atlas:\n" + JSON.stringify(displayDoc, null, 2);
 
         } catch (err) {
             dbPassed = false;
             if (err.name === 'ValidationError') dbFeedback = "❌ Validation Error: " + Object.values(err.errors).map(e => e.message).join(", ");
-            else if (err.code === 11000) dbFeedback = "❌ Duplicate Error: Email already exists for this task.";
             else if (err instanceof SyntaxError) dbFeedback = "❌ Invalid JSON Format.";
             else dbFeedback = "❌ Database Error: " + err.message;
         }
@@ -283,9 +288,8 @@ app.post("/api/task/submit", async (req, res) => {
     // -------------------------------------------------------------
     let result;
     try {
-        const EXECUTION_TIMEOUT = 3000; // 3 Seconds Timeout
+        const EXECUTION_TIMEOUT = 3000; // 3s Timeout to kill infinite loops
         
-        // Wrapper Promise
         const executionPromise = (async () => {
              if (lang === "java") return await runJava(code);
              if (lang === "python") return await runPython(code);
@@ -293,7 +297,6 @@ app.post("/api/task/submit", async (req, res) => {
              throw new Error("Unsupported Language");
         })();
 
-        // Race: Code Execution vs Timeout
         result = await Promise.race([
             executionPromise,
             new Promise((_, reject) => setTimeout(() => reject(new Error("Execution Timed Out (Possible Infinite Loop)")), EXECUTION_TIMEOUT))
@@ -307,10 +310,9 @@ app.post("/api/task/submit", async (req, res) => {
     let passed = true;
     let feedback = "";
 
-    // 🧠 IMPROVED LOGIC CHECKS
+    // Language Specific Checks
     if (lang === "java") {
         if (concept === "integer" && !code.match(/\bint\s+/)) passed = false;
-        // Fix: Ensure class has main method
         if (concept === "class" && !code.match(/public\s+static\s+void\s+main\s*\(/)) { 
             passed = false; 
             feedback = "Missing 'public static void main' method.";
@@ -318,7 +320,6 @@ app.post("/api/task/submit", async (req, res) => {
     }
     if (lang === "python") {
         if (concept === "print" && !code.includes("print(")) passed = false;
-        // Fix: Simple syntax check for control flow
         if ((code.includes("if ") || code.includes("def ") || code.includes("for ")) && !code.includes(":")) {
             passed = false;
             feedback = "Missing colon ':' in statement.";
