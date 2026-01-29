@@ -1,10 +1,10 @@
 /**
- * server.js — MindStep FINAL (Gold Standard Production-Grade)
+ * server.js — MindStep FINAL (With Project Submission)
  * Features:
- * 1. MongoDB Isolation with Smart Upsert (Update/Insert).
- * 2. Execution Timeouts for Java/Python security.
- * 3. Static React/JSX Validation.
- * 4. Production Error Handling & Sanitization.
+ * 1. MongoDB Isolation with Smart Upsert.
+ * 2. Execution Timeouts.
+ * 3. Static React Validation.
+ * 4. Project File Uploads (Permanent Storage).
  */
 
 require("dotenv").config();
@@ -30,9 +30,14 @@ const PORT = process.env.PORT || 10000;
 const PUBLIC_DIR = path.join(__dirname, "public");
 const TEMP_DIR = path.join(__dirname, "temp");
 
+// Ensure basic directories exist
 if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR, { recursive: true });
 const UPLOADS_DIR = path.join(PUBLIC_DIR, "uploads");
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+// 🔥 Ensure Project Storage Directory Exists
+const PROJECT_DIR = path.join(UPLOADS_DIR, "projects");
+if (!fs.existsSync(PROJECT_DIR)) fs.mkdirSync(PROJECT_DIR, { recursive: true });
 
 /* ---------------- ENV CHECKS ---------------- */
 if (!process.env.MONGO_URI) { console.error("❌ MONGO_URI missing"); process.exit(1); }
@@ -62,7 +67,39 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(PUBLIC_DIR));
+
+// Generic Upload (Temp)
 const upload = multer({ dest: TEMP_DIR });
+
+/* ---------------- 🔥 PROJECT UPLOAD CONFIG 🔥 ---------------- */
+const projectStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, PROJECT_DIR); // Save to public/uploads/projects
+    },
+    filename: (req, file, cb) => {
+        // Unique Name: userId-lessonId-timestamp.ext
+        const ext = path.extname(file.originalname);
+        const uniqueName = `${req.body.userId}-${req.body.lessonId}-${Date.now()}${ext}`;
+        cb(null, uniqueName);
+    }
+});
+
+const uploadProject = multer({ 
+    storage: projectStorage,
+    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB Limit
+    fileFilter: (req, file, cb) => {
+        // Allow zip, rar, 7z
+        const allowed = /zip|rar|7z|tar|gz/;
+        const ext = path.extname(file.originalname).toLowerCase().replace('.', '');
+        const mime = file.mimetype;
+        
+        if (allowed.test(ext) || mime.includes('zip') || mime.includes('compressed')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only .zip, .rar, or .7z files are allowed!'));
+        }
+    }
+});
 
 /* ---------------- MODELS ---------------- */
 const userSchema = new mongoose.Schema({ 
@@ -71,7 +108,9 @@ const userSchema = new mongoose.Schema({
     email: { type: String, unique: true }, 
     password: String, 
     image: String, 
-    created_at: { type: Date, default: Date.now } 
+    created_at: { type: Date, default: Date.now },
+    xp: { type: Number, default: 0 },
+    completed_lessons: [String] // Array of lesson IDs
 });
 const UserModel = mongoose.models.User || mongoose.model("User", userSchema);
 
@@ -102,31 +141,23 @@ const completionSchema = new mongoose.Schema({
 completionSchema.index({ user_id: 1, lesson_id: 1 }, { unique: true });
 const Completion = mongoose.models.Completion || mongoose.model("Completion", completionSchema);
 
-// 🔥 Practical MongoDB Schema (Gold Standard)
 const practiceUserSchema = new mongoose.Schema({
-    // Content Fields (Validated)
     name: { type: String, required: true },
     email: { type: String, required: true, match: /.+@.+\..+/ },
     age: { type: Number, min: 1 },
-    
-    // Isolation Fields (Hidden from student output)
     _userId: { type: String, required: true },
     _lessonId: { type: mongoose.Schema.Types.ObjectId, required: true },
     _taskId: { type: mongoose.Schema.Types.ObjectId, required: true },
-    
-    // Audit Field
     submittedAt: { type: Date, default: Date.now }
 });
-
-// ✅ Index Fix: Ensure 1 Document per User per Task (Upsert friendly)
-// We removed the email unique index so multiple students can use "john@example.com"
 practiceUserSchema.index({ _userId: 1, _taskId: 1 }, { unique: true });
-
 const PracticeUser = mongoose.models.PracticeUser || mongoose.model("PracticeUser", practiceUserSchema);
 
+// Import Models
 const Task = require("./models/Task");
 const Course = require("./models/Course");
 const Lesson = require("./models/Lesson");
+const Project = require("./models/Project"); // ✅ NEW MODEL IMPORT
 
 // Middleware
 function requireAdminMiddleware(req, res, next) {
@@ -141,6 +172,69 @@ app.get("/", (req, res) => res.sendFile(path.join(PUBLIC_DIR, "LoginPage.html"))
 app.get("/admin", (req, res) => res.sendFile(path.join(PUBLIC_DIR, "AdminDashboard.html")));
 app.get("/admin/login", (req, res) => res.sendFile(path.join(PUBLIC_DIR, "AdminLogin.html")));
 app.get("/health", (req, res) => res.status(200).send("OK"));
+
+/* ---------------- 🔥 PROJECT SUBMISSION ROUTE 🔥 ---------------- */
+app.post('/api/project/upload', uploadProject.single('projectFile'), async (req, res) => {
+    try {
+        const { userId, lessonId, courseId } = req.body; // Ensure these are sent from frontend
+
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: "No file uploaded" });
+        }
+
+        // 1. Save Project Metadata to MongoDB
+        const newProject = new Project({
+            userId,
+            courseId: courseId || "unknown", // Fallback if missing
+            lessonId,
+            originalName: req.file.originalname,
+            storedName: req.file.filename,
+            filePath: `/uploads/projects/${req.file.filename}`, // Relative path for access
+            fileSize: req.file.size
+        });
+
+        await newProject.save();
+
+        // 2. Mark Lesson/Course as Completed & Award XP
+        const user = await UserModel.findById(userId);
+        if (user) {
+            user.xp = (user.xp || 0) + 100; // Bonus XP for Project
+            
+            // Mark lesson as complete in User array if not exists
+            if (!user.completed_lessons) user.completed_lessons = [];
+            if (!user.completed_lessons.includes(lessonId)) {
+                user.completed_lessons.push(lessonId);
+            }
+            
+            await user.save();
+
+            // Also update Completion model for tracking
+            const lessonObjectId = new mongoose.Types.ObjectId(lessonId);
+            await Completion.updateOne(
+                { user_id: userId, lesson_id: lessonObjectId },
+                { 
+                    $setOnInsert: { 
+                        user_id: userId, 
+                        course_id: courseId, 
+                        lesson_id: lessonObjectId, 
+                        completed_at: new Date() 
+                    } 
+                },
+                { upsert: true }
+            );
+        }
+
+        res.json({ 
+            success: true, 
+            message: "Project submitted successfully! 🎓",
+            xp: user ? user.xp : 0
+        });
+
+    } catch (err) {
+        console.error("Project Upload Error:", err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
 
 /* ---------------- 🔥 CORE TASK EXECUTION ENGINE 🔥 ---------------- */
 app.post("/api/task/submit", async (req, res) => {
@@ -159,7 +253,6 @@ app.post("/api/task/submit", async (req, res) => {
     
     if (!user || !task) return res.status(404).json({ success: false, error: "Not Found" });
 
-    // Security: Integrity Check
     if (task.lesson_id.toString() !== lessonId) {
         return res.status(403).json({ success: false, error: "Task mismatches lesson." });
     }
@@ -168,14 +261,11 @@ app.post("/api/task/submit", async (req, res) => {
     const rule = task.validation || {}; 
     const concept = rule.concept || "generic"; 
 
-    // -------------------------------------------------------------
-    // 1. REACT / JSX VALIDATION (Static Check - No Runtime)
-    // -------------------------------------------------------------
+    // 1. REACT / JSX VALIDATION
     if (lang === "react" || lang === "jsx") {
         let reactPassed = true;
         let reactFeedback = "";
         
-        // Static Syntax Checks
         if (!code.includes("return") || (!code.includes("(") && !code.includes("<"))) {
             reactPassed = false;
             reactFeedback = "Missing 'return' statement or JSX structure.";
@@ -187,18 +277,13 @@ app.post("/api/task/submit", async (req, res) => {
 
         await TaskProgress.findOneAndUpdate(
             { user_id: userId, task_id: taskObjectId },
-            { 
-                user_id: userId, lesson_id: lessonObjectId, task_id: taskObjectId, 
-                passed: reactPassed, output: "React Logic Validated", submittedAt: new Date() 
-            },
+            { user_id: userId, lesson_id: lessonObjectId, task_id: taskObjectId, passed: reactPassed, output: "React Logic Validated", submittedAt: new Date() },
             { upsert: true }
         );
         return res.json({ success: true, passed: reactPassed, output: reactPassed ? "✅ JSX Structure Valid" : reactFeedback });
     }
 
-    // -------------------------------------------------------------
-    // 2. MONGODB PRACTICAL (Production Grade Upsert)
-    // -------------------------------------------------------------
+    // 2. MONGODB PRACTICAL
     if (task.type === "mongodb" || concept === "mongodb") {
         let dbPassed = true;
         let dbFeedback = "";
@@ -208,24 +293,16 @@ app.post("/api/task/submit", async (req, res) => {
             let data;
             try { data = JSON.parse(code); } catch { throw new SyntaxError("Invalid JSON Format."); }
 
-            // Security: Allowlist Sanitization
             const allowed = ["name", "email", "age"];
             const cleanData = {};
             for (const key of allowed) { if (data[key] !== undefined) cleanData[key] = data[key]; }
 
-            // ✅ SMART UPSERT: Update if exists, Insert if new
-            // Prevents spam while allowing corrections
             savedDoc = await PracticeUser.findOneAndUpdate(
-                { _userId: userId, _taskId: taskObjectId }, // Filter
-                { 
-                    ...cleanData, 
-                    _lessonId: lessonObjectId,
-                    submittedAt: new Date() 
-                }, 
+                { _userId: userId, _taskId: taskObjectId }, 
+                { ...cleanData, _lessonId: lessonObjectId, submittedAt: new Date() }, 
                 { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
             );
             
-            // Format output (Hide internal fields)
             const displayDoc = savedDoc.toObject();
             delete displayDoc._userId; delete displayDoc._lessonId; delete displayDoc._taskId; delete displayDoc.__v;
 
@@ -246,9 +323,7 @@ app.post("/api/task/submit", async (req, res) => {
         return res.json({ success: true, passed: dbPassed, output: dbFeedback });
     }
 
-    // -------------------------------------------------------------
     // 3. GENERIC JSON CHECK
-    // -------------------------------------------------------------
     if (concept === "json") {
         let jsonPassed = true;
         let jsonFeedback = "";
@@ -262,9 +337,7 @@ app.post("/api/task/submit", async (req, res) => {
         return res.json({ success: true, passed: jsonPassed, output: jsonPassed ? "Valid JSON" : jsonFeedback });
     }
 
-    // -------------------------------------------------------------
     // 4. HTML / CSS VALIDATION
-    // -------------------------------------------------------------
     if (lang === "html" || lang === "css") {
         if (!code || code.trim().length < 5) return res.json({ success: false, passed: false, output: "Code too short" });
         let webPassed = true;
@@ -283,13 +356,10 @@ app.post("/api/task/submit", async (req, res) => {
         return res.json({ success: true, passed: webPassed, output: webPassed ? code : `[ERROR]: ${webFeedback}`, preview: true });
     }
 
-    // -------------------------------------------------------------
-    // 5. RUNTIME EXECUTION (Java, Python, JS) + SECURITY TIMEOUT
-    // -------------------------------------------------------------
+    // 5. RUNTIME EXECUTION
     let result;
     try {
-        const EXECUTION_TIMEOUT = 3000; // 3s Timeout to kill infinite loops
-        
+        const EXECUTION_TIMEOUT = 3000; 
         const executionPromise = (async () => {
              if (lang === "java") return await runJava(code);
              if (lang === "python") return await runPython(code);
@@ -328,7 +398,6 @@ app.post("/api/task/submit", async (req, res) => {
     if (lang === "javascript" && concept === "decimal" && !code.match(/=\s*\d+\.\d+/)) passed = false;
 
     if (passed) {
-        // Route/API tasks don't need console output
         const requiresOutput = rule.requiresOutput !== false && concept !== "route" && concept !== "api";
         if (requiresOutput && outputString.length === 0) {
             passed = false;

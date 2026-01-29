@@ -1,422 +1,1166 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Futuristic Neon Form</title>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>MindStep — Quantum IDE</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
+
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Poppins', 'Montserrat', sans-serif;
+    :root {
+      --bg-root: #09090b;
+      --bg-sidebar: #121214;
+      --bg-editor: #1e1e1e;
+      --bg-terminal: #0c0c0c;
+      --border: #27272a;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --accent: #38bdf8;
+      --success: #22c55e;
+      --error: #ef4444;
+      --warning: #f59e0b;
+      --text: #e4e4e7;
+      --text-dim: #a1a1aa;
+      --font-main: 'Plus Jakarta Sans', sans-serif;
+      --font-code: 'JetBrains Mono', monospace;
     }
+
+    body.theme-neon {
+      --bg-root: #0b0014;
+      --bg-sidebar: #130024;
+      --bg-editor: #1a0b2e;
+      --bg-terminal: #05010a;
+      --border: #3c1f5e;
+      --primary: #d946ef;
+      --accent: #22d3ee;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; outline: none; }
 
     body {
+      background-color: var(--bg-root);
+      color: var(--text);
+      font-family: var(--font-main);
       height: 100vh;
+      display: flex;
+      flex-direction: column;
       overflow: hidden;
-      background: linear-gradient(135deg, #ff003c, #0066ff);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-      animation: fadeIn 1.5s ease;
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: scale(0.95); }
-      to { opacity: 1; transform: scale(1); }
+    /* NAVBAR */
+    .navbar {
+      height: 60px; flex-shrink: 0;
+      background: var(--bg-sidebar);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 25px; z-index: 50;
+    }
+    .brand {
+      font-weight: 800; font-size: 1.2rem; color: var(--text);
+      text-decoration: none; display: flex; align-items: center; gap: 12px;
+    }
+    .brand i { color: var(--primary); font-size: 1.4rem; filter: drop-shadow(0 0 10px rgba(99,102,241,0.5)); }
+
+    /* XP System */
+    .xp-container {
+      display: flex; align-items: center; gap: 15px;
+      background: rgba(255,255,255,0.03); padding: 5px 15px; border-radius: 20px;
+      border: 1px solid var(--border);
+    }
+    .level-badge { font-size: 0.8rem; font-weight: 700; color: var(--accent); }
+    .xp-bar-wrapper { width: 100px; height: 6px; background: #27272a; border-radius: 3px; overflow: hidden; }
+    .xp-bar-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); width: 0%; transition: width 0.5s ease; }
+    .xp-text { font-size: 0.75rem; color: var(--text-dim); font-family: var(--font-code); }
+
+    /* WORKSPACE */
+    .workspace {
+      flex: 1; display: grid; overflow: hidden;
+      transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+    .workspace.mode-reading { grid-template-columns: 1fr 0px; }
+    .workspace.mode-coding { grid-template-columns: 35% 65%; }
+
+    /* Left Panel (Guide/Content) */
+    .guide-panel {
+      background: var(--bg-sidebar); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; overflow: hidden; position: relative;
+    }
+    .guide-content { padding: 30px; overflow-y: auto; flex: 1; scroll-behavior: smooth; }
+    .guide-content h1 { font-size: 1.8rem; margin-bottom: 20px; color: var(--text); }
+    .guide-content p { line-height: 1.7; color: var(--text-dim); margin-bottom: 20px; }
+    .guide-content code { background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; color: var(--accent); font-family: var(--font-code); }
+    
+    .badge { padding: 6px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-bottom: 15px; display: inline-flex; align-items: center; gap: 6px; }
+    .badge-theory { background: rgba(99, 102, 241, 0.1); color: var(--primary); border: 1px solid rgba(99,102,241,0.2); }
+    .badge-task { background: rgba(56, 189, 248, 0.1); color: var(--accent); border: 1px solid rgba(56, 189, 248, 0.2); }
+
+    /* --- RICH CONTENT STYLES (NEW) --- */
+    .theory-section { margin-bottom: 25px; }
+    .theory-section h3 { color: var(--accent); margin-bottom: 10px; font-size: 1.1rem; border-left: 3px solid var(--primary); padding-left: 10px; }
+    .theory-section ul { padding-left: 20px; color: var(--text-dim); }
+    .theory-section li { margin-bottom: 8px; line-height: 1.6; }
+    
+    .concept-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 10px; }
+    .concept-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border); padding: 12px; border-radius: 6px; }
+    .concept-term { color: var(--success); font-weight: bold; font-family: var(--font-code); display: block; margin-bottom: 6px; font-size: 0.95rem; }
+    
+    .code-block { 
+        background: #111; border: 1px solid var(--border); 
+        padding: 15px; border-radius: 6px; font-family: var(--font-code); 
+        color: #a5b4fc; overflow-x: auto; font-size: 0.85rem; margin-top: 10px; line-height: 1.5;
     }
 
-    /* Background particles */
-    .particles {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      z-index: 0;
+    .analogy-box { background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); padding: 15px; border-radius: 8px; color: #fbbf24; margin-top: 10px; }
+    .mistake-box { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 15px; border-radius: 8px; color: #fca5a5; margin-top: 10px; }
+
+    /* File Input UI */
+    .file-input-group {
+        background: rgba(0,0,0,0.2); border: 1px solid var(--border);
+        padding: 15px; border-radius: 8px; margin-bottom: 20px;
+    }
+    .file-input-group label {
+        display: block; font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; margin-bottom: 8px; font-weight: 700;
+    }
+    .file-input-wrapper {
+        display: flex; align-items: center; gap: 10px; background: var(--bg-editor);
+        padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border);
+    }
+    .file-input-wrapper i { color: var(--primary); }
+    #fileNameInput {
+        background: transparent; border: none; color: var(--text); font-family: var(--font-code);
+        font-size: 0.9rem; flex: 1;
     }
 
-    .particle {
-      position: absolute;
-      width: 4px;
-      height: 4px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.8);
-      box-shadow: 0 0 8px rgba(255,255,255,0.8);
-      animation: floatParticles linear infinite;
+    .hint-box {
+      margin-top: 20px; padding: 15px; border-radius: 8px; display: none;
+      background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3);
+      animation: slideIn 0.3s ease;
+    }
+    @keyframes slideIn { from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
+
+    /* Right Panel */
+    .ide-panel {
+      display: flex; flex-direction: column;
+      background: var(--bg-editor); height: 100%; position: relative;
     }
 
-    @keyframes floatParticles {
-      from { transform: translateY(0) scale(1); opacity: 1; }
-      to { transform: translateY(-100vh) scale(0.3); opacity: 0; }
+    .toolbar {
+      height: 40px; background: #27272a; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; padding: 0 15px; flex-shrink: 0;
+    }
+    .file-tab {
+      background: var(--bg-editor); padding: 0 20px; height: 100%; border-top: 2px solid var(--primary);
+      color: var(--text); font-family: var(--font-code); font-size: 0.85rem; display: flex; align-items: center; gap: 8px;
+    }
+    .icon-btn {
+      background: transparent; border: none; color: var(--text-dim);
+      cursor: pointer; width: 28px; height: 28px; border-radius: 6px; 
+      display: grid; place-items: center; transition: 0.2s;
+    }
+    .icon-btn:hover { color: var(--text); background: rgba(255,255,255,0.1); }
+
+    .editor-container { flex: 1; position: relative; overflow: hidden; min-height: 200px; }
+    #monaco-editor { width: 100%; height: 100%; }
+
+    /* Terminal & Interactive Area */
+    .terminal {
+      height: 40px; min-height: 40px; flex-shrink: 0; 
+      background: var(--bg-terminal); border-top: 1px solid var(--border);
+      display: flex; flex-direction: column; transition: height 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+      position: absolute; bottom: 0; width: 100%; z-index: 20;
+    }
+    .terminal.expanded { height: 60% !important; border-top: 2px solid var(--primary); box-shadow: 0 -10px 40px rgba(0,0,0,0.5); }
+
+    .term-header {
+      padding: 0 15px; height: 40px; background: #27272a;
+      font-family: var(--font-main); font-size: 0.75rem; color: var(--text-dim);
+      text-transform: uppercase; letter-spacing: 1px;
+      display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; cursor: pointer;
+    }
+    .term-body {
+      flex: 1; padding: 20px; 
+      font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; color: #ccc;
+      overflow-y: auto; white-space: pre-wrap; scroll-behavior: smooth;
+      display: flex; flex-direction: column; cursor: text;
+    }
+    .term-log { flex: 1; }
+    .term-line { margin-bottom: 6px; display: flex; gap: 10px; line-height: 1.5; }
+    
+    .term-input-line {
+        display: flex; align-items: center; gap: 10px; margin-top: 10px;
+    }
+    .term-prompt { color: var(--success); font-weight: bold; }
+    #termInput {
+        background: transparent; border: none; color: #fff; 
+        font-family: 'JetBrains Mono', monospace; font-size: 0.9rem;
+        flex: 1; outline: none;
     }
 
-    /* Card */
-    .card {
-      position: relative;
-      width: 370px;
-      max-width: 90%;
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.3);
-      border-radius: 20px;
-      padding: 30px;
-      backdrop-filter: blur(12px);
-      box-shadow: 0 0 20px rgba(0,255,255,0.3), 0 0 40px rgba(0,255,255,0.2);
-      z-index: 1;
-      animation: floatCard 6s ease-in-out infinite;
+    /* API PREVIEW & ACTION BUTTONS */
+    .api-preview {
+        background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+        border-radius: 6px; margin: 15px 0; overflow: hidden;
+        animation: fadeIn 0.5s;
     }
-
-    @keyframes floatCard {
-      0%,100% { transform: translateY(0) scale(1); }
-      50% { transform: translateY(-10px) scale(1.02); }
+    .api-header {
+        background: rgba(255,255,255,0.05); padding: 8px 12px; border-bottom: 1px solid var(--border);
+        display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem;
     }
-
-    .card:hover {
-      transform: scale(1.03);
-      box-shadow: 0 0 30px rgba(0,255,255,0.6), 0 0 60px rgba(0,255,255,0.4);
-      transition: 0.4s ease;
+    .method-badge { background: var(--success); color: #000; padding: 2px 6px; border-radius: 4px; font-weight: 700; margin-right: 8px; }
+    .api-body { padding: 12px; font-family: 'JetBrains Mono', monospace; color: #a5b4fc; }
+    
+    .action-btn {
+        background: var(--primary); color: #fff; border:none; padding: 6px 14px;
+        border-radius: 4px; font-family: var(--font-main); cursor: pointer;
+        display: inline-flex; align-items: center; gap: 8px; margin-top: 10px;
+        font-size: 0.85rem; transition: 0.2s;
     }
+    .action-btn:hover { background: var(--primary-hover); }
+    .action-btn:disabled { opacity: 0.7; cursor: not-allowed; }
 
-    /* Decorative lamp */
-    .lamp {
-      position: absolute;
-      top: -30px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      background: #0ff;
-      box-shadow: 0 0 20px #0ff, 0 0 40px #0ff;
-      animation: blinkLamp 2s infinite alternate;
+    /* Footer */
+    .footer {
+      height: 60px; flex-shrink: 0; background: var(--bg-sidebar); border-top: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; padding: 0 30px; z-index: 50;
     }
-
-    @keyframes blinkLamp {
-      0% { opacity: 0.7; box-shadow: 0 0 10px #0ff, 0 0 20px #0ff; }
-      100% { opacity: 1; box-shadow: 0 0 30px #0ff, 0 0 60px #0ff; }
-    }
-
-    /* Profile Upload */
-    .profile-upload {
-      position: relative;
-      margin: 0 auto 20px;
-      width: 100px;
-      height: 100px;
-    }
-
-    .profile-upload input {
-      display: none;
-    }
-
-    .profile-circle {
-      width: 100px;
-      height: 100px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.1);
-      border: 2px dashed #0ff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #0ff;
-      cursor: pointer;
-      position: relative;
-      overflow: hidden;
-      animation: haloPulse 2s infinite;
-    }
-
-    @keyframes haloPulse {
-      0% { box-shadow: 0 0 10px #0ff, 0 0 20px #0ff; }
-      50% { box-shadow: 0 0 25px #0ff, 0 0 50px #0ff; }
-      100% { box-shadow: 0 0 10px #0ff, 0 0 20px #0ff; }
-    }
-
-    .profile-circle img {
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-      object-fit: cover;
-    }
-
-    /* Inputs */
-    .form-group {
-      position: relative;
-      margin-bottom: 20px;
-    }
-
-    .form-group input, .form-group textarea {
-      width: 100%;
-      padding: 12px;
-      border: none;
-      border-bottom: 2px solid #0ff;
-      background: transparent;
-      color: #fff;
-      outline: none;
-      font-size: 1rem;
-    }
-
-    .form-group label {
-      position: absolute;
-      top: 12px;
-      left: 0;
-      color: rgba(255,255,255,0.7);
-      font-size: 1rem;
-      pointer-events: none;
-      transition: 0.3s;
-    }
-
-    .form-group input:focus + label,
-    .form-group input:valid + label,
-    .form-group textarea:focus + label,
-    .form-group textarea:valid + label {
-      top: -10px;
-      font-size: 0.8rem;
-      color: #0ff;
-    }
-
-    .form-group input:focus, .form-group textarea:focus {
-      border-bottom-color: #ff0;
-      box-shadow: 0 0 10px #ff0;
-    }
-
-    /* Gender section */
-    .gender-group {
-      color: #fff;
-      margin-bottom: 20px;
-      animation: glow 3s infinite alternate;
-    }
-
-    @keyframes glow {
-      from { text-shadow: 0 0 5px #0ff; }
-      to { text-shadow: 0 0 15px #0ff; }
-    }
-
-    .gender-options {
-      display: flex;
-      gap: 20px;
-      margin-top: 10px;
-    }
-
-    .gender-options label {
-      display: flex;
-      align-items: center;
-      cursor: pointer;
-      font-size: 0.9rem;
-      position: relative;
-    }
-
-    .gender-options input {
-      display: none;
-    }
-
-    .custom-radio {
-      width: 16px;
-      height: 16px;
-      border: 2px solid #0ff;
-      border-radius: 50%;
-      margin-right: 8px;
-      position: relative;
-      box-shadow: 0 0 5px #0ff;
-      transition: 0.3s;
-    }
-
-    .gender-options input:checked + .custom-radio {
-      background: #0ff;
-      box-shadow: 0 0 15px #0ff, 0 0 25px #0ff;
-    }
-
-    /* Courses */
-    .courses-group {
-      color: #fff;
-      margin-bottom: 20px;
-      animation: glow 3s infinite alternate;
-    }
-
-    .courses-options {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 10px;
-    }
-
-    .courses-options label {
-      display: flex;
-      align-items: center;
-      cursor: pointer;
-      font-size: 0.9rem;
-    }
-
-    .courses-options input {
-      display: none;
-    }
-
-    .custom-check {
-      width: 16px;
-      height: 16px;
-      border: 2px solid #0ff;
-      margin-right: 8px;
-      position: relative;
-      box-shadow: 0 0 5px #0ff;
-      transition: 0.3s;
-    }
-
-    .courses-options input:checked + .custom-check {
-      background: #0ff;
-      box-shadow: 0 0 15px #0ff, 0 0 25px #0ff;
-      animation: pulseCheck 1.2s infinite;
-    }
-
-    @keyframes pulseCheck {
-      0% { transform: scale(1); box-shadow: 0 0 15px #0ff; }
-      50% { transform: scale(1.2); box-shadow: 0 0 25px #0ff; }
-      100% { transform: scale(1); box-shadow: 0 0 15px #0ff; }
-    }
-
-    /* Buttons */
-    .buttons {
-      display: flex;
-      justify-content: space-between;
-      gap: 15px;
-    }
-
     .btn {
-      flex: 1;
-      padding: 12px;
-      border: none;
-      border-radius: 25px;
-      font-size: 1rem;
-      cursor: pointer;
-      color: #fff;
-      background: linear-gradient(90deg, #ff0080, #7928ca, #00ffff);
-      background-size: 200%;
-      box-shadow: 0 0 15px rgba(0,255,255,0.6);
-      transition: 0.4s;
-      position: relative;
-      overflow: hidden;
+      padding: 10px 24px; border-radius: 8px; border: none; cursor: pointer;
+      font-weight: 600; font-family: var(--font-main); display: flex; align-items: center; gap: 10px; transition: 0.2s;
+    }
+    .btn-secondary { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
+    .btn-run { background: var(--primary); color: #fff; }
+    .btn-next { background: var(--success); color: #000; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* Progress & Lock */
+    .progress-container { display: flex; gap: 6px; align-items: center; }
+    .step-pill { width: 30px; height: 4px; background: #27272a; border-radius: 2px; cursor: pointer; transition: 0.3s; }
+    .step-pill.active { background: var(--primary); width: 40px; box-shadow: 0 0 10px var(--primary); }
+    .step-pill.completed { background: var(--success); }
+    .step-pill.locked { opacity: 0.3; cursor: not-allowed; }
+
+    #loadingOverlay {
+      position: fixed; top:0; left:0; width:100%; height:100%;
+      background: var(--bg-root); z-index: 100;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      transition: opacity 0.5s;
+    }
+    #customToast {
+      position: fixed; top: 80px; right: 30px; background: #27272a; 
+      padding: 12px 20px; border-radius: 8px; display: flex; gap: 10px; 
+      align-items: center; color: #fff; transform: translateX(150%); 
+      transition: 0.3s; z-index: 200; box-shadow: 0 10px 40px rgba(0,0,0,0.5); 
+      border: 1px solid var(--border);
+    }
+    @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
+
+    /* ✅ MOBILE & TABLET OPTIMIZATIONS */
+    @media (max-width: 900px) {
+      .workspace.mode-coding { 
+        grid-template-columns: 1fr; 
+        grid-template-rows: auto 1fr; 
+      }
+      .guide-panel { 
+        max-height: 35vh; 
+        border-right: none; 
+        border-bottom: 1px solid var(--border); 
+      }
+      .ide-panel { height: auto; min-height: 0; }
+      .terminal { 
+        position: fixed; bottom: 0; left: 0; width: 100%; 
+        height: 40px; z-index: 999; transition: height 0.3s ease;
+      }
+      .terminal.expanded { height: 60vh !important; }
+      #monaco-editor { height: 100% !important; min-height: 300px; }
     }
 
-    .btn:hover {
-      background-position: 100%;
-      box-shadow: 0 0 30px rgba(0,255,255,0.9);
-    }
-
-    .btn:active::after {
-      content: "";
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      width: 5px;
-      height: 5px;
-      background: rgba(255,255,255,0.6);
-      border-radius: 50%;
-      transform: translate(-50%, -50%);
-      animation: ripple 0.6s linear;
-    }
-
-    @keyframes ripple {
-      from { width: 5px; height: 5px; opacity: 1; }
-      to { width: 200px; height: 200px; opacity: 0; }
-    }
-
-    /* Responsive */
-    @media (max-width: 500px) {
-      .card { padding: 20px; }
-      .profile-upload { width: 80px; height: 80px; }
-      .profile-circle { width: 80px; height: 80px; }
+    @media (max-width: 600px) {
+      .navbar { padding: 0 12px; }
+      .xp-container { display: none; }
+      .footer { padding: 10px; gap: 10px; height: auto; }
+      .footer .btn { flex: 1; justify-content: center; }
+      .file-input-wrapper { flex-direction: column; align-items: stretch; }
+      #fileNameInput { width: 100%; }
     }
   </style>
 </head>
 <body>
-  <div class="particles" id="particles"></div>
 
-  <div class="card">
-    <div class="lamp"></div>
-    <div class="profile-upload">
-      <input type="file" id="profilePic" accept="image/*">
-      <label for="profilePic" class="profile-circle" id="profileCircle">
-        <span>+</span>
-      </label>
-    </div>
-
-    <form>
-      <div class="form-group">
-        <input type="text" id="name" required>
-        <label for="name">Full Name</label>
-      </div>
-      <div class="form-group">
-        <input type="email" id="email" required>
-        <label for="email">Email</label>
-      </div>
-
-      <!-- Gender -->
-      <div class="gender-group">
-        Gender:
-        <div class="gender-options">
-          <label>
-            <input type="radio" name="gender" value="male" required>
-            <span class="custom-radio"></span> Male
-          </label>
-          <label>
-            <input type="radio" name="gender" value="female">
-            <span class="custom-radio"></span> Female
-          </label>
-          <label>
-            <input type="radio" name="gender" value="other">
-            <span class="custom-radio"></span> Other
-          </label>
-        </div>
-      </div>
-
-      <!-- Courses -->
-      <div class="courses-group">
-        Choose your courses:
-        <div class="courses-options">
-          <label><input type="checkbox" name="courses" value="HTML"><span class="custom-check"></span> HTML</label>
-          <label><input type="checkbox" name="courses" value="CSS"><span class="custom-check"></span> CSS</label>
-          <label><input type="checkbox" name="courses" value="JavaScript"><span class="custom-check"></span> JavaScript</label>
-          <label><input type="checkbox" name="courses" value="Java"><span class="custom-check"></span> Java</label>
-          <label><input type="checkbox" name="courses" value="Python"><span class="custom-check"></span> Python</label>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <textarea id="bio" rows="3"></textarea>
-        <label for="bio">Bio (Optional)</label>
-      </div>
-      <div class="buttons">
-        <button type="button" class="btn" onclick="window.location.href='LoginPage.html'">Back</button>
-        <button type="submit" class="btn">Continue</button>
-      </div>
-    </form>
+  <div id="loadingOverlay">
+    <i class="fas fa-cube fa-spin fa-3x" style="color:var(--primary); margin-bottom:20px;"></i>
+    <p style="color:var(--text-dim); font-family:var(--font-code);">INITIALIZING DEV ENV...</p>
   </div>
 
-  <script>
-    // Particle generation
-    const particles = document.getElementById("particles");
-    for (let i=0; i<60; i++) {
-      let p = document.createElement("div");
-      p.classList.add("particle");
-      p.style.left = Math.random()*100 + "vw";
-      p.style.top = Math.random()*100 + "vh";
-      p.style.animationDuration = (5 + Math.random()*10) + "s";
-      particles.appendChild(p);
+  <div id="customToast"></div>
+
+  <nav class="navbar">
+    <a href="#" class="brand" onclick="window.history.back()">
+      <i class="fas fa-cube"></i> <span>MindStep</span>
+    </a>
+    <div style="display:flex; gap:20px; align-items:center;">
+        <div class="xp-container">
+            <span class="level-badge" id="levelDisplay">LVL 1</span>
+            <div class="xp-bar-wrapper"><div class="xp-bar-fill" id="xpBar"></div></div>
+            <span class="xp-text" id="xpText">0 XP</span>
+        </div>
+        <div class="progress-container" id="progressBar"></div>
+    </div>
+    <div style="display:flex; gap:10px;">
+        <button class="icon-btn" onclick="toggleTheme()" title="Switch Theme"><i class="fas fa-palette"></i></button>
+        <div style="font-size:0.85rem; color:var(--text-dim); display:flex; gap:8px; align-items:center; background:#18181b; padding:6px 12px; border-radius:20px; border:1px solid var(--border);">
+            <div style="width:6px; height:6px; background:var(--success); border-radius:50%;"></div> 
+            <span id="saveStatus">Synced</span>
+        </div>
+    </div>
+  </nav>
+
+  <div class="workspace mode-reading" id="mainWorkspace" style="opacity:0;">
+    
+    <div class="guide-panel">
+      <div class="guide-content" id="guideContent"></div>
+      <div style="padding: 0 30px 30px 30px;">
+          <div id="hintBox" class="hint-box">
+              <div style="color:var(--warning); font-weight:700; margin-bottom:5px;"><i class="fas fa-lightbulb"></i> Concept Hint</div>
+              <div id="hintText" style="color:var(--text);"></div>
+          </div>
+      </div>
+    </div>
+
+    <div class="ide-panel">
+      <div class="toolbar">
+        <div class="file-tab">
+          <i class="fas fa-file-code" id="langIcon" style="color:var(--primary);"></i> <span id="langName">server.js</span>
+        </div>
+        <div class="toolbar-actions">
+          <button class="icon-btn" onclick="copyCode()" title="Copy Code"><i class="far fa-copy"></i></button>
+          <button class="icon-btn" onclick="resetCode()" title="Reset Code"><i class="fas fa-undo"></i></button>
+        </div>
+      </div>
+
+      <div class="editor-container">
+        <div id="monaco-editor"></div>
+      </div>
+
+      <div class="terminal" id="terminalArea">
+        <div class="term-header" onclick="toggleTerminal()">
+          <span><i class="fas fa-terminal" style="margin-right:8px; opacity:0.7;"></i> TERMINAL / PREVIEW</span>
+          <div style="display:flex; gap:10px;">
+              <button class="icon-btn" style="width:auto; padding:0 10px; font-size:0.8rem;">
+                  <i class="fas fa-expand" id="termExpandIcon"></i> <span id="termExpandText">Expand</span>
+              </button>
+              <button class="icon-btn" onclick="event.stopPropagation(); clearTerminal()" title="Clear"><i class="fas fa-trash"></i></button>
+          </div>
+        </div>
+        <div class="term-body" id="termBody" onclick="document.getElementById('termInput').focus()">
+          <div id="termLog" class="term-log">
+            <div style="color:var(--text-dim); margin-bottom:10px; font-style:italic;">
+                # Welcome to MindStep Shell v1.0 <br>
+                # Step 1: Write Code. Step 2: Check Logic. Step 3: Action.
+            </div>
+          </div>
+          <div class="term-input-line">
+            <span class="term-prompt">user@mindstep:~$</span>
+            <input type="text" id="termInput" autocomplete="off" spellcheck="false">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <button class="btn btn-secondary" id="prevBtn" disabled><i class="fas fa-arrow-left"></i> Previous</button>
+    <div style="font-size:0.8rem; color:var(--text-dim); font-family:var(--font-code);">Write Code & Check Logic</div>
+    <button class="btn btn-run" id="runBtn">Check Logic <i class="fas fa-check-circle"></i></button>
+  </div>
+
+<script>
+require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' }});
+
+document.addEventListener("DOMContentLoaded", () => {
+  const state = {
+    steps: [], idx: 0, userCode: {}, passed: new Set(),
+    lessonId: new URLSearchParams(location.search).get("lesson"),
+    userId: JSON.parse(localStorage.getItem("mindstep_user") || '{"_id":"guest"}')._id,
+    defaults: {}, mockMode: false, failCounts: {},
+    xp: parseInt(localStorage.getItem("mindstep_xp") || "0"),
+    editorInstance: null,
+    
+    // STATE FOR 2-STEP VALIDATION
+    fileName: "server.js",
+    isLogicValid: false,
+    cmdHistory: [],
+    cmdHistoryIdx: -1
+  };
+
+  const els = {
+    termLog: document.getElementById("termLog"),
+    termInput: document.getElementById("termInput"),
+    termBody: document.getElementById("termBody"),
+    terminalArea: document.getElementById("terminalArea"),
+    termExpandIcon: document.getElementById("termExpandIcon"),
+    termExpandText: document.getElementById("termExpandText"),
+    runBtn: document.getElementById("runBtn"),
+    prevBtn: document.getElementById("prevBtn"),
+    guide: document.getElementById("guideContent"),
+    ws: document.getElementById("mainWorkspace"),
+    dots: document.getElementById("progressBar"),
+    xpBar: document.getElementById("xpBar"),
+    xpText: document.getElementById("xpText"),
+    lvlDisplay: document.getElementById("levelDisplay"),
+    hintBox: document.getElementById("hintBox"),
+    hintText: document.getElementById("hintText"),
+    langName: document.getElementById("langName")
+  };
+
+  // --- TERMINAL UI ---
+  window.toggleTerminal = (forceState) => {
+      const isCurrentlyExpanded = els.terminalArea.classList.contains('expanded');
+      const shouldExpand = forceState !== undefined ? forceState : !isCurrentlyExpanded;
+
+      if(shouldExpand) {
+          els.terminalArea.classList.add('expanded');
+          els.termExpandIcon.className = "fas fa-compress";
+          els.termExpandText.innerText = "Minimize";
+          scrollToBottom();
+          els.termInput.focus();
+      } else {
+          els.terminalArea.classList.remove('expanded');
+          els.termExpandIcon.className = "fas fa-expand";
+          els.termExpandText.innerText = "Expand";
+      }
+  };
+
+  window.clearTerminal = () => {
+      els.termLog.innerHTML = `<div style="color:var(--text-dim); font-style:italic;"># Terminal cleared.</div>`;
+  };
+
+  function scrollToBottom() {
+      els.termBody.scrollTop = els.termBody.scrollHeight;
+  }
+
+  function addLog(msg, type='log') {
+      const color = type === 'error' ? 'var(--error)' : (type === 'success' ? 'var(--success)' : (type==='warning'?'var(--warning)':'var(--text-dim)'));
+      els.termLog.innerHTML += `<div class="term-line" style="color:${color};">${msg}</div>`;
+      scrollToBottom();
+  }
+
+  // --- ADDED FOR MOBILE UX: Auto Expand Terminal ---
+  window.addEventListener("focusin", (e) => {
+      if (window.innerWidth < 900 && e.target.id === "termInput") {
+          els.terminalArea.classList.add('expanded');
+          els.termExpandIcon.className = "fas fa-compress";
+          els.termExpandText.innerText = "Minimize";
+      }
+  });
+
+  // --- INIT & MOCK DATA ---
+  function initMonaco() {
+    return new Promise((resolve) => {
+        require(['vs/editor/editor.main'], function () {
+            state.editorInstance = monaco.editor.create(document.getElementById('monaco-editor'), {
+                value: "", language: 'javascript', theme: 'vs-dark',
+                fontSize: 15, fontFamily: "'JetBrains Mono', monospace",
+                automaticLayout: true, minimap: { enabled: false },
+                scrollBeyondLastLine: false, padding: { top: 16, bottom: 16 }
+            });
+            state.editorInstance.onDidChangeModelContent(() => {
+                const code = state.editorInstance.getValue();
+                const step = state.steps[state.idx];
+                
+                // RESET VALIDATION IF CODE CHANGES
+                if (state.isLogicValid) {
+                   state.isLogicValid = false;
+                   els.runBtn.className = "btn btn-run";
+                   els.runBtn.innerHTML = `Check Logic <i class="fas fa-check-circle"></i>`;
+                   els.runBtn.disabled = false;
+                }
+
+                if(step && step.type === 'task') {
+                    state.userCode[step.data._id] = code;
+                    localStorage.setItem(`draft_${state.userId}_${step.data._id}`, code);
+                }
+            });
+            state.editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => els.runBtn.click());
+            resolve();
+        });
+    });
+  }
+
+  async function init() {
+    if(localStorage.getItem("theme") === "neon") document.body.classList.add("theme-neon");
+    updateXP();
+    await initMonaco();
+    setupTerminalInput();
+    
+    try {
+      if(!state.lessonId) throw new Error("No ID");
+      const res = await fetch(`/api/lesson/${state.lessonId}/details`);
+      const data = await res.json();
+      if(!data.success) throw new Error("API Fail");
+      loadData(data);
+    } catch(e) {
+      state.mockMode = true; 
+      loadMockData();
+    }
+  }
+
+  function loadMockData() {
+    loadData({
+      lesson: { 
+          title: "Express Basics", 
+          description: "Learn to create a server and API endpoints.",
+          lesson: {
+              intro: "Express.js is a minimal and flexible Node.js web application framework.",
+              learningOutcomes: ["Setup Server", "Create Routes", "Handle Data"],
+              deepExplanation: ["Express simplifies the server creation process."],
+              conceptBreakdown: [{concept: "Server", explanation: "Computes requests"}],
+              summary: "Express is essential for Node backend."
+          }
+      },
+      tasks: [
+        { 
+            _id: "demo_task_1", 
+            title: "1. Setup Server", 
+            description: "Initialize an Express app and listen on port 3000.\n\nType: Server Task", 
+            type: "server",
+            validation: { patterns: ["express", "app\\.listen", "3000"], hints: ["Use app.listen(3000)"] },
+            language: "javascript"
+        }
+      ]
+    });
+  }
+
+  // --- 🔥 UPDATED LOAD DATA FUNCTION FOR RICH CONTENT 🔥 ---
+  function loadData(data) {
+    state.steps = [];
+    
+    // 1. Get the main document and the nested 'lesson' detail object
+    // Handle structure variety (db structure vs mock structure)
+    const mainDoc = data.lesson || {};
+    const richContent = mainDoc.lesson || mainDoc || {}; 
+
+    // --- HTML GENERATION LOGIC ---
+    let theoryHtml = "";
+
+    // A. Intro
+    if (richContent.intro) {
+        theoryHtml += `<p style="font-size: 1.1rem; line-height: 1.6; color: var(--text);">${richContent.intro}</p><hr style="border-color:var(--border); margin: 20px 0;">`;
+    } else if (mainDoc.description) {
+        theoryHtml += `<p style="font-size: 1.1rem; line-height: 1.6; color: var(--text);">${mainDoc.description}</p><hr style="border-color:var(--border); margin: 20px 0;">`;
     }
 
-    // Profile upload preview
-    const profileInput = document.getElementById("profilePic");
-    const profileCircle = document.getElementById("profileCircle");
+    // B. Learning Outcomes
+    if (richContent.learningOutcomes && richContent.learningOutcomes.length > 0) {
+        theoryHtml += `
+            <div class="theory-section">
+                <h3>🎯 What you will learn</h3>
+                <ul>${richContent.learningOutcomes.map(item => `<li>${item}</li>`).join('')}</ul>
+            </div>`;
+    }
 
-    profileInput.addEventListener("change", e => {
-      const file = e.target.files[0];
-      if(file){
-        const reader = new FileReader();
-        reader.onload = function(event){
-          profileCircle.innerHTML = `<img src="${event.target.result}" alt="profile">`;
-        }
-        reader.readAsDataURL(file);
-      }
+    // C. Deep Explanation (Paragraphs)
+    if (richContent.deepExplanation && richContent.deepExplanation.length > 0) {
+        theoryHtml += `
+            <div class="theory-section">
+                <h3>📖 Core Concepts</h3>
+                ${richContent.deepExplanation.map(text => `<p>${text}</p>`).join('')}
+            </div>`;
+    }
+
+    // D. Concept Breakdown (Cards)
+    if (richContent.conceptBreakdown && richContent.conceptBreakdown.length > 0) {
+        theoryHtml += `
+            <div class="theory-section">
+                <h3>⚡ Key Terms</h3>
+                <div class="concept-grid">
+                    ${richContent.conceptBreakdown.map(c => `
+                        <div class="concept-card">
+                            <span class="concept-term">${c.concept}</span>
+                            <span style="font-size:0.9rem;">${c.explanation}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>`;
+    }
+
+    // E. Real World Analogy
+    if (richContent.realWorldAnalogy && richContent.realWorldAnalogy.length > 0) {
+        theoryHtml += `
+            <div class="theory-section">
+                <h3>🌍 Real World Analogy</h3>
+                <div class="analogy-box">
+                    <ul style="margin:0; padding-left:20px; color:inherit;">
+                        ${richContent.realWorldAnalogy.map(a => `<li>${a}</li>`).join('')}
+                    </ul>
+                </div>
+            </div>`;
+    }
+
+    // F. Example Code
+    if (richContent.example && richContent.example.code) {
+        theoryHtml += `
+            <div class="theory-section">
+                <h3>💻 Example: ${richContent.example.description || "Code Snippet"}</h3>
+                <pre class="code-block"><code>${richContent.example.code}</code></pre>
+            </div>`;
+    }
+
+    // G. Common Mistakes
+    if (richContent.commonMistakes && richContent.commonMistakes.length > 0) {
+        theoryHtml += `
+            <div class="theory-section">
+                <h3>⚠️ Common Mistakes</h3>
+                <div class="mistake-box">
+                    <ul style="margin:0; padding-left:20px; color:inherit;">
+                        ${richContent.commonMistakes.map(m => `<li>${m}</li>`).join('')}
+                    </ul>
+                </div>
+            </div>`;
+    }
+
+    // H. Summary
+    if (richContent.summary) {
+        theoryHtml += `<hr style="border-color:var(--border); margin: 20px 0;"><p style="font-style:italic; color:var(--accent);">💡 <strong>Summary:</strong> ${richContent.summary}</p>`;
+    }
+
+    // --- PUSH THEORY STEP ---
+    state.steps.push({ 
+        type: 'theory', 
+        data: { 
+            title: mainDoc.title || "Module", 
+            html: theoryHtml || "<p>No content available.</p>" 
+        } 
     });
-  </script>
+
+    // --- PUSH TASKS ---
+    (data.tasks || []).forEach(t => {
+        state.steps.push({ type: 'task', data: t });
+        state.defaults[t._id] = "";
+        state.failCounts[t._id] = 0;
+        const draft = localStorage.getItem(`draft_${state.userId}_${t._id}`);
+        if (draft) state.userCode[t._id] = draft;
+    });
+
+    state.steps.push({ type: 'finish' });
+    renderStep(0);
+    
+    document.getElementById("loadingOverlay").style.opacity = '0';
+    setTimeout(()=>document.getElementById("loadingOverlay").style.display='none', 500);
+    els.ws.style.opacity = '1';
+  }
+
+  window.renderStep = (i) => {
+    if (i > 0 && state.steps[i-1].type === 'task' && !state.passed.has(state.steps[i-1].data._id)) {
+        showToast("Complete previous task first!", "error"); return;
+    }
+
+    toggleTerminal(false); 
+    state.isLogicValid = false;
+    els.termLog.innerHTML = `<div style="color:var(--text-dim); font-style:italic;"># Ready.</div>`;
+
+    state.idx = i;
+    const step = state.steps[i];
+    
+    els.dots.innerHTML = state.steps.map((s,idx) => {
+        let status = idx===i?'active':(idx<i?'completed':'');
+        let locked = (idx>0 && state.steps[idx-1].type==='task' && !state.passed.has(state.steps[idx-1].data._id));
+        return `<div class="step-pill ${status} ${locked?'locked':''}" onclick="${!locked ? `renderStep(${idx})` : ''}"></div>`;
+    }).join("");
+
+    els.prevBtn.disabled = i === 0;
+    els.prevBtn.onclick = () => renderStep(i-1);
+    els.hintBox.style.display = 'none';
+
+    if(step.type === 'theory') {
+        els.ws.className = "workspace mode-reading";
+        els.guide.innerHTML = `<div class="badge badge-theory"><i class="fas fa-book-open"></i> Theory</div><h1>${step.data.title}</h1><hr>${step.data.html}`;
+        els.runBtn.innerHTML = `Start Coding <i class="fas fa-arrow-right"></i>`;
+        els.runBtn.className = "btn btn-run";
+        els.runBtn.onclick = () => renderStep(i+1);
+        els.terminalArea.style.display = 'none';
+    } 
+    else if(step.type === 'task') {
+        els.ws.className = "workspace mode-coding";
+        els.terminalArea.style.display = 'flex';
+        
+        const fileInputHtml = `
+            <div class="file-input-group">
+                <label>1. File Name</label>
+                <div class="file-input-wrapper">
+                    <i class="fas fa-file-code"></i>
+                    <input type="text" id="fileNameInput" value="${state.fileName}" placeholder="e.g. server.js">
+                </div>
+            </div>
+        `;
+
+        els.guide.innerHTML = `
+            <div class="badge badge-task"><i class="fas fa-code"></i> Task ${i}</div>
+            <h1>${step.data.title}</h1>
+            <hr>
+            ${fileInputHtml}
+            <p style="white-space:pre-wrap;">${step.data.description}</p>
+        `;
+
+        const fnInput = document.getElementById("fileNameInput");
+        fnInput.addEventListener("input", (e) => {
+            state.fileName = e.target.value.trim() || "untitled";
+            els.langName.innerText = state.fileName;
+        });
+        
+        // --- AUTO-SET FILENAME FOR UX ---
+        const lang = (step.data.language || "javascript").toLowerCase();
+        if(lang === 'react' || lang === 'jsx') state.fileName = "App.jsx";
+        else if(lang === 'java') state.fileName = "Main.java";
+        else if(lang === 'python') state.fileName = "script.py";
+        else if(lang === 'html') state.fileName = "index.html";
+        else state.fileName = "server.js";
+
+        els.langName.innerText = state.fileName;
+        document.getElementById("fileNameInput").value = state.fileName;
+
+        monaco.editor.setModelLanguage(state.editorInstance.getModel(), lang);
+        state.editorInstance.setValue(state.userCode[step.data._id] || "");
+
+        if(state.passed.has(step.data._id)) setSuccessBtn();
+        else {
+            els.runBtn.innerHTML = `Check Logic <i class="fas fa-check-circle"></i>`;
+            els.runBtn.className = "btn btn-run";
+            els.runBtn.onclick = () => runCode(step.data);
+            els.runBtn.disabled = false;
+        }
+    }
+    else if(step.type === 'finish') finishLesson();
+  };
+
+  // --- LOGIC CHECK (Step 1) ---
+  async function runCode(task) {
+    const code = state.editorInstance.getValue();
+    if(!code.trim()) return showToast("Code is empty!", "error");
+
+    toggleTerminal(true);
+    els.termLog.innerHTML = ''; 
+
+    addLog("[SYSTEM] Analyzing code structure...", "log");
+    els.runBtn.disabled = true;
+    els.runBtn.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> Checking...`;
+
+    setTimeout(() => {
+        const analysis = validateLogic(code, task);
+
+        if (analysis.passed) {
+             state.isLogicValid = true; 
+             addLog("[SUCCESS] Logic Verified.", "success");
+             
+             els.runBtn.className = "btn btn-secondary";
+             els.runBtn.innerHTML = "Logic OK - Wait for Action";
+             els.runBtn.disabled = true;
+
+             const title = task.title.toLowerCase();
+             const hasListen = code.includes("app.listen");
+             const lang = (task.language || "javascript").toLowerCase();
+
+             // Check for HTML indicators inside code
+             const isHTMLContent = code.trim().startsWith("<!DOCTYPE") || code.includes("<html") || code.includes("<body") || code.includes("<style");
+
+             // --- 🔥 FIXED: HTML / CSS / JS-DOM Preview Logic 🔥 ---
+             if (lang === 'html' || lang === 'css' || (lang === 'javascript' && isHTMLContent)) {
+                 addLog("[PREVIEW] Rendering in browser...", "success");
+                 const iframe = document.createElement("iframe");
+                 iframe.style.width = "100%";
+                 iframe.style.height = "350px";
+                 iframe.style.border = "1px solid #333";
+                 iframe.style.borderRadius = "8px";
+                 iframe.style.marginTop = "10px";
+                 iframe.style.background = "#fff";
+
+                 if (lang === "css") {
+                     iframe.srcdoc = `<style>${code}</style><h1>CSS Preview</h1><p>Test Text</p>`;
+                 } else {
+                     iframe.srcdoc = code;
+                 }
+                 els.termLog.appendChild(iframe);
+                 handleSuccess(task);
+                 return;
+             }
+             
+             // --- 🔥 FIXED: Pure Frontend JS (Console Logic) 🔥 ---
+             else if (lang === 'javascript' && !isHTMLContent && !code.includes("require(") && !code.includes("app.listen") && !title.includes("server")) {
+                 addLog("[JS] Running in browser context...", "success");
+                 try {
+                     const iframe = document.createElement("iframe");
+                     iframe.style.display = "none";
+                     document.body.appendChild(iframe);
+                     
+                     let output = [];
+                     iframe.contentWindow.console.log = (...args) => output.push(args.join(' '));
+                     
+                     try {
+                         iframe.contentWindow.eval(code);
+                     } catch(e) {
+                         output.push("Error: " + e.message);
+                     }
+                     
+                     if(output.length > 0) addLog(output.join('\n'), "log");
+                     else addLog("(Code ran with no console output)", "warning");
+                     
+                     document.body.removeChild(iframe);
+                     handleSuccess(task);
+                 } catch (err) {
+                     addLog(err.message, "error");
+                 }
+                 return;
+             }
+
+             // --- Backend & Other Logic ---
+             if (!hasListen && (task.type === 'route' || title.includes("route") || title.includes("api"))) {
+                 const match = code.match(/app\.(get|post)\(['"]([^'"]+)['"]/);
+                 const method = match ? match[1].toUpperCase() : "GET";
+                 const url = match ? match[2] : "/";
+
+                 addLog(`[INFO] Route defined: ${method} ${url}`, "log");
+                 addLog(`[ACTION REQUIRED] Click "Simulate Request" below to test this API.`, "warning");
+                 
+                 const btnId = `simBtn_${Date.now()}`;
+                 const html = `
+                    <div style="margin-top:10px;">
+                        <button id="${btnId}" class="action-btn" onclick="triggerRouteAction('${method}', '${url}')">
+                            <i class="fas fa-play"></i> Simulate Request
+                        </button>
+                    </div>
+                 `;
+                 els.termLog.innerHTML += html;
+             } 
+             else if (title.includes("mongodb") || title.includes("json") || title.includes("object") || title.includes("data")) {
+                 addLog(`[INFO] Data structure detected.`, "log");
+                 addLog(`[ACTION REQUIRED] Click "Preview Data" to verify format.`, "warning");
+                 
+                 const btnId = `dataBtn_${Date.now()}`;
+                 const html = `
+                    <div style="margin-top:10px;">
+                        <button id="${btnId}" class="action-btn" onclick="triggerDataAction()">
+                            <i class="fas fa-database"></i> Preview Data
+                        </button>
+                    </div>
+                 `;
+                 els.termLog.innerHTML += html;
+             }
+             else if (task.language === 'java' || task.language === 'python') {
+                 addLog(`[ACTION REQUIRED] Type 'run' or 'python/java filename' to execute.`, "warning");
+                 els.termInput.focus();
+             }
+             else {
+                 addLog(`[ACTION REQUIRED] Type 'node ${state.fileName}' below to run.`, "warning");
+                 els.termInput.focus();
+             }
+        } else {
+             state.isLogicValid = false;
+             addLog(`[ERROR] Logic Check Failed:\n${analysis.message}`, "error");
+             handleFailure(task);
+        }
+    }, 500);
+  }
+
+  function validateLogic(code, task) {
+      let missing = [];
+      const patterns = task.validation?.patterns || [];
+      patterns.forEach(p => {
+          if (!new RegExp(p, 'i').test(code)) missing.push(p);
+      });
+      if (missing.length > 0) return { passed: false, message: "Missing concepts: " + missing.join(", ") };
+      return { passed: true, message: "OK" };
+  }
+
+  // --- ACTION HANDLERS (Step 2) ---
+  
+  // 1. ROUTE ACTION
+  window.triggerRouteAction = (method, url) => {
+    const btn = event.target.closest('button');
+    if(btn) { btn.disabled = true; btn.innerHTML = `<i class="fas fa-check"></i> Request Sent`; }
+
+    const task = state.steps[state.idx].data;
+    const code = state.editorInstance.getValue();
+    
+    // --- UPDATED EXTRACTION LOGIC ---
+    let json;
+    let status = "200 OK";
+
+    if (method === "POST") {
+        status = "201 Created";
+        json = JSON.stringify({
+            id: 1,
+            name: "New Product",
+            price: 500,
+            category: "Demo",
+            createdAt: new Date().toISOString()
+        }, null, 2);
+    } else {
+        json = extractJsonFromCode(code);
+    }
+
+    addApiPreview(method, url, json, status); 
+    handleSuccess(task); 
+  };
+
+  // 2. DATA ACTION
+  window.triggerDataAction = async () => {
+    const btn = event.target.closest('button');
+    if(btn) { btn.disabled = true; btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Saving...`; }
+
+    const task = state.steps[state.idx].data;
+    const code = state.editorInstance.getValue();
+    
+    if (!state.mockMode && (task.type === 'mongodb' || task.title.toLowerCase().includes('mongo'))) {
+        try {
+            const res = await fetch("/api/task/submit", { 
+                method: "POST", headers: {"Content-Type":"application/json"}, 
+                body: JSON.stringify({userId:state.userId, lessonId:state.lessonId, taskId:task._id, code:code}) 
+            });
+            const data = await res.json();
+            
+            if(data.passed) {
+                addLog(data.output, "success");
+                handleSuccess(task);
+            } else {
+                addLog(data.output, "error");
+                handleFailure(task);
+            }
+        } catch(e) {
+            addLog("Network Error: " + e.message, "error");
+        }
+        return;
+    }
+
+    const start = code.indexOf('{');
+    const content = extractBalancedBlock(code, start);
+    const html = `
+        <div class="api-preview">
+            <div class="api-header">
+                <div><span class="method-badge" style="background:var(--accent)">DATA</span> Object Preview</div>
+                <div style="color:var(--success); font-weight:bold;">Valid</div>
+            </div>
+            <div class="api-body" style="white-space: pre-wrap;">${content || "{}"}</div>
+        </div>
+    `;
+    els.termLog.innerHTML += html;
+    scrollToBottom();
+    handleSuccess(task);
+  };
+
+  // 3. SERVER ACTION (Type)
+  function setupTerminalInput() {
+      els.termInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+              const cmd = els.termInput.value.trim();
+              if(!cmd) return;
+              state.cmdHistory.push(cmd);
+              state.cmdHistoryIdx = state.cmdHistory.length;
+              els.termInput.value = "";
+              addLog(`user@mindstep:~$ ${cmd}`, "log");
+              processCommand(cmd);
+          } else if (e.key === "ArrowUp") {
+              e.preventDefault();
+              if(state.cmdHistoryIdx > 0) {
+                  state.cmdHistoryIdx--;
+                  els.termInput.value = state.cmdHistory[state.cmdHistoryIdx];
+              }
+          } else if (e.key === "ArrowDown") {
+              e.preventDefault();
+              if(state.cmdHistoryIdx < state.cmdHistory.length - 1) {
+                  state.cmdHistoryIdx++;
+                  els.termInput.value = state.cmdHistory[state.cmdHistoryIdx];
+              } else {
+                  state.cmdHistoryIdx = state.cmdHistory.length;
+                  els.termInput.value = "";
+              }
+          }
+      });
+  }
+
+  function processCommand(cmd) {
+      const parts = cmd.split(" ");
+      const task = state.steps[state.idx].data;
+      const code = state.editorInstance.getValue();
+      const hasListen = code.includes("app.listen");
+
+      if (!hasListen && task.type !== 'server' && task.language === 'javascript') {
+           addLog(`[TIP] This is a Route task. Please click the "Simulate Request" button instead of running the server manually.`, "warning");
+           return;
+      }
+      
+      const validCmds = ["node", "python", "java", "javac", "run"];
+      if (!validCmds.includes(parts[0])) {
+          addLog(`[ERROR] bash: ${parts[0]}: command not found`, "error");
+          return;
+      }
+      
+      if (!state.isLogicValid) {
+          addLog(`[ERROR] Logic errors detected. Click 'Check Logic' first.`, "error");
+          return;
+      }
+
+      addLog(`[INFO] Executing ${state.fileName}...`, "log");
+      
+      if(parts[0] === 'node' && hasListen) {
+          setTimeout(() => {
+              const portMatch = code.match(/app\.listen\(\s*(\d+)/);
+              const port = portMatch ? portMatch[1] : "3000";
+              addLog(`[SUCCESS] Server running on port ${port}`, "success");
+              handleSuccess(task); 
+          }, 800);
+          return;
+      }
+
+      if(!state.mockMode) {
+          fetch("/api/task/submit", { 
+                method: "POST", headers: {"Content-Type":"application/json"}, 
+                body: JSON.stringify({userId:state.userId, lessonId:state.lessonId, taskId:task._id, code:code}) 
+          })
+          .then(res => res.json())
+          .then(data => {
+              if(data.passed) {
+                  addLog(data.output, "success");
+                  handleSuccess(task);
+              } else {
+                  addLog(data.output, "error");
+                  handleFailure(task);
+              }
+          })
+          .catch(e => addLog("Execution Error: " + e.message, "error"));
+      } else {
+          addLog("[MOCK] Execution success.", "success");
+          handleSuccess(task);
+      }
+  }
+
+  function extractJsonFromCode(code) {
+      const cleanCode = code.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
+      
+      const textMatch = cleanCode.match(/res\.send\s*\(\s*(['"`])([\s\S]*?)\1\s*\)/);
+      if (textMatch) return textMatch[2];
+
+      const jsonStartIndex = cleanCode.search(/res(?:\.status\(\s*\d+\s*\))?\.json\s*\(\s*[\[\{]/);
+      if (jsonStartIndex !== -1) {
+          const start = cleanCode.indexOf('(', jsonStartIndex) + 1;
+          const content = extractBalancedBlock(cleanCode, start);
+          if (content) return content;
+      }
+
+      const varMatch = cleanCode.match(/res(?:\.status\(\s*\d+\s*\))?\.json\s*\(\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\)/);
+      if (varMatch && varMatch[1]) {
+          const varName = varMatch[1];
+          const defRegex = new RegExp(`(?:const|let|var)\\s+${varName}\\s*=\\s*`, 'g');
+          const defMatch = defRegex.exec(cleanCode);
+          if (defMatch) {
+              const valueStartIndex = defMatch.index + defMatch[0].length;
+              const content = extractBalancedBlock(cleanCode, valueStartIndex);
+              if (content) return content;
+          }
+          return `[INFO] Response uses variable '${varName}'.\nSimulating resolved output:\n[ { "id": 1, "data": "Sample" } ]`;
+      }
+
+      return "{ \"status\": \"success\" }";
+  }
+
+  function extractBalancedBlock(code, startIndex) {
+      let open = 0;
+      let startFound = false;
+      let blockStart = -1;
+      
+      for (let i = startIndex; i < code.length; i++) {
+          const char = code[i];
+          if (!startFound) {
+              if (/\s/.test(char)) continue;
+              if (char === '[' || char === '{') {
+                  startFound = true;
+                  blockStart = i;
+                  open++;
+              } else {
+                  return null;
+              }
+          } else {
+              if (char === '[' || char === '{') open++;
+              if (char === ']' || char === '}') open--;
+              if (open === 0) return code.substring(blockStart, i + 1);
+          }
+      }
+      return null;
+  }
+
+  function addApiPreview(method, url, body, status = "200 OK") {
+      const html = `
+        <div class="api-preview">
+            <div class="api-header">
+                <div><span class="method-badge">${method}</span> <span style="color:#a1a1aa">${url}</span></div>
+                <div style="color:var(--success); font-weight:bold;">${status}</div>
+            </div>
+            <div class="api-body" style="white-space: pre-wrap;">${body}</div>
+        </div>
+      `;
+      els.termLog.innerHTML += html;
+      scrollToBottom();
+  }
+
+  function handleSuccess(task) {
+    if(state.passed.has(task._id)) return;
+    state.passed.add(task._id);
+    confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+    setSuccessBtn();
+    updateXP(25);
+    if(!state.mockMode) {
+        fetch("/api/task/submit", { 
+            method: "POST", headers: {"Content-Type":"application/json"}, 
+            body: JSON.stringify({userId:state.userId, lessonId:state.lessonId, taskId:task._id, code:state.editorInstance.getValue(), passed:true}) 
+        }).catch(err => console.log("Sync skipped"));
+    }
+  }
+
+  function handleFailure(task) {
+      els.runBtn.disabled = false;
+      els.runBtn.innerHTML = `Check Logic <i class="fas fa-check-circle"></i>`;
+      state.failCounts[task._id] = (state.failCounts[task._id] || 0) + 1;
+      if(state.failCounts[task._id] >= 2) {
+          els.hintBox.style.display = 'block';
+          els.hintText.innerHTML = (task.validation && task.validation.hints && task.validation.hints[0]) || "Check the requirements.";
+      }
+  }
+
+  function setSuccessBtn() {
+    els.runBtn.disabled = false;
+    els.runBtn.className = "btn btn-next";
+    els.runBtn.innerHTML = `Next Task <i class="fas fa-arrow-right"></i>`;
+    els.runBtn.onclick = () => renderStep(state.idx+1);
+  }
+
+  function updateXP(amount=0) {
+      if(amount > 0) { state.xp += amount; localStorage.setItem("mindstep_xp", state.xp); }
+      const lvl = Math.floor(state.xp / 100) + 1;
+      els.xpBar.style.width = `${state.xp % 100}%`;
+      els.xpText.innerText = `${state.xp} XP`;
+      els.lvlDisplay.innerText = `LVL ${lvl}`;
+  }
+
+  function finishLesson() {
+    document.querySelector(".footer").style.display = 'none';
+    els.terminalArea.style.display = 'none';
+    els.ws.style.gridTemplateColumns = "1fr";
+    els.ws.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; text-align:center;"><i class="fas fa-trophy" style="font-size:5rem; color:var(--warning); margin-bottom:20px;"></i><h1 style="color:#fff;">Module Completed</h1><button class="btn btn-run" onclick="window.history.back()">Return</button></div>`;
+    updateXP(50);
+    confetti({ particleCount: 300, spread: 100, origin: { y: 0.6 } });
+    if(!state.mockMode) fetch("/api/complete", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({userId:state.userId, lessonId:state.lessonId})});
+  }
+
+  window.toggleTheme = () => { document.body.classList.toggle("theme-neon"); localStorage.setItem("theme", document.body.classList.contains("theme-neon") ? "neon" : "standard"); };
+  window.copyCode = () => { navigator.clipboard.writeText(state.editorInstance.getValue()); showToast("Copied", "success"); };
+  window.resetCode = () => { if(state.steps[state.idx].type==='task') state.editorInstance.setValue(""); };
+  function showToast(msg, type) { const t = document.getElementById("customToast"); t.innerHTML = `<i class="fas ${type==='success'?'fa-check-circle':'fa-triangle-exclamation'}" style="color:${type==='success'?'var(--success)':'var(--error)'}"></i> ${msg}`; t.style.borderColor = type==='success'?'var(--success)':'var(--error)'; t.style.transform = "translateX(0)"; setTimeout(()=>t.style.transform="translateX(150%)", 3000); }
+
+  init();
+});
+</script>
 </body>
 </html>

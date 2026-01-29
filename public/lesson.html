@@ -85,7 +85,7 @@
     .workspace.mode-reading { grid-template-columns: 1fr 0px; }
     .workspace.mode-coding { grid-template-columns: 35% 65%; }
 
-    /* Left Panel */
+    /* Left Panel (Guide/Content) */
     .guide-panel {
       background: var(--bg-sidebar); border-right: 1px solid var(--border);
       display: flex; flex-direction: column; overflow: hidden; position: relative;
@@ -98,6 +98,25 @@
     .badge { padding: 6px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-bottom: 15px; display: inline-flex; align-items: center; gap: 6px; }
     .badge-theory { background: rgba(99, 102, 241, 0.1); color: var(--primary); border: 1px solid rgba(99,102,241,0.2); }
     .badge-task { background: rgba(56, 189, 248, 0.1); color: var(--accent); border: 1px solid rgba(56, 189, 248, 0.2); }
+
+    /* --- RICH CONTENT STYLES (NEW) --- */
+    .theory-section { margin-bottom: 25px; }
+    .theory-section h3 { color: var(--accent); margin-bottom: 10px; font-size: 1.1rem; border-left: 3px solid var(--primary); padding-left: 10px; }
+    .theory-section ul { padding-left: 20px; color: var(--text-dim); }
+    .theory-section li { margin-bottom: 8px; line-height: 1.6; }
+    
+    .concept-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 10px; }
+    .concept-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border); padding: 12px; border-radius: 6px; }
+    .concept-term { color: var(--success); font-weight: bold; font-family: var(--font-code); display: block; margin-bottom: 6px; font-size: 0.95rem; }
+    
+    .code-block { 
+        background: #111; border: 1px solid var(--border); 
+        padding: 15px; border-radius: 6px; font-family: var(--font-code); 
+        color: #a5b4fc; overflow-x: auto; font-size: 0.85rem; margin-top: 10px; line-height: 1.5;
+    }
+
+    .analogy-box { background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); padding: 15px; border-radius: 8px; color: #fbbf24; margin-top: 10px; }
+    .mistake-box { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 15px; border-radius: 8px; color: #fca5a5; margin-top: 10px; }
 
     /* File Input UI */
     .file-input-group {
@@ -145,7 +164,6 @@
     }
     .icon-btn:hover { color: var(--text); background: rgba(255,255,255,0.1); }
 
-    /* ✅ EDITOR CONTAINER: Flex growth & Min-height for Mobile */
     .editor-container { flex: 1; position: relative; overflow: hidden; min-height: 200px; }
     #monaco-editor { width: 100%; height: 100%; }
 
@@ -496,7 +514,13 @@ document.addEventListener("DOMContentLoaded", () => {
       lesson: { 
           title: "Express Basics", 
           description: "Learn to create a server and API endpoints.",
-          deepExplanation: ["Part 1: Start the server."]
+          lesson: {
+              intro: "Express.js is a minimal and flexible Node.js web application framework.",
+              learningOutcomes: ["Setup Server", "Create Routes", "Handle Data"],
+              deepExplanation: ["Express simplifies the server creation process."],
+              conceptBreakdown: [{concept: "Server", explanation: "Computes requests"}],
+              summary: "Express is essential for Node backend."
+          }
       },
       tasks: [
         { 
@@ -511,16 +535,109 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // --- 🔥 UPDATED LOAD DATA FUNCTION FOR RICH CONTENT 🔥 ---
   function loadData(data) {
     state.steps = [];
-    let theory = data.lesson.lesson || data.lesson || {};
-    if(Array.isArray(theory)) theory = theory[0];
     
+    // 1. Get the main document and the nested 'lesson' detail object
+    // Handle structure variety (db structure vs mock structure)
+    const mainDoc = data.lesson || {};
+    const richContent = mainDoc.lesson || mainDoc || {}; 
+
+    // --- HTML GENERATION LOGIC ---
+    let theoryHtml = "";
+
+    // A. Intro
+    if (richContent.intro) {
+        theoryHtml += `<p style="font-size: 1.1rem; line-height: 1.6; color: var(--text);">${richContent.intro}</p><hr style="border-color:var(--border); margin: 20px 0;">`;
+    } else if (mainDoc.description) {
+        theoryHtml += `<p style="font-size: 1.1rem; line-height: 1.6; color: var(--text);">${mainDoc.description}</p><hr style="border-color:var(--border); margin: 20px 0;">`;
+    }
+
+    // B. Learning Outcomes
+    if (richContent.learningOutcomes && richContent.learningOutcomes.length > 0) {
+        theoryHtml += `
+            <div class="theory-section">
+                <h3>🎯 What you will learn</h3>
+                <ul>${richContent.learningOutcomes.map(item => `<li>${item}</li>`).join('')}</ul>
+            </div>`;
+    }
+
+    // C. Deep Explanation (Paragraphs)
+    if (richContent.deepExplanation && richContent.deepExplanation.length > 0) {
+        theoryHtml += `
+            <div class="theory-section">
+                <h3>📖 Core Concepts</h3>
+                ${richContent.deepExplanation.map(text => `<p>${text}</p>`).join('')}
+            </div>`;
+    }
+
+    // D. Concept Breakdown (Cards)
+    if (richContent.conceptBreakdown && richContent.conceptBreakdown.length > 0) {
+        theoryHtml += `
+            <div class="theory-section">
+                <h3>⚡ Key Terms</h3>
+                <div class="concept-grid">
+                    ${richContent.conceptBreakdown.map(c => `
+                        <div class="concept-card">
+                            <span class="concept-term">${c.concept}</span>
+                            <span style="font-size:0.9rem;">${c.explanation}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>`;
+    }
+
+    // E. Real World Analogy
+    if (richContent.realWorldAnalogy && richContent.realWorldAnalogy.length > 0) {
+        theoryHtml += `
+            <div class="theory-section">
+                <h3>🌍 Real World Analogy</h3>
+                <div class="analogy-box">
+                    <ul style="margin:0; padding-left:20px; color:inherit;">
+                        ${richContent.realWorldAnalogy.map(a => `<li>${a}</li>`).join('')}
+                    </ul>
+                </div>
+            </div>`;
+    }
+
+    // F. Example Code
+    if (richContent.example && richContent.example.code) {
+        theoryHtml += `
+            <div class="theory-section">
+                <h3>💻 Example: ${richContent.example.description || "Code Snippet"}</h3>
+                <pre class="code-block"><code>${richContent.example.code}</code></pre>
+            </div>`;
+    }
+
+    // G. Common Mistakes
+    if (richContent.commonMistakes && richContent.commonMistakes.length > 0) {
+        theoryHtml += `
+            <div class="theory-section">
+                <h3>⚠️ Common Mistakes</h3>
+                <div class="mistake-box">
+                    <ul style="margin:0; padding-left:20px; color:inherit;">
+                        ${richContent.commonMistakes.map(m => `<li>${m}</li>`).join('')}
+                    </ul>
+                </div>
+            </div>`;
+    }
+
+    // H. Summary
+    if (richContent.summary) {
+        theoryHtml += `<hr style="border-color:var(--border); margin: 20px 0;"><p style="font-style:italic; color:var(--accent);">💡 <strong>Summary:</strong> ${richContent.summary}</p>`;
+    }
+
+    // --- PUSH THEORY STEP ---
     state.steps.push({ 
         type: 'theory', 
-        data: { title: theory.title || "Module", html: `<p>${theory.description || ""}</p>${(theory.deepExplanation||[]).map(p=>`<p>${p}</p>`).join("")}` } 
+        data: { 
+            title: mainDoc.title || "Module", 
+            html: theoryHtml || "<p>No content available.</p>" 
+        } 
     });
 
+    // --- PUSH TASKS ---
     (data.tasks || []).forEach(t => {
         state.steps.push({ type: 'task', data: t });
         state.defaults[t._id] = "";
@@ -647,12 +764,10 @@ document.addEventListener("DOMContentLoaded", () => {
              const hasListen = code.includes("app.listen");
              const lang = (task.language || "javascript").toLowerCase();
 
-             // Check for HTML indicators (<!DOCTYPE, <html>, <body>) inside the code regardless of file extension
-             // This detects if a user is writing HTML inside a JS task (common in DOM lessons)
+             // Check for HTML indicators inside code
              const isHTMLContent = code.trim().startsWith("<!DOCTYPE") || code.includes("<html") || code.includes("<body") || code.includes("<style");
 
              // --- 🔥 FIXED: HTML / CSS / JS-DOM Preview Logic 🔥 ---
-             // 1. If Language is HTML/CSS OR if it's JS but contains HTML tags (DOM Task)
              if (lang === 'html' || lang === 'css' || (lang === 'javascript' && isHTMLContent)) {
                  addLog("[PREVIEW] Rendering in browser...", "success");
                  const iframe = document.createElement("iframe");
@@ -666,7 +781,6 @@ document.addEventListener("DOMContentLoaded", () => {
                  if (lang === "css") {
                      iframe.srcdoc = `<style>${code}</style><h1>CSS Preview</h1><p>Test Text</p>`;
                  } else {
-                     // For HTML or JS with HTML content, render directly
                      iframe.srcdoc = code;
                  }
                  els.termLog.appendChild(iframe);
@@ -675,7 +789,6 @@ document.addEventListener("DOMContentLoaded", () => {
              }
              
              // --- 🔥 FIXED: Pure Frontend JS (Console Logic) 🔥 ---
-             // Only run eval() if it is Javascript AND DOES NOT contain HTML tags AND is not Node.js
              else if (lang === 'javascript' && !isHTMLContent && !code.includes("require(") && !code.includes("app.listen") && !title.includes("server")) {
                  addLog("[JS] Running in browser context...", "success");
                  try {
@@ -683,7 +796,6 @@ document.addEventListener("DOMContentLoaded", () => {
                      iframe.style.display = "none";
                      document.body.appendChild(iframe);
                      
-                     // Console capture hack
                      let output = [];
                      iframe.contentWindow.console.log = (...args) => output.push(args.join(' '));
                      
