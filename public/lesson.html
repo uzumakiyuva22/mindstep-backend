@@ -66,12 +66,9 @@
     }
     .brand i { color: var(--primary); font-size: 1.4rem; filter: drop-shadow(0 0 10px rgba(99,102,241,0.5)); }
 
-    /* XP System */
-    .xp-container {
-      display: flex; align-items: center; gap: 15px;
-      background: rgba(255,255,255,0.03); padding: 5px 15px; border-radius: 20px;
-      border: 1px solid var(--border);
-    }
+    /* XP HIDDEN FOR VIVA */
+    .xp-container { display: none !important; }
+    
     .level-badge { font-size: 0.8rem; font-weight: 700; color: var(--accent); }
     .xp-bar-wrapper { width: 100px; height: 6px; background: #27272a; border-radius: 3px; overflow: hidden; }
     .xp-bar-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); width: 0%; transition: width 0.5s ease; }
@@ -99,186 +96,100 @@
     .badge-theory { background: rgba(99, 102, 241, 0.1); color: var(--primary); border: 1px solid rgba(99,102,241,0.2); }
     .badge-task { background: rgba(56, 189, 248, 0.1); color: var(--accent); border: 1px solid rgba(56, 189, 248, 0.2); }
 
-    /* --- RICH CONTENT STYLES (NEW) --- */
+    /* --- RICH CONTENT STYLES --- */
     .theory-section { margin-bottom: 25px; }
     .theory-section h3 { color: var(--accent); margin-bottom: 10px; font-size: 1.1rem; border-left: 3px solid var(--primary); padding-left: 10px; }
     .theory-section ul { padding-left: 20px; color: var(--text-dim); }
     .theory-section li { margin-bottom: 8px; line-height: 1.6; }
-    
     .concept-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 10px; }
     .concept-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border); padding: 12px; border-radius: 6px; }
     .concept-term { color: var(--success); font-weight: bold; font-family: var(--font-code); display: block; margin-bottom: 6px; font-size: 0.95rem; }
-    
-    .code-block { 
-        background: #111; border: 1px solid var(--border); 
-        padding: 15px; border-radius: 6px; font-family: var(--font-code); 
-        color: #a5b4fc; overflow-x: auto; font-size: 0.85rem; margin-top: 10px; line-height: 1.5;
-    }
-
+    .code-block { background: #111; border: 1px solid var(--border); padding: 15px; border-radius: 6px; font-family: var(--font-code); color: #a5b4fc; overflow-x: auto; font-size: 0.85rem; margin-top: 10px; line-height: 1.5; }
     .analogy-box { background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); padding: 15px; border-radius: 8px; color: #fbbf24; margin-top: 10px; }
     .mistake-box { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 15px; border-radius: 8px; color: #fca5a5; margin-top: 10px; }
 
     /* File Input UI */
-    .file-input-group {
-        background: rgba(0,0,0,0.2); border: 1px solid var(--border);
-        padding: 15px; border-radius: 8px; margin-bottom: 20px;
-    }
-    .file-input-group label {
-        display: block; font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; margin-bottom: 8px; font-weight: 700;
-    }
-    .file-input-wrapper {
-        display: flex; align-items: center; gap: 10px; background: var(--bg-editor);
-        padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border);
-    }
+    .file-input-group { background: rgba(0,0,0,0.2); border: 1px solid var(--border); padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+    .file-input-group label { display: block; font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; margin-bottom: 8px; font-weight: 700; }
+    .file-input-wrapper { display: flex; align-items: center; gap: 10px; background: var(--bg-editor); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); }
     .file-input-wrapper i { color: var(--primary); }
-    #fileNameInput {
-        background: transparent; border: none; color: var(--text); font-family: var(--font-code);
-        font-size: 0.9rem; flex: 1;
-    }
+    #fileNameInput { background: transparent; border: none; color: var(--text); font-family: var(--font-code); font-size: 0.9rem; flex: 1; }
 
-    .hint-box {
-      margin-top: 20px; padding: 15px; border-radius: 8px; display: none;
-      background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3);
-      animation: slideIn 0.3s ease;
-    }
+    .hint-box { margin-top: 20px; padding: 15px; border-radius: 8px; display: none; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); animation: slideIn 0.3s ease; }
     @keyframes slideIn { from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
 
     /* Right Panel */
-    .ide-panel {
-      display: flex; flex-direction: column;
-      background: var(--bg-editor); height: 100%; position: relative;
-    }
-
-    .toolbar {
-      height: 40px; background: #27272a; border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; justify-content: space-between; padding: 0 15px; flex-shrink: 0;
-    }
-    .file-tab {
-      background: var(--bg-editor); padding: 0 20px; height: 100%; border-top: 2px solid var(--primary);
-      color: var(--text); font-family: var(--font-code); font-size: 0.85rem; display: flex; align-items: center; gap: 8px;
-    }
-    .icon-btn {
-      background: transparent; border: none; color: var(--text-dim);
-      cursor: pointer; width: 28px; height: 28px; border-radius: 6px; 
-      display: grid; place-items: center; transition: 0.2s;
-    }
+    .ide-panel { display: flex; flex-direction: column; background: var(--bg-editor); height: 100%; position: relative; }
+    .toolbar { height: 40px; background: #27272a; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 15px; flex-shrink: 0; }
+    .file-tab { background: var(--bg-editor); padding: 0 20px; height: 100%; border-top: 2px solid var(--primary); color: var(--text); font-family: var(--font-code); font-size: 0.85rem; display: flex; align-items: center; gap: 8px; }
+    .icon-btn { background: transparent; border: none; color: var(--text-dim); cursor: pointer; width: 28px; height: 28px; border-radius: 6px; display: grid; place-items: center; transition: 0.2s; }
     .icon-btn:hover { color: var(--text); background: rgba(255,255,255,0.1); }
 
     .editor-container { flex: 1; position: relative; overflow: hidden; min-height: 200px; }
     #monaco-editor { width: 100%; height: 100%; }
 
-    /* Terminal & Interactive Area */
-    .terminal {
-      height: 40px; min-height: 40px; flex-shrink: 0; 
-      background: var(--bg-terminal); border-top: 1px solid var(--border);
-      display: flex; flex-direction: column; transition: height 0.4s cubic-bezier(0.25, 1, 0.5, 1);
-      position: absolute; bottom: 0; width: 100%; z-index: 20;
+    /* PROJECT UPLOAD UI */
+    .project-upload-container { display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 20px; background: var(--bg-editor); color: var(--text); text-align: center; }
+    .upload-box { 
+        border: 2px dashed var(--primary); 
+        padding: 40px; border-radius: 12px; 
+        background: rgba(99,102,241,0.05); 
+        width: 100%; max-width: 500px; 
+        transition: 0.3s;
+        cursor: pointer;
     }
-    .terminal.expanded { height: 60% !important; border-top: 2px solid var(--primary); box-shadow: 0 -10px 40px rgba(0,0,0,0.5); }
+    .upload-box:hover { background: rgba(99,102,241,0.1); border-color: var(--accent); }
+    .upload-box i { font-size: 3rem; color: var(--primary); margin-bottom: 15px; }
 
-    .term-header {
-      padding: 0 15px; height: 40px; background: #27272a;
-      font-family: var(--font-main); font-size: 0.75rem; color: var(--text-dim);
-      text-transform: uppercase; letter-spacing: 1px;
-      display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; cursor: pointer;
-    }
-    .term-body {
-      flex: 1; padding: 20px; 
-      font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; color: #ccc;
-      overflow-y: auto; white-space: pre-wrap; scroll-behavior: smooth;
-      display: flex; flex-direction: column; cursor: text;
-    }
+    /* Terminal */
+    .terminal { height: 40px; min-height: 40px; flex-shrink: 0; background: var(--bg-terminal); border-top: 1px solid var(--border); display: flex; flex-direction: column; transition: height 0.4s cubic-bezier(0.25, 1, 0.5, 1); position: absolute; bottom: 0; width: 100%; z-index: 20; }
+    .terminal.expanded { height: 60% !important; border-top: 2px solid var(--primary); box-shadow: 0 -10px 40px rgba(0,0,0,0.5); }
+    .term-header { padding: 0 15px; height: 40px; background: #27272a; font-family: var(--font-main); font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; cursor: pointer; }
+    .term-body { flex: 1; padding: 20px; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; color: #ccc; overflow-y: auto; white-space: pre-wrap; scroll-behavior: smooth; display: flex; flex-direction: column; cursor: text; }
     .term-log { flex: 1; }
     .term-line { margin-bottom: 6px; display: flex; gap: 10px; line-height: 1.5; }
-    
-    .term-input-line {
-        display: flex; align-items: center; gap: 10px; margin-top: 10px;
-    }
+    .term-input-line { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
     .term-prompt { color: var(--success); font-weight: bold; }
-    #termInput {
-        background: transparent; border: none; color: #fff; 
-        font-family: 'JetBrains Mono', monospace; font-size: 0.9rem;
-        flex: 1; outline: none;
-    }
+    #termInput { background: transparent; border: none; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; flex: 1; outline: none; }
 
-    /* API PREVIEW & ACTION BUTTONS */
-    .api-preview {
-        background: rgba(255,255,255,0.03); border: 1px solid var(--border);
-        border-radius: 6px; margin: 15px 0; overflow: hidden;
-        animation: fadeIn 0.5s;
-    }
-    .api-header {
-        background: rgba(255,255,255,0.05); padding: 8px 12px; border-bottom: 1px solid var(--border);
-        display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem;
-    }
+    /* API PREVIEW */
+    .api-preview { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 6px; margin: 15px 0; overflow: hidden; animation: fadeIn 0.5s; }
+    .api-header { background: rgba(255,255,255,0.05); padding: 8px 12px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; }
     .method-badge { background: var(--success); color: #000; padding: 2px 6px; border-radius: 4px; font-weight: 700; margin-right: 8px; }
     .api-body { padding: 12px; font-family: 'JetBrains Mono', monospace; color: #a5b4fc; }
     
-    .action-btn {
-        background: var(--primary); color: #fff; border:none; padding: 6px 14px;
-        border-radius: 4px; font-family: var(--font-main); cursor: pointer;
-        display: inline-flex; align-items: center; gap: 8px; margin-top: 10px;
-        font-size: 0.85rem; transition: 0.2s;
-    }
+    .action-btn { background: var(--primary); color: #fff; border:none; padding: 6px 14px; border-radius: 4px; font-family: var(--font-main); cursor: pointer; display: inline-flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 0.85rem; transition: 0.2s; }
     .action-btn:hover { background: var(--primary-hover); }
     .action-btn:disabled { opacity: 0.7; cursor: not-allowed; }
 
     /* Footer */
-    .footer {
-      height: 60px; flex-shrink: 0; background: var(--bg-sidebar); border-top: 1px solid var(--border);
-      display: flex; align-items: center; justify-content: space-between; padding: 0 30px; z-index: 50;
-    }
-    .btn {
-      padding: 10px 24px; border-radius: 8px; border: none; cursor: pointer;
-      font-weight: 600; font-family: var(--font-main); display: flex; align-items: center; gap: 10px; transition: 0.2s;
-    }
+    .footer { height: 60px; flex-shrink: 0; background: var(--bg-sidebar); border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 30px; z-index: 50; }
+    .btn { padding: 10px 24px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; font-family: var(--font-main); display: flex; align-items: center; gap: 10px; transition: 0.2s; }
     .btn-secondary { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
     .btn-run { background: var(--primary); color: #fff; }
     .btn-next { background: var(--success); color: #000; }
     .btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-    /* Progress & Lock */
+    /* Progress */
     .progress-container { display: flex; gap: 6px; align-items: center; }
     .step-pill { width: 30px; height: 4px; background: #27272a; border-radius: 2px; cursor: pointer; transition: 0.3s; }
     .step-pill.active { background: var(--primary); width: 40px; box-shadow: 0 0 10px var(--primary); }
     .step-pill.completed { background: var(--success); }
     .step-pill.locked { opacity: 0.3; cursor: not-allowed; }
 
-    #loadingOverlay {
-      position: fixed; top:0; left:0; width:100%; height:100%;
-      background: var(--bg-root); z-index: 100;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      transition: opacity 0.5s;
-    }
-    #customToast {
-      position: fixed; top: 80px; right: 30px; background: #27272a; 
-      padding: 12px 20px; border-radius: 8px; display: flex; gap: 10px; 
-      align-items: center; color: #fff; transform: translateX(150%); 
-      transition: 0.3s; z-index: 200; box-shadow: 0 10px 40px rgba(0,0,0,0.5); 
-      border: 1px solid var(--border);
-    }
+    #loadingOverlay { position: fixed; top:0; left:0; width:100%; height:100%; background: var(--bg-root); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s; }
+    #customToast { position: fixed; top: 80px; right: 30px; background: #27272a; padding: 12px 20px; border-radius: 8px; display: flex; gap: 10px; align-items: center; color: #fff; transform: translateX(150%); transition: 0.3s; z-index: 200; box-shadow: 0 10px 40px rgba(0,0,0,0.5); border: 1px solid var(--border); }
     @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
 
-    /* ✅ MOBILE & TABLET OPTIMIZATIONS */
+    /* Mobile */
     @media (max-width: 900px) {
-      .workspace.mode-coding { 
-        grid-template-columns: 1fr; 
-        grid-template-rows: auto 1fr; 
-      }
-      .guide-panel { 
-        max-height: 35vh; 
-        border-right: none; 
-        border-bottom: 1px solid var(--border); 
-      }
+      .workspace.mode-coding { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+      .guide-panel { max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
       .ide-panel { height: auto; min-height: 0; }
-      .terminal { 
-        position: fixed; bottom: 0; left: 0; width: 100%; 
-        height: 40px; z-index: 999; transition: height 0.3s ease;
-      }
+      .terminal { position: fixed; bottom: 0; left: 0; width: 100%; height: 40px; z-index: 999; transition: height 0.3s ease; }
       .terminal.expanded { height: 60vh !important; }
       #monaco-editor { height: 100% !important; min-height: 300px; }
     }
-
     @media (max-width: 600px) {
       .navbar { padding: 0 12px; }
       .xp-container { display: none; }
@@ -346,6 +257,22 @@
         <div id="monaco-editor"></div>
       </div>
 
+      <div id="projectUploadArea" class="project-upload-container">
+        <div class="upload-box" onclick="document.getElementById('projectFileInput').click()">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <h2 id="uploadTitle">Submit Project</h2>
+            <p id="uploadHint" style="color:var(--text-dim); margin-bottom:20px;"></p>
+            
+            <input type="file" id="projectFileInput" accept=".zip,.pdf,.docx" style="display:none;" onchange="handleProjectUpload(this.files[0])">
+            
+            <button class="btn btn-run" style="margin: 0 auto; pointer-events: none;">
+                <i class="fas fa-paper-plane"></i> Choose File
+            </button>
+            <div id="uploadStatus" style="margin-top:20px; font-weight: 500;"></div>
+            <div id="adminFeedback" style="margin-top:20px; display:none; color:var(--text-dim); font-size:0.9rem;"></div>
+        </div>
+      </div>
+
       <div class="terminal" id="terminalArea">
         <div class="term-header" onclick="toggleTerminal()">
           <span><i class="fas fa-terminal" style="margin-right:8px; opacity:0.7;"></i> TERMINAL / PREVIEW</span>
@@ -390,7 +317,6 @@ document.addEventListener("DOMContentLoaded", () => {
     xp: parseInt(localStorage.getItem("mindstep_xp") || "0"),
     editorInstance: null,
     
-    // STATE FOR 2-STEP VALIDATION
     fileName: "server.js",
     isLogicValid: false,
     cmdHistory: [],
@@ -414,7 +340,8 @@ document.addEventListener("DOMContentLoaded", () => {
     lvlDisplay: document.getElementById("levelDisplay"),
     hintBox: document.getElementById("hintBox"),
     hintText: document.getElementById("hintText"),
-    langName: document.getElementById("langName")
+    langName: document.getElementById("langName"),
+    saveStatus: document.getElementById("saveStatus")
   };
 
   // --- TERMINAL UI ---
@@ -449,7 +376,6 @@ document.addEventListener("DOMContentLoaded", () => {
       scrollToBottom();
   }
 
-  // --- ADDED FOR MOBILE UX: Auto Expand Terminal ---
   window.addEventListener("focusin", (e) => {
       if (window.innerWidth < 900 && e.target.id === "termInput") {
           els.terminalArea.classList.add('expanded');
@@ -472,7 +398,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 const code = state.editorInstance.getValue();
                 const step = state.steps[state.idx];
                 
-                // RESET VALIDATION IF CODE CHANGES
+                // Auto Save Indicator
+                els.saveStatus.innerText = "Saving...";
+                setTimeout(()=>els.saveStatus.innerText="Synced", 500);
+
                 if (state.isLogicValid) {
                    state.isLogicValid = false;
                    els.runBtn.className = "btn btn-run";
@@ -530,132 +459,135 @@ document.addEventListener("DOMContentLoaded", () => {
             type: "server",
             validation: { patterns: ["express", "app\\.listen", "3000"], hints: ["Use app.listen(3000)"] },
             language: "javascript"
+        },
+        {
+            _id: "demo_project_task",
+            title: "Final Project",
+            description: "Upload your project zip.",
+            type: "project" 
         }
       ]
     });
   }
 
-  // --- 🔥 UPDATED LOAD DATA FUNCTION FOR RICH CONTENT 🔥 ---
   function loadData(data) {
     state.steps = [];
-    
-    // 1. Get the main document and the nested 'lesson' detail object
-    // Handle structure variety (db structure vs mock structure)
     const mainDoc = data.lesson || {};
     const richContent = mainDoc.lesson || mainDoc || {}; 
 
-    // --- HTML GENERATION LOGIC ---
+    // ✅✅✅ NEW: VIDEO, NOTES, PDF INJECTION ✅✅✅
+    let mediaHtml = "";
+
+    // 1. VIDEO
+    if (mainDoc.video) {
+        let url = mainDoc.video;
+        // Convert watch -> embed
+        if (url.includes("youtube.com/watch")) {
+            const videoId = url.split("v=")[1].split("&")[0];
+            url = `https://www.youtube.com/embed/${videoId}`;
+        } else if (url.includes("youtu.be/")) {
+            const videoId = url.split("youtu.be/")[1];
+            url = `https://www.youtube.com/embed/${videoId}`;
+        }
+
+        mediaHtml += `
+            <div class="theory-section">
+                <h3 style="color:var(--accent);">🎥 Lesson Video</h3>
+                <div style="position:relative; padding-top:56.25%; margin-bottom:20px;">
+                    <iframe src="${url}" 
+                        style="position:absolute; top:0; left:0; width:100%; height:100%; border-radius:10px; border:1px solid var(--border);" 
+                        frameborder="0" allowfullscreen>
+                    </iframe>
+                </div>
+            </div>`;
+    }
+
+    // 2. NOTES
+    if (mainDoc.notes) {
+        mediaHtml += `
+            <div class="theory-section">
+                <h3 style="color:var(--accent);">📝 Instructor Notes</h3>
+                <div style="color:var(--text-dim); line-height:1.7; background:rgba(255,255,255,0.02); padding:15px; border-radius:8px; border:1px solid var(--border);">
+                    ${mainDoc.notes.replace(/\n/g, '<br>')}
+                </div>
+            </div>`;
+    }
+
+    // 3. PDF
+    if (mainDoc.pdf) {
+        mediaHtml += `
+            <div class="theory-section" style="margin-bottom:20px;">
+                <a href="${mainDoc.pdf}" target="_blank" class="action-btn" style="width:100%; justify-content:center; background:rgba(56,189,248,0.1); border:1px solid var(--accent); color:var(--accent); text-decoration:none;">
+                    <i class="fas fa-file-pdf"></i> Download Study Material (PDF)
+                </a>
+            </div>`;
+    }
+    // ✅✅✅ END NEW CONTENT ✅✅✅
+
     let theoryHtml = "";
+    if (richContent.intro) theoryHtml += `<p style="font-size: 1.1rem; line-height: 1.6; color: var(--text);">${richContent.intro}</p><hr style="border-color:var(--border); margin: 20px 0;">`;
+    else if (mainDoc.description) theoryHtml += `<p style="font-size: 1.1rem; line-height: 1.6; color: var(--text);">${mainDoc.description}</p><hr style="border-color:var(--border); margin: 20px 0;">`;
 
-    // A. Intro
-    if (richContent.intro) {
-        theoryHtml += `<p style="font-size: 1.1rem; line-height: 1.6; color: var(--text);">${richContent.intro}</p><hr style="border-color:var(--border); margin: 20px 0;">`;
-    } else if (mainDoc.description) {
-        theoryHtml += `<p style="font-size: 1.1rem; line-height: 1.6; color: var(--text);">${mainDoc.description}</p><hr style="border-color:var(--border); margin: 20px 0;">`;
-    }
-
-    // B. Learning Outcomes
     if (richContent.learningOutcomes && richContent.learningOutcomes.length > 0) {
-        theoryHtml += `
-            <div class="theory-section">
-                <h3>🎯 What you will learn</h3>
-                <ul>${richContent.learningOutcomes.map(item => `<li>${item}</li>`).join('')}</ul>
-            </div>`;
+        theoryHtml += `<div class="theory-section"><h3>🎯 What you will learn</h3><ul>${richContent.learningOutcomes.map(item => `<li>${item}</li>`).join('')}</ul></div>`;
     }
-
-    // C. Deep Explanation (Paragraphs)
     if (richContent.deepExplanation && richContent.deepExplanation.length > 0) {
-        theoryHtml += `
-            <div class="theory-section">
-                <h3>📖 Core Concepts</h3>
-                ${richContent.deepExplanation.map(text => `<p>${text}</p>`).join('')}
-            </div>`;
+        theoryHtml += `<div class="theory-section"><h3>📖 Core Concepts</h3>${richContent.deepExplanation.map(text => `<p>${text}</p>`).join('')}</div>`;
     }
-
-    // D. Concept Breakdown (Cards)
     if (richContent.conceptBreakdown && richContent.conceptBreakdown.length > 0) {
-        theoryHtml += `
-            <div class="theory-section">
-                <h3>⚡ Key Terms</h3>
-                <div class="concept-grid">
-                    ${richContent.conceptBreakdown.map(c => `
-                        <div class="concept-card">
-                            <span class="concept-term">${c.concept}</span>
-                            <span style="font-size:0.9rem;">${c.explanation}</span>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>`;
+        theoryHtml += `<div class="theory-section"><h3>⚡ Key Terms</h3><div class="concept-grid">${richContent.conceptBreakdown.map(c => `<div class="concept-card"><span class="concept-term">${c.concept}</span><span style="font-size:0.9rem;">${c.explanation}</span></div>`).join('')}</div></div>`;
     }
-
-    // E. Real World Analogy
     if (richContent.realWorldAnalogy && richContent.realWorldAnalogy.length > 0) {
-        theoryHtml += `
-            <div class="theory-section">
-                <h3>🌍 Real World Analogy</h3>
-                <div class="analogy-box">
-                    <ul style="margin:0; padding-left:20px; color:inherit;">
-                        ${richContent.realWorldAnalogy.map(a => `<li>${a}</li>`).join('')}
-                    </ul>
-                </div>
-            </div>`;
+        theoryHtml += `<div class="theory-section"><h3>🌍 Real World Analogy</h3><div class="analogy-box"><ul style="margin:0; padding-left:20px; color:inherit;">${richContent.realWorldAnalogy.map(a => `<li>${a}</li>`).join('')}</ul></div></div>`;
     }
-
-    // F. Example Code
     if (richContent.example && richContent.example.code) {
-        theoryHtml += `
-            <div class="theory-section">
-                <h3>💻 Example: ${richContent.example.description || "Code Snippet"}</h3>
-                <pre class="code-block"><code>${richContent.example.code}</code></pre>
-            </div>`;
+        theoryHtml += `<div class="theory-section"><h3>💻 Example: ${richContent.example.description || "Code Snippet"}</h3><pre class="code-block"><code>${richContent.example.code}</code></pre></div>`;
     }
-
-    // G. Common Mistakes
     if (richContent.commonMistakes && richContent.commonMistakes.length > 0) {
-        theoryHtml += `
-            <div class="theory-section">
-                <h3>⚠️ Common Mistakes</h3>
-                <div class="mistake-box">
-                    <ul style="margin:0; padding-left:20px; color:inherit;">
-                        ${richContent.commonMistakes.map(m => `<li>${m}</li>`).join('')}
-                    </ul>
-                </div>
-            </div>`;
+        theoryHtml += `<div class="theory-section"><h3>⚠️ Common Mistakes</h3><div class="mistake-box"><ul style="margin:0; padding-left:20px; color:inherit;">${richContent.commonMistakes.map(m => `<li>${m}</li>`).join('')}</ul></div></div>`;
     }
-
-    // H. Summary
     if (richContent.summary) {
         theoryHtml += `<hr style="border-color:var(--border); margin: 20px 0;"><p style="font-style:italic; color:var(--accent);">💡 <strong>Summary:</strong> ${richContent.summary}</p>`;
     }
 
-    // --- PUSH THEORY STEP ---
-    state.steps.push({ 
-        type: 'theory', 
-        data: { 
-            title: mainDoc.title || "Module", 
-            html: theoryHtml || "<p>No content available.</p>" 
-        } 
-    });
+    // Combine Media + Theory
+    const fullTheoryHtml = mediaHtml + theoryHtml;
 
-    // --- PUSH TASKS ---
+    state.steps.push({ type: 'theory', data: { title: mainDoc.title || "Module", html: fullTheoryHtml || "<p>No content available.</p>" } });
+
     (data.tasks || []).forEach(t => {
-        state.steps.push({ type: 'task', data: t });
+        state.steps.push({ type: t.type === 'project' ? 'project' : 'task', data: t }); 
         state.defaults[t._id] = "";
         state.failCounts[t._id] = 0;
         const draft = localStorage.getItem(`draft_${state.userId}_${t._id}`);
         if (draft) state.userCode[t._id] = draft;
     });
 
+    if (data.lesson && data.lesson.type === "project") {
+        state.steps.push({
+            type: "project",
+            data: data.lesson
+        });
+    }
+
     state.steps.push({ type: 'finish' });
-    renderStep(0);
+    
+    // 🔥 AUTO RESUME FEATURE 🔥
+    const lastStep = localStorage.getItem(`lastStep_${state.lessonId}`);
+    if (lastStep) renderStep(Number(lastStep));
+    else renderStep(0);
     
     document.getElementById("loadingOverlay").style.opacity = '0';
     setTimeout(()=>document.getElementById("loadingOverlay").style.display='none', 500);
     els.ws.style.opacity = '1';
   }
 
+  // --- 🔥 RENDER STEP (SWITCHES UI) 🔥 ---
   window.renderStep = (i) => {
-    if (i > 0 && state.steps[i-1].type === 'task' && !state.passed.has(state.steps[i-1].data._id)) {
+    // 🔥 AUTO RESUME SAVE 🔥
+    localStorage.setItem(`lastStep_${state.lessonId}`, i);
+
+    if (i > 0 && state.steps[i-1].type !== 'theory' && !state.passed.has(state.steps[i-1].data._id)) {
         showToast("Complete previous task first!", "error"); return;
     }
 
@@ -668,7 +600,7 @@ document.addEventListener("DOMContentLoaded", () => {
     
     els.dots.innerHTML = state.steps.map((s,idx) => {
         let status = idx===i?'active':(idx<i?'completed':'');
-        let locked = (idx>0 && state.steps[idx-1].type==='task' && !state.passed.has(state.steps[idx-1].data._id));
+        let locked = (idx>0 && state.steps[idx-1].type!=='theory' && !state.passed.has(state.steps[idx-1].data._id));
         return `<div class="step-pill ${status} ${locked?'locked':''}" onclick="${!locked ? `renderStep(${idx})` : ''}"></div>`;
     }).join("");
 
@@ -676,17 +608,60 @@ document.addEventListener("DOMContentLoaded", () => {
     els.prevBtn.onclick = () => renderStep(i-1);
     els.hintBox.style.display = 'none';
 
+    // RESET UI STATES
+    document.getElementById('projectUploadArea').style.display = 'none';
+    document.querySelector('.editor-container').style.display = 'block';
+    if(step.type !== 'theory' && step.type !== 'finish') els.terminalArea.style.display = 'flex';
+
     if(step.type === 'theory') {
         els.ws.className = "workspace mode-reading";
         els.guide.innerHTML = `<div class="badge badge-theory"><i class="fas fa-book-open"></i> Theory</div><h1>${step.data.title}</h1><hr>${step.data.html}`;
         els.runBtn.innerHTML = `Start Coding <i class="fas fa-arrow-right"></i>`;
         els.runBtn.className = "btn btn-run";
+        els.runBtn.style.display = 'block';
         els.runBtn.onclick = () => renderStep(i+1);
         els.terminalArea.style.display = 'none';
     } 
+    // 🔥 PROJECT UPLOAD STEP LOGIC (FIXED) 🔥
+    else if(step.type === 'project') {
+        els.ws.className = "workspace mode-coding";
+        document.querySelector('.editor-container').style.display = 'none'; // Hide Editor
+        els.terminalArea.style.display = 'none';     // Hide Terminal
+        document.getElementById('projectUploadArea').style.display = 'flex'; // Show Upload Box
+        
+        // ✅ FIX 2: Dynamic UI Text based on Project Type
+        const titleEl = document.getElementById("uploadTitle");
+        const hintEl = document.getElementById("uploadHint");
+        const projType = step.data.projectType || (step.data.type === 'project' ? 'planning' : 'code');
+
+        if (projType === 'planning') {
+            titleEl.innerText = "Submit File";
+            hintEl.innerHTML = "Upload your project plan as a <b>.zip</b>,<b>.pdf</b> or <b>.docx</b> file.";
+        } else {
+            titleEl.innerText = "Submit Final Project";
+            hintEl.innerHTML = "Compress your complete project folder into a single <b>.zip</b> file.";
+        }
+
+        els.guide.innerHTML = `
+            <div class="badge badge-task"><i class="fas fa-trophy"></i> Final Project</div>
+            <h1>${step.data.title}</h1>
+            <hr>
+            <p>${step.data.description}</p>
+            <div class="hint-box" style="display:block; border-color:var(--success); background:rgba(34,197,94,0.1);">
+                <i class="fas fa-info-circle"></i> <b>Instructions:</b><br>
+                1. Complete your work locally.<br>
+                2. ${projType === 'planning' ? 'Export as PDF/DOCX' : 'Compress/Zip folder'}.<br>
+                3. Upload the file here.
+            </div>
+        `;
+        
+        els.runBtn.style.display = 'none';
+    }
+    // CODING TASK STEP
     else if(step.type === 'task') {
         els.ws.className = "workspace mode-coding";
         els.terminalArea.style.display = 'flex';
+        els.runBtn.style.display = 'block';
         
         const fileInputHtml = `
             <div class="file-input-group">
@@ -712,7 +687,6 @@ document.addEventListener("DOMContentLoaded", () => {
             els.langName.innerText = state.fileName;
         });
         
-        // --- AUTO-SET FILENAME FOR UX ---
         const lang = (step.data.language || "javascript").toLowerCase();
         if(lang === 'react' || lang === 'jsx') state.fileName = "App.jsx";
         else if(lang === 'java') state.fileName = "Main.java";
@@ -737,8 +711,102 @@ document.addEventListener("DOMContentLoaded", () => {
     else if(step.type === 'finish') finishLesson();
   };
 
+  // 🔥 SUBMIT PROJECT FUNCTION (WITH ANIMATION) 🔥
+  window.handleProjectUpload = async (file) => {
+    // ✅ SECURITY CHECK: GUEST GUARD (IMPROVED)
+    if (!state.userId || state.userId === "guest") {
+        showToast("Login required to submit project", "error");
+        setTimeout(() => window.location.href = "LoginPage.html", 1500); // Redirect logic
+        return;
+    }
+
+    if (!file) return;
+
+    if (file.size > 50 * 1024 * 1024) { 
+        showToast("File is too large (Max 50MB)", "error");
+        return;
+    }
+
+    const statusText = document.getElementById('uploadStatus');
+    statusText.innerHTML = `<span style="color:var(--warning)"><i class="fas fa-spinner fa-spin"></i> Uploading...</span>`;
+
+    const formData = new FormData();
+    formData.append('projectFile', file);
+    formData.append('userId', state.userId);
+    formData.append('lessonId', state.lessonId);
+    
+    // ✅ POLISH 1: Robust Project Type Logic
+    const step = state.steps[state.idx];
+    const stepData = step.data;
+    // Default to 'planning' if it's the specific project step, otherwise 'code'
+    const projType = stepData.projectType || (step.type === 'project' ? 'planning' : 'code');
+    formData.append('projectType', projType); 
+
+    try {
+        const res = await fetch('/api/project/upload', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            statusText.innerHTML = `<span style="color:var(--success)"><i class="fas fa-check-circle"></i> Upload Complete!</span>`;
+            
+            // ✅ FIX 3: Smart Feedback Logic
+            const adminFb = document.getElementById("adminFeedback");
+            adminFb.style.display = "block";
+            
+            let fileIcon = "fa-file-archive";
+            let typeText = "Project Archive";
+            if (projType === 'planning') {
+                fileIcon = "fa-file-pdf";
+                typeText = "Planning Document";
+            }
+
+            adminFb.innerHTML = `
+                <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:6px; margin-bottom:10px;">
+                    <i class="fas ${fileIcon}" style="color:var(--accent)"></i> 
+                    <b>${typeText} Received</b><br>
+                    <span style="font-size:0.8rem; color:var(--text-dim)">${file.name}</span>
+                </div>
+                <b>Admin Review:</b> Pending (ETA: 24–48 hrs) <i class="fas fa-clock" style="color:var(--warning)"></i>
+            `;
+
+            confetti({ particleCount: 250, spread: 120, origin: { y: 0.6 } });
+            showToast("Project Submitted Successfully! 🎓", "success");
+            
+            state.passed.add(state.steps[state.idx].data._id);
+            updateXP(100, false); // ✅ FIX: Visual Only XP
+            
+            setTimeout(() => {
+                finishLesson();
+            }, 4000); // Increased time to read success msg
+        } else {
+            throw new Error(data.message);
+        }
+    } catch (err) {
+        statusText.innerHTML = `<span style="color:var(--error)"><i class="fas fa-times-circle"></i> Upload Failed</span>`;
+        showToast(err.message, "error");
+    }
+  };
+
   // --- LOGIC CHECK (Step 1) ---
   async function runCode(task) {
+    // ✅ FRONTEND GUARD: Skip backend for HTML/CSS tasks
+    if (['html','css'].includes(task.language)) {
+        addLog("[INFO] Frontend preview only. No server execution.", "warning");
+        const code = state.editorInstance.getValue();
+        const iframe = document.createElement("iframe");
+        iframe.style.width = "100%";
+        iframe.style.height = "350px";
+        iframe.style.border = "1px solid #333";
+        iframe.style.background = "#fff";
+        iframe.srcdoc = code;
+        els.termLog.appendChild(iframe);
+        handleSuccess(task);
+        return;
+    }
+
     const code = state.editorInstance.getValue();
     if(!code.trim()) return showToast("Code is empty!", "error");
 
@@ -764,32 +832,8 @@ document.addEventListener("DOMContentLoaded", () => {
              const hasListen = code.includes("app.listen");
              const lang = (task.language || "javascript").toLowerCase();
 
-             // Check for HTML indicators inside code
-             const isHTMLContent = code.trim().startsWith("<!DOCTYPE") || code.includes("<html") || code.includes("<body") || code.includes("<style");
-
-             // --- 🔥 FIXED: HTML / CSS / JS-DOM Preview Logic 🔥 ---
-             if (lang === 'html' || lang === 'css' || (lang === 'javascript' && isHTMLContent)) {
-                 addLog("[PREVIEW] Rendering in browser...", "success");
-                 const iframe = document.createElement("iframe");
-                 iframe.style.width = "100%";
-                 iframe.style.height = "350px";
-                 iframe.style.border = "1px solid #333";
-                 iframe.style.borderRadius = "8px";
-                 iframe.style.marginTop = "10px";
-                 iframe.style.background = "#fff";
-
-                 if (lang === "css") {
-                     iframe.srcdoc = `<style>${code}</style><h1>CSS Preview</h1><p>Test Text</p>`;
-                 } else {
-                     iframe.srcdoc = code;
-                 }
-                 els.termLog.appendChild(iframe);
-                 handleSuccess(task);
-                 return;
-             }
-             
-             // --- 🔥 FIXED: Pure Frontend JS (Console Logic) 🔥 ---
-             else if (lang === 'javascript' && !isHTMLContent && !code.includes("require(") && !code.includes("app.listen") && !title.includes("server")) {
+             // Pure Frontend JS (Console Logic)
+             if (lang === 'javascript' && !code.includes("require(") && !code.includes("app.listen") && !title.includes("server")) {
                  addLog("[JS] Running in browser context...", "success");
                  try {
                      const iframe = document.createElement("iframe");
@@ -816,7 +860,7 @@ document.addEventListener("DOMContentLoaded", () => {
                  return;
              }
 
-             // --- Backend & Other Logic ---
+             // Backend & Other Logic
              if (!hasListen && (task.type === 'route' || title.includes("route") || title.includes("api"))) {
                  const match = code.match(/app\.(get|post)\(['"]([^'"]+)['"]/);
                  const method = match ? match[1].toUpperCase() : "GET";
@@ -877,7 +921,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // --- ACTION HANDLERS (Step 2) ---
   
-  // 1. ROUTE ACTION
   window.triggerRouteAction = (method, url) => {
     const btn = event.target.closest('button');
     if(btn) { btn.disabled = true; btn.innerHTML = `<i class="fas fa-check"></i> Request Sent`; }
@@ -885,7 +928,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const task = state.steps[state.idx].data;
     const code = state.editorInstance.getValue();
     
-    // --- UPDATED EXTRACTION LOGIC ---
     let json;
     let status = "200 OK";
 
@@ -906,7 +948,6 @@ document.addEventListener("DOMContentLoaded", () => {
     handleSuccess(task); 
   };
 
-  // 2. DATA ACTION
   window.triggerDataAction = async () => {
     const btn = event.target.closest('button');
     if(btn) { btn.disabled = true; btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Saving...`; }
@@ -951,7 +992,6 @@ document.addEventListener("DOMContentLoaded", () => {
     handleSuccess(task);
   };
 
-  // 3. SERVER ACTION (Type)
   function setupTerminalInput() {
       els.termInput.addEventListener("keydown", (e) => {
           if (e.key === "Enter") {
@@ -995,6 +1035,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const validCmds = ["node", "python", "java", "javac", "run"];
       if (!validCmds.includes(parts[0])) {
           addLog(`[ERROR] bash: ${parts[0]}: command not found`, "error");
+          // ✅ POLISH 3: Helpful UX for invalid commands
+          addLog("Try: node <file>, python <file>, java <file>, or run", "warning");
           return;
       }
       
@@ -1039,17 +1081,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function extractJsonFromCode(code) {
       const cleanCode = code.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
-      
       const textMatch = cleanCode.match(/res\.send\s*\(\s*(['"`])([\s\S]*?)\1\s*\)/);
       if (textMatch) return textMatch[2];
-
       const jsonStartIndex = cleanCode.search(/res(?:\.status\(\s*\d+\s*\))?\.json\s*\(\s*[\[\{]/);
       if (jsonStartIndex !== -1) {
           const start = cleanCode.indexOf('(', jsonStartIndex) + 1;
           const content = extractBalancedBlock(cleanCode, start);
           if (content) return content;
       }
-
       const varMatch = cleanCode.match(/res(?:\.status\(\s*\d+\s*\))?\.json\s*\(\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\)/);
       if (varMatch && varMatch[1]) {
           const varName = varMatch[1];
@@ -1062,7 +1101,6 @@ document.addEventListener("DOMContentLoaded", () => {
           }
           return `[INFO] Response uses variable '${varName}'.\nSimulating resolved output:\n[ { "id": 1, "data": "Sample" } ]`;
       }
-
       return "{ \"status\": \"success\" }";
   }
 
@@ -1070,7 +1108,6 @@ document.addEventListener("DOMContentLoaded", () => {
       let open = 0;
       let startFound = false;
       let blockStart = -1;
-      
       for (let i = startIndex; i < code.length; i++) {
           const char = code[i];
           if (!startFound) {
@@ -1092,15 +1129,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function addApiPreview(method, url, body, status = "200 OK") {
-      const html = `
-        <div class="api-preview">
-            <div class="api-header">
-                <div><span class="method-badge">${method}</span> <span style="color:#a1a1aa">${url}</span></div>
-                <div style="color:var(--success); font-weight:bold;">${status}</div>
-            </div>
-            <div class="api-body" style="white-space: pre-wrap;">${body}</div>
-        </div>
-      `;
+      const html = `<div class="api-preview"><div class="api-header"><div><span class="method-badge">${method}</span> <span style="color:#a1a1aa">${url}</span></div><div style="color:var(--success); font-weight:bold;">${status}</div></div><div class="api-body" style="white-space: pre-wrap;">${body}</div></div>`;
       els.termLog.innerHTML += html;
       scrollToBottom();
   }
@@ -1110,7 +1139,7 @@ document.addEventListener("DOMContentLoaded", () => {
     state.passed.add(task._id);
     confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
     setSuccessBtn();
-    updateXP(25);
+    updateXP(25, false); // ✅ FIX: Visual only XP
     if(!state.mockMode) {
         fetch("/api/task/submit", { 
             method: "POST", headers: {"Content-Type":"application/json"}, 
@@ -1123,6 +1152,11 @@ document.addEventListener("DOMContentLoaded", () => {
       els.runBtn.disabled = false;
       els.runBtn.innerHTML = `Check Logic <i class="fas fa-check-circle"></i>`;
       state.failCounts[task._id] = (state.failCounts[task._id] || 0) + 1;
+      
+      // ✅ ADD: Retry Tracker
+      if (state.failCounts[task._id] === 1) {
+         showToast("Try again. Hint unlocks after next fail.", "warning");
+      }
       if(state.failCounts[task._id] >= 2) {
           els.hintBox.style.display = 'block';
           els.hintText.innerHTML = (task.validation && task.validation.hints && task.validation.hints[0]) || "Check the requirements.";
@@ -1136,8 +1170,11 @@ document.addEventListener("DOMContentLoaded", () => {
     els.runBtn.onclick = () => renderStep(state.idx+1);
   }
 
-  function updateXP(amount=0) {
-      if(amount > 0) { state.xp += amount; localStorage.setItem("mindstep_xp", state.xp); }
+  function updateXP(amount=0, persist=true) {
+      if(amount > 0) { 
+        state.xp += amount; 
+        if(persist) localStorage.setItem("mindstep_xp", state.xp); 
+      }
       const lvl = Math.floor(state.xp / 100) + 1;
       els.xpBar.style.width = `${state.xp % 100}%`;
       els.xpText.innerText = `${state.xp} XP`;
@@ -1149,9 +1186,12 @@ document.addEventListener("DOMContentLoaded", () => {
     els.terminalArea.style.display = 'none';
     els.ws.style.gridTemplateColumns = "1fr";
     els.ws.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; text-align:center;"><i class="fas fa-trophy" style="font-size:5rem; color:var(--warning); margin-bottom:20px;"></i><h1 style="color:#fff;">Module Completed</h1><button class="btn btn-run" onclick="window.history.back()">Return</button></div>`;
-    updateXP(50);
+    updateXP(50, false); // Visual only
     confetti({ particleCount: 300, spread: 100, origin: { y: 0.6 } });
     if(!state.mockMode) fetch("/api/complete", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({userId:state.userId, lessonId:state.lessonId})});
+    
+    // ✅ POLISH 2: Reset Resume Point
+    localStorage.removeItem(`lastStep_${state.lessonId}`);
   }
 
   window.toggleTheme = () => { document.body.classList.toggle("theme-neon"); localStorage.setItem("theme", document.body.classList.contains("theme-neon") ? "neon" : "standard"); };

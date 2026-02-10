@@ -169,7 +169,7 @@
         <p class="subtitle">Enter credentials to access the console.</p>
 
         <div class="input-group" id="group-user">
-            <input type="text" id="admin-user" placeholder="Admin Username">
+            <input type="text" id="admin-user" placeholder="Admin Username" autofocus>
             <i class="fas fa-user-shield"></i>
         </div>
 
@@ -184,19 +184,33 @@
     </div>
 
 <script>
-    // Automatically detect server URL (works for localhost & deployed)
     const API_BASE = window.location.origin;
+    const btn = document.getElementById('btnLogin');
+    const user = document.getElementById('admin-user');
+    const pass = document.getElementById('admin-pass');
 
-    document.getElementById('btnLogin').onclick = async () => {
-        const btn = document.getElementById('btnLogin');
-        const user = document.getElementById('admin-user');
-        const pass = document.getElementById('admin-pass');
-        
-        // Reset Errors
+    // ✅ FEATURE 1: Enter in Username -> Go to Password
+    user.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            pass.focus();
+        }
+    });
+
+    // ✅ FEATURE 2: Enter in Password -> Click Login
+    pass.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            btn.click();
+        }
+    });
+
+    btn.onclick = async () => {
+        // Clear previous error styles
         user.parentElement.classList.remove('error-shake');
         pass.parentElement.classList.remove('error-shake');
 
-        // Validation
+        // Basic Validation
         if (!user.value.trim()) {
             user.parentElement.classList.add('error-shake'); return;
         }
@@ -204,11 +218,10 @@
             pass.parentElement.classList.add('error-shake'); return;
         }
 
-        // Optimistic Loading State
+        // Show Loading State
         btn.classList.add('loading');
         
         try {
-            // ✅ FIX: Use the correct endpoint matching server.js
             const res = await fetch(`${API_BASE}/api/admin/login`, {
                 method: "POST", 
                 headers: { "Content-Type": "application/json" },
@@ -221,18 +234,22 @@
             const data = await res.json();
 
             if (data.success) {
-                // ✅ Store Token Correctly
+                // ✅ CRITICAL: Store token so dashboard works
                 localStorage.setItem("mindstep_admin_token", data.token);
-                // Redirect to the Admin Dashboard root route (handled by server.js)
+                
+                // Redirect to dashboard
                 window.location.href = "/admin"; 
             } else {
-                alert(data.error || "Access Denied");
+                // Show specific message if available, else generic
+                alert(data.message || data.error || "Access Denied");
                 pass.parentElement.classList.add('error-shake');
+                pass.value = ""; // Clear password field
             }
         } catch (err) {
             console.error(err);
             alert("Server Connection Failed. Is the backend running?");
         } finally {
+            // Remove Loading State
             btn.classList.remove('loading');
         }
     };
