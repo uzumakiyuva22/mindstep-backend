@@ -272,7 +272,7 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-  const API_BASE = window.location.origin; // Dynamically gets current host (localhost or deployed)
+  const API_BASE = window.location.origin;
   const params = new URLSearchParams(window.location.search);
   const courseSlug = params.get("course");
 
@@ -292,6 +292,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       document.getElementById("courseTitle").textContent = courseData.course.title;
       document.getElementById("courseDesc").textContent = courseData.course.description || "Master your skills.";
+      
+      // ✅ FIX 1: Capture Course ID for Progress API
+      const courseId = courseData.course._id;
 
       // 2. Fetch Lessons
       const lessonRes = await fetch(`${API_BASE}/api/course/${courseSlug}/lessons`);
@@ -299,20 +302,30 @@ document.addEventListener("DOMContentLoaded", () => {
       const lessons = lessonData.lessons || [];
       document.getElementById("lessonCount").textContent = `${lessons.length} Lessons`;
 
-      // 3. Fetch User Progress (THE FIXED LOGIC)
-      let completedIds = new Set();
+      // ✅ FIX 2: Correct Progress API Call
+      let completedCount = 0;
+      let percent = 0;
+      const completedIds = new Set();
+
       try {
-        const progRes = await fetch(`${API_BASE}/api/course/${courseSlug}/progress/${user._id}`);
+        const progRes = await fetch(`${API_BASE}/api/course-progress/${user._id}/${courseId}`);
         const progData = await progRes.json();
         
-        // ✅ FIX: Safely map IDs to strings, handle empty array
-        if (progData.completedLessonIds && Array.isArray(progData.completedLessonIds)) {
-            completedIds = new Set(progData.completedLessonIds.map(id => String(id)));
-        }
+        // Use Backend Data directly
+        completedCount = progData.completed || 0;
+        percent = progData.percentage || 0;
+
+        // ✅ FIX 3: Reconstruct Completed IDs based on Sequential Order
+        lessons.forEach((lesson, index) => {
+            if (index < completedCount) {
+                completedIds.add(String(lesson._id));
+            }
+        });
+
       } catch(e) { console.warn("Progress fetch failed:", e); }
 
-      // 4. Render UI
-      renderUI(lessons, completedIds);
+      // 4. Render UI with CORRECT percentage
+      renderUI(lessons, completedIds, percent, completedCount);
 
     } catch (err) {
       console.error(err);
@@ -320,19 +333,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function renderUI(lessons, completedIds) {
+  function renderUI(lessons, completedIds, percent, completedCount) {
     const listEl = document.getElementById("lessonContainer");
     const trackEl = document.getElementById("timelineTrack");
     
     listEl.innerHTML = "";
     trackEl.innerHTML = `<div class="track-line"></div><div class="track-fill" id="trackFill"></div>`;
 
-    let completedCount = 0;
-
     lessons.forEach((lesson, index) => {
-      // ✅ STRING MATCHING: robust check
+      // Robust String Check
       const isDone = completedIds.has(String(lesson._id));
-      if (isDone) completedCount++;
 
       // --- RENDER LESSON LIST ---
       const item = document.createElement("div");
@@ -368,10 +378,7 @@ document.addEventListener("DOMContentLoaded", () => {
       trackEl.appendChild(node);
     });
 
-    // --- ANIMATE PROGRESS ---
-    const total = lessons.length;
-    const percent = total > 0 ? Math.round((completedCount / total) * 100) : 0;
-
+    // --- ANIMATE PROGRESS (Using Backend Percent) ---
     // Update Text
     document.getElementById("percentText").textContent = `${percent}%`;
 
@@ -390,6 +397,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Update Timeline Bar
     const barEl = document.getElementById("trackFill"); 
+    const total = lessons.length;
     if(barEl) {
         let stepWidth = 0;
         if(total > 1) {

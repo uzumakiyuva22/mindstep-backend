@@ -1,496 +1,1094 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>MindStep — Quantum IDE</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>MindStep — Quantum IDE</title>
 
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet">
 
-  <style>
-    :root {
-      --bg-root: #09090b;
-      --bg-sidebar: #121214;
-      --bg-editor: #1e1e1e;
-      --bg-terminal: #0c0c0c;
-      --border: #27272a;
-      --primary: #6366f1;
-      --primary-hover: #4f46e5;
-      --accent: #38bdf8;
-      --success: #22c55e;
-      --error: #ef4444;
-      --warning: #f59e0b;
-      --text: #e4e4e7;
-      --text-dim: #a1a1aa;
-      --font-main: 'Plus Jakarta Sans', sans-serif;
-      --font-code: 'JetBrains Mono', monospace;
-    }
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
 
-    body.theme-neon {
-      --bg-root: #0b0014;
-      --bg-sidebar: #130024;
-      --bg-editor: #1a0b2e;
-      --bg-terminal: #05010a;
-      --border: #3c1f5e;
-      --primary: #d946ef;
-      --accent: #22d3ee;
-    }
+    <style>
+        :root {
+            --bg-root: #09090b;
+            --bg-sidebar: #121214;
+            --bg-editor: #1e1e1e;
+            --bg-terminal: #0c0c0c;
+            --border: #27272a;
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --accent: #38bdf8;
+            --success: #22c55e;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --text: #e4e4e7;
+            --text-dim: #a1a1aa;
+            --font-main: 'Plus Jakarta Sans', sans-serif;
+            --font-code: 'JetBrains Mono', monospace;
+        }
 
-    * { margin: 0; padding: 0; box-sizing: border-box; outline: none; }
+        body.theme-neon {
+            --bg-root: #0b0014;
+            --bg-sidebar: #130024;
+            --bg-editor: #1a0b2e;
+            --bg-terminal: #05010a;
+            --border: #3c1f5e;
+            --primary: #d946ef;
+            --accent: #22d3ee;
+        }
 
-    body {
-      background-color: var(--bg-root);
-      color: var(--text);
-      font-family: var(--font-main);
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            outline: none;
+        }
 
-    /* NAVBAR */
-    .navbar {
-      height: 60px; flex-shrink: 0;
-      background: var(--bg-sidebar);
-      border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0 25px; z-index: 50;
-    }
-    .brand {
-      font-weight: 800; font-size: 1.2rem; color: var(--text);
-      text-decoration: none; display: flex; align-items: center; gap: 12px;
-    }
-    .brand i { color: var(--primary); font-size: 1.4rem; filter: drop-shadow(0 0 10px rgba(99,102,241,0.5)); }
+        body {
+            background-color: var(--bg-root);
+            color: var(--text);
+            font-family: var(--font-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
 
-    /* XP HIDDEN FOR VIVA */
-    .xp-container { display: none !important; }
-    
-    .level-badge { font-size: 0.8rem; font-weight: 700; color: var(--accent); }
-    .xp-bar-wrapper { width: 100px; height: 6px; background: #27272a; border-radius: 3px; overflow: hidden; }
-    .xp-bar-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); width: 0%; transition: width 0.5s ease; }
-    .xp-text { font-size: 0.75rem; color: var(--text-dim); font-family: var(--font-code); }
+        /* NAVBAR */
+        .navbar {
+            height: 60px;
+            flex-shrink: 0;
+            background: var(--bg-sidebar);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 25px;
+            z-index: 50;
+        }
 
-    /* WORKSPACE */
-    .workspace {
-      flex: 1; display: grid; overflow: hidden;
-      transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
-    }
-    .workspace.mode-reading { grid-template-columns: 1fr 0px; }
-    .workspace.mode-coding { grid-template-columns: 35% 65%; }
+        .brand {
+            font-weight: 800;
+            font-size: 1.2rem;
+            color: var(--text);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
 
-    /* Left Panel (Guide/Content) */
-    .guide-panel {
-      background: var(--bg-sidebar); border-right: 1px solid var(--border);
-      display: flex; flex-direction: column; overflow: hidden; position: relative;
-    }
-    .guide-content { padding: 30px; overflow-y: auto; flex: 1; scroll-behavior: smooth; }
-    .guide-content h1 { font-size: 1.8rem; margin-bottom: 20px; color: var(--text); }
-    .guide-content p { line-height: 1.7; color: var(--text-dim); margin-bottom: 20px; }
-    .guide-content code { background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; color: var(--accent); font-family: var(--font-code); }
-    
-    .badge { padding: 6px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-bottom: 15px; display: inline-flex; align-items: center; gap: 6px; }
-    .badge-theory { background: rgba(99, 102, 241, 0.1); color: var(--primary); border: 1px solid rgba(99,102,241,0.2); }
-    .badge-task { background: rgba(56, 189, 248, 0.1); color: var(--accent); border: 1px solid rgba(56, 189, 248, 0.2); }
+        .brand i {
+            color: var(--primary);
+            font-size: 1.4rem;
+            filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.5));
+        }
 
-    /* --- RICH CONTENT STYLES --- */
-    .theory-section { margin-bottom: 25px; }
-    .theory-section h3 { color: var(--accent); margin-bottom: 10px; font-size: 1.1rem; border-left: 3px solid var(--primary); padding-left: 10px; }
-    .theory-section ul { padding-left: 20px; color: var(--text-dim); }
-    .theory-section li { margin-bottom: 8px; line-height: 1.6; }
-    .concept-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 10px; }
-    .concept-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border); padding: 12px; border-radius: 6px; }
-    .concept-term { color: var(--success); font-weight: bold; font-family: var(--font-code); display: block; margin-bottom: 6px; font-size: 0.95rem; }
-    .code-block { background: #111; border: 1px solid var(--border); padding: 15px; border-radius: 6px; font-family: var(--font-code); color: #a5b4fc; overflow-x: auto; font-size: 0.85rem; margin-top: 10px; line-height: 1.5; }
-    .analogy-box { background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); padding: 15px; border-radius: 8px; color: #fbbf24; margin-top: 10px; }
-    .mistake-box { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 15px; border-radius: 8px; color: #fca5a5; margin-top: 10px; }
+        /* XP HIDDEN FOR VIVA */
+        .xp-container {
+            display: none !important;
+        }
 
-    /* File Input UI */
-    .file-input-group { background: rgba(0,0,0,0.2); border: 1px solid var(--border); padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-    .file-input-group label { display: block; font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; margin-bottom: 8px; font-weight: 700; }
-    .file-input-wrapper { display: flex; align-items: center; gap: 10px; background: var(--bg-editor); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); }
-    .file-input-wrapper i { color: var(--primary); }
-    #fileNameInput { background: transparent; border: none; color: var(--text); font-family: var(--font-code); font-size: 0.9rem; flex: 1; }
+        .level-badge {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
 
-    .hint-box { margin-top: 20px; padding: 15px; border-radius: 8px; display: none; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); animation: slideIn 0.3s ease; }
-    @keyframes slideIn { from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
+        .xp-bar-wrapper {
+            width: 100px;
+            height: 6px;
+            background: #27272a;
+            border-radius: 3px;
+            overflow: hidden;
+        }
 
-    /* Right Panel */
-    .ide-panel { display: flex; flex-direction: column; background: var(--bg-editor); height: 100%; position: relative; }
-    .toolbar { height: 40px; background: #27272a; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 15px; flex-shrink: 0; }
-    .file-tab { background: var(--bg-editor); padding: 0 20px; height: 100%; border-top: 2px solid var(--primary); color: var(--text); font-family: var(--font-code); font-size: 0.85rem; display: flex; align-items: center; gap: 8px; }
-    .icon-btn { background: transparent; border: none; color: var(--text-dim); cursor: pointer; width: 28px; height: 28px; border-radius: 6px; display: grid; place-items: center; transition: 0.2s; }
-    .icon-btn:hover { color: var(--text); background: rgba(255,255,255,0.1); }
+        .xp-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            width: 0%;
+            transition: width 0.5s ease;
+        }
 
-    .editor-container { flex: 1; position: relative; overflow: hidden; min-height: 200px; }
-    #monaco-editor { width: 100%; height: 100%; }
+        .xp-text {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            font-family: var(--font-code);
+        }
 
-    /* PROJECT UPLOAD UI */
-    .project-upload-container { display: none; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 20px; background: var(--bg-editor); color: var(--text); text-align: center; }
-    .upload-box { 
-        border: 2px dashed var(--primary); 
-        padding: 40px; border-radius: 12px; 
-        background: rgba(99,102,241,0.05); 
-        width: 100%; max-width: 500px; 
-        transition: 0.3s;
-        cursor: pointer;
-    }
-    .upload-box:hover { background: rgba(99,102,241,0.1); border-color: var(--accent); }
-    .upload-box i { font-size: 3rem; color: var(--primary); margin-bottom: 15px; }
+        /* WORKSPACE */
+        .workspace {
+            flex: 1;
+            display: grid;
+            overflow: hidden;
+            transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+        }
 
-    /* Terminal */
-    .terminal { height: 40px; min-height: 40px; flex-shrink: 0; background: var(--bg-terminal); border-top: 1px solid var(--border); display: flex; flex-direction: column; transition: height 0.4s cubic-bezier(0.25, 1, 0.5, 1); position: absolute; bottom: 0; width: 100%; z-index: 20; }
-    .terminal.expanded { height: 60% !important; border-top: 2px solid var(--primary); box-shadow: 0 -10px 40px rgba(0,0,0,0.5); }
-    .term-header { padding: 0 15px; height: 40px; background: #27272a; font-family: var(--font-main); font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; cursor: pointer; }
-    .term-body { flex: 1; padding: 20px; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; color: #ccc; overflow-y: auto; white-space: pre-wrap; scroll-behavior: smooth; display: flex; flex-direction: column; cursor: text; }
-    .term-log { flex: 1; }
-    .term-line { margin-bottom: 6px; display: flex; gap: 10px; line-height: 1.5; }
-    .term-input-line { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
-    .term-prompt { color: var(--success); font-weight: bold; }
-    #termInput { background: transparent; border: none; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; flex: 1; outline: none; }
+        .workspace.mode-reading {
+            grid-template-columns: 1fr 0px;
+        }
 
-    /* API PREVIEW */
-    .api-preview { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 6px; margin: 15px 0; overflow: hidden; animation: fadeIn 0.5s; }
-    .api-header { background: rgba(255,255,255,0.05); padding: 8px 12px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; }
-    .method-badge { background: var(--success); color: #000; padding: 2px 6px; border-radius: 4px; font-weight: 700; margin-right: 8px; }
-    .api-body { padding: 12px; font-family: 'JetBrains Mono', monospace; color: #a5b4fc; }
-    
-    .action-btn { background: var(--primary); color: #fff; border:none; padding: 6px 14px; border-radius: 4px; font-family: var(--font-main); cursor: pointer; display: inline-flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 0.85rem; transition: 0.2s; }
-    .action-btn:hover { background: var(--primary-hover); }
-    .action-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+        .workspace.mode-coding {
+            grid-template-columns: 35% 65%;
+        }
 
-    /* Footer */
-    .footer { height: 60px; flex-shrink: 0; background: var(--bg-sidebar); border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 30px; z-index: 50; }
-    .btn { padding: 10px 24px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; font-family: var(--font-main); display: flex; align-items: center; gap: 10px; transition: 0.2s; }
-    .btn-secondary { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
-    .btn-run { background: var(--primary); color: #fff; }
-    .btn-next { background: var(--success); color: #000; }
-    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        /* Left Panel (Guide/Content) */
+        .guide-panel {
+            background: var(--bg-sidebar);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
 
-    /* Progress */
-    .progress-container { display: flex; gap: 6px; align-items: center; }
-    .step-pill { width: 30px; height: 4px; background: #27272a; border-radius: 2px; cursor: pointer; transition: 0.3s; }
-    .step-pill.active { background: var(--primary); width: 40px; box-shadow: 0 0 10px var(--primary); }
-    .step-pill.completed { background: var(--success); }
-    .step-pill.locked { opacity: 0.3; cursor: not-allowed; }
+        .guide-content {
+            padding: 30px;
+            overflow-y: auto;
+            flex: 1;
+            scroll-behavior: smooth;
+        }
 
-    #loadingOverlay { position: fixed; top:0; left:0; width:100%; height:100%; background: var(--bg-root); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s; }
-    #customToast { position: fixed; top: 80px; right: 30px; background: #27272a; padding: 12px 20px; border-radius: 8px; display: flex; gap: 10px; align-items: center; color: #fff; transform: translateX(150%); transition: 0.3s; z-index: 200; box-shadow: 0 10px 40px rgba(0,0,0,0.5); border: 1px solid var(--border); }
-    @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
+        .guide-content h1 {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            color: var(--text);
+        }
 
-    /* Mobile */
-    @media (max-width: 900px) {
-      .workspace.mode-coding { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
-      .guide-panel { max-height: 35vh; border-right: none; border-bottom: 1px solid var(--border); }
-      .ide-panel { height: auto; min-height: 0; }
-      .terminal { position: fixed; bottom: 0; left: 0; width: 100%; height: 40px; z-index: 999; transition: height 0.3s ease; }
-      .terminal.expanded { height: 60vh !important; }
-      #monaco-editor { height: 100% !important; min-height: 300px; }
-    }
-    @media (max-width: 600px) {
-      .navbar { padding: 0 12px; }
-      .xp-container { display: none; }
-      .footer { padding: 10px; gap: 10px; height: auto; }
-      .footer .btn { flex: 1; justify-content: center; }
-      .file-input-wrapper { flex-direction: column; align-items: stretch; }
-      #fileNameInput { width: 100%; }
-    }
-  </style>
+        .guide-content p {
+            line-height: 1.7;
+            color: var(--text-dim);
+            margin-bottom: 20px;
+        }
+
+        .guide-content code {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: var(--accent);
+            font-family: var(--font-code);
+        }
+
+        .badge {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge-theory {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--primary);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+
+        .badge-task {
+            background: rgba(56, 189, 248, 0.1);
+            color: var(--accent);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+        }
+
+        /* --- RICH CONTENT STYLES --- */
+        .theory-section {
+            margin-bottom: 25px;
+        }
+
+        .theory-section h3 {
+            color: var(--accent);
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+            border-left: 3px solid var(--primary);
+            padding-left: 10px;
+        }
+
+        .theory-section ul {
+            padding-left: 20px;
+            color: var(--text-dim);
+        }
+
+        .theory-section li {
+            margin-bottom: 8px;
+            line-height: 1.6;
+        }
+
+        .concept-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .concept-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            padding: 12px;
+            border-radius: 6px;
+        }
+
+        .concept-term {
+            color: var(--success);
+            font-weight: bold;
+            font-family: var(--font-code);
+            display: block;
+            margin-bottom: 6px;
+            font-size: 0.95rem;
+        }
+
+        .code-block {
+            background: #111;
+            border: 1px solid var(--border);
+            padding: 15px;
+            border-radius: 6px;
+            font-family: var(--font-code);
+            color: #a5b4fc;
+            overflow-x: auto;
+            font-size: 0.85rem;
+            margin-top: 10px;
+            line-height: 1.5;
+        }
+
+        .analogy-box {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            color: #fbbf24;
+            margin-top: 10px;
+        }
+
+        .mistake-box {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            color: #fca5a5;
+            margin-top: 10px;
+        }
+
+        /* File Input UI */
+        .file-input-group {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .file-input-group label {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .file-input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--bg-editor);
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+
+        .file-input-wrapper i {
+            color: var(--primary);
+        }
+
+        #fileNameInput {
+            background: transparent;
+            border: none;
+            color: var(--text);
+            font-family: var(--font-code);
+            font-size: 0.9rem;
+            flex: 1;
+        }
+
+        .hint-box {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Right Panel */
+        .ide-panel {
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-editor);
+            height: 100%;
+            position: relative;
+        }
+
+        .toolbar {
+            height: 40px;
+            background: #27272a;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 15px;
+            flex-shrink: 0;
+        }
+
+        .file-tab {
+            background: var(--bg-editor);
+            padding: 0 20px;
+            height: 100%;
+            border-top: 2px solid var(--primary);
+            color: var(--text);
+            font-family: var(--font-code);
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .icon-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-dim);
+            cursor: pointer;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            display: grid;
+            place-items: center;
+            transition: 0.2s;
+        }
+
+        .icon-btn:hover {
+            color: var(--text);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .editor-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            min-height: 200px;
+        }
+
+        #monaco-editor {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* PROJECT UPLOAD UI */
+        .project-upload-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            padding: 20px;
+            background: var(--bg-editor);
+            color: var(--text);
+            text-align: center;
+        }
+
+        .upload-box {
+            border: 2px dashed var(--primary);
+            padding: 40px;
+            border-radius: 12px;
+            background: rgba(99, 102, 241, 0.05);
+            width: 100%;
+            max-width: 500px;
+            transition: 0.3s;
+            cursor: pointer;
+        }
+
+        .upload-box:hover {
+            background: rgba(99, 102, 241, 0.1);
+            border-color: var(--accent);
+        }
+
+        .upload-box i {
+            font-size: 3rem;
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+
+        /* Terminal */
+        .terminal {
+            height: 40px;
+            min-height: 40px;
+            flex-shrink: 0;
+            background: var(--bg-terminal);
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            transition: height 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            z-index: 20;
+        }
+
+        .terminal.expanded {
+            height: 60% !important;
+            border-top: 2px solid var(--primary);
+            box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .term-header {
+            padding: 0 15px;
+            height: 40px;
+            background: #27272a;
+            font-family: var(--font-main);
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+
+        .term-body {
+            flex: 1;
+            padding: 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: #ccc;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            scroll-behavior: smooth;
+            display: flex;
+            flex-direction: column;
+            cursor: text;
+        }
+
+        .term-log {
+            flex: 1;
+        }
+
+        .term-line {
+            margin-bottom: 6px;
+            display: flex;
+            gap: 10px;
+            line-height: 1.5;
+        }
+
+        .term-input-line {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .term-prompt {
+            color: var(--success);
+            font-weight: bold;
+        }
+
+        #termInput {
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            flex: 1;
+            outline: none;
+        }
+
+        /* API PREVIEW */
+        .api-preview {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            margin: 15px 0;
+            overflow: hidden;
+            animation: fadeIn 0.5s;
+        }
+
+        .api-header {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+        }
+
+        .method-badge {
+            background: var(--success);
+            color: #000;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 700;
+            margin-right: 8px;
+        }
+
+        .api-body {
+            padding: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            color: #a5b4fc;
+        }
+
+        .action-btn {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 4px;
+            font-family: var(--font-main);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            font-size: 0.85rem;
+            transition: 0.2s;
+        }
+
+        .action-btn:hover {
+            background: var(--primary-hover);
+        }
+
+        .action-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        /* Footer */
+        .footer {
+            height: 60px;
+            flex-shrink: 0;
+            background: var(--bg-sidebar);
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            z-index: 50;
+        }
+
+        .btn {
+            padding: 10px 24px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-family: var(--font-main);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: 0.2s;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-dim);
+            border: 1px solid var(--border);
+        }
+
+        .btn-run {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .btn-next {
+            background: var(--success);
+            color: #000;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* Progress */
+        .progress-container {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .step-pill {
+            width: 30px;
+            height: 4px;
+            background: #27272a;
+            border-radius: 2px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .step-pill.active {
+            background: var(--primary);
+            width: 40px;
+            box-shadow: 0 0 10px var(--primary);
+        }
+
+        .step-pill.completed {
+            background: var(--success);
+        }
+
+        .step-pill.locked {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        #loadingOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-root);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s;
+        }
+
+        #customToast {
+            position: fixed;
+            top: 80px;
+            right: 30px;
+            background: #27272a;
+            padding: 12px 20px;
+            border-radius: 8px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            color: #fff;
+            transform: translateX(150%);
+            transition: 0.3s;
+            z-index: 200;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* Mobile */
+        @media (max-width: 900px) {
+            .workspace.mode-coding {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr;
+            }
+
+            .guide-panel {
+                max-height: 35vh;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+            }
+
+            .ide-panel {
+                height: auto;
+                min-height: 0;
+            }
+
+            .terminal {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                height: 40px;
+                z-index: 999;
+                transition: height 0.3s ease;
+            }
+
+            .terminal.expanded {
+                height: 60vh !important;
+            }
+
+            #monaco-editor {
+                height: 100% !important;
+                min-height: 300px;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .navbar {
+                padding: 0 12px;
+            }
+
+            .xp-container {
+                display: none;
+            }
+
+            .footer {
+                padding: 10px;
+                gap: 10px;
+                height: auto;
+            }
+
+            .footer .btn {
+                flex: 1;
+                justify-content: center;
+            }
+
+            .file-input-wrapper {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            #fileNameInput {
+                width: 100%;
+            }
+        }
+    </style>
 </head>
+
 <body>
 
-  <div id="loadingOverlay">
-    <i class="fas fa-cube fa-spin fa-3x" style="color:var(--primary); margin-bottom:20px;"></i>
-    <p style="color:var(--text-dim); font-family:var(--font-code);">INITIALIZING DEV ENV...</p>
-  </div>
-
-  <div id="customToast"></div>
-
-  <nav class="navbar">
-    <a href="#" class="brand" onclick="window.history.back()">
-      <i class="fas fa-cube"></i> <span>MindStep</span>
-    </a>
-    <div style="display:flex; gap:20px; align-items:center;">
-        <div class="xp-container">
-            <span class="level-badge" id="levelDisplay">LVL 1</span>
-            <div class="xp-bar-wrapper"><div class="xp-bar-fill" id="xpBar"></div></div>
-            <span class="xp-text" id="xpText">0 XP</span>
-        </div>
-        <div class="progress-container" id="progressBar"></div>
-    </div>
-    <div style="display:flex; gap:10px;">
-        <button class="icon-btn" onclick="toggleTheme()" title="Switch Theme"><i class="fas fa-palette"></i></button>
-        <div style="font-size:0.85rem; color:var(--text-dim); display:flex; gap:8px; align-items:center; background:#18181b; padding:6px 12px; border-radius:20px; border:1px solid var(--border);">
-            <div style="width:6px; height:6px; background:var(--success); border-radius:50%;"></div> 
-            <span id="saveStatus">Synced</span>
-        </div>
-    </div>
-  </nav>
-
-  <div class="workspace mode-reading" id="mainWorkspace" style="opacity:0;">
-    
-    <div class="guide-panel">
-      <div class="guide-content" id="guideContent"></div>
-      <div style="padding: 0 30px 30px 30px;">
-          <div id="hintBox" class="hint-box">
-              <div style="color:var(--warning); font-weight:700; margin-bottom:5px;"><i class="fas fa-lightbulb"></i> Concept Hint</div>
-              <div id="hintText" style="color:var(--text);"></div>
-          </div>
-      </div>
+    <div id="loadingOverlay">
+        <i class="fas fa-cube fa-spin fa-3x" style="color:var(--primary); margin-bottom:20px;"></i>
+        <p style="color:var(--text-dim); font-family:var(--font-code);">INITIALIZING DEV ENV...</p>
     </div>
 
-    <div class="ide-panel">
-      <div class="toolbar">
-        <div class="file-tab">
-          <i class="fas fa-file-code" id="langIcon" style="color:var(--primary);"></i> <span id="langName">server.js</span>
-        </div>
-        <div class="toolbar-actions">
-          <button class="icon-btn" onclick="copyCode()" title="Copy Code"><i class="far fa-copy"></i></button>
-          <button class="icon-btn" onclick="resetCode()" title="Reset Code"><i class="fas fa-undo"></i></button>
-        </div>
-      </div>
+    <div id="customToast"></div>
 
-      <div class="editor-container">
-        <div id="monaco-editor"></div>
-      </div>
-
-      <div id="projectUploadArea" class="project-upload-container">
-        <div class="upload-box" onclick="document.getElementById('projectFileInput').click()">
-            <i class="fas fa-cloud-upload-alt"></i>
-            <h2 id="uploadTitle">Submit Project</h2>
-            <p id="uploadHint" style="color:var(--text-dim); margin-bottom:20px;"></p>
-            
-            <input type="file" id="projectFileInput" accept=".zip,.pdf,.docx" style="display:none;" onchange="handleProjectUpload(this.files[0])">
-            
-            <button class="btn btn-run" style="margin: 0 auto; pointer-events: none;">
-                <i class="fas fa-paper-plane"></i> Choose File
-            </button>
-            <div id="uploadStatus" style="margin-top:20px; font-weight: 500;"></div>
-            <div id="adminFeedback" style="margin-top:20px; display:none; color:var(--text-dim); font-size:0.9rem;"></div>
-        </div>
-      </div>
-
-      <div class="terminal" id="terminalArea">
-        <div class="term-header" onclick="toggleTerminal()">
-          <span><i class="fas fa-terminal" style="margin-right:8px; opacity:0.7;"></i> TERMINAL / PREVIEW</span>
-          <div style="display:flex; gap:10px;">
-              <button class="icon-btn" style="width:auto; padding:0 10px; font-size:0.8rem;">
-                  <i class="fas fa-expand" id="termExpandIcon"></i> <span id="termExpandText">Expand</span>
-              </button>
-              <button class="icon-btn" onclick="event.stopPropagation(); clearTerminal()" title="Clear"><i class="fas fa-trash"></i></button>
-          </div>
-        </div>
-        <div class="term-body" id="termBody" onclick="document.getElementById('termInput').focus()">
-          <div id="termLog" class="term-log">
-            <div style="color:var(--text-dim); margin-bottom:10px; font-style:italic;">
-                # Welcome to MindStep Shell v1.0 <br>
-                # Step 1: Write Code. Step 2: Check Logic. Step 3: Action.
+    <nav class="navbar">
+        <a href="#" class="brand" onclick="window.history.back()">
+            <i class="fas fa-cube"></i> <span>MindStep</span>
+        </a>
+        <div style="display:flex; gap:20px; align-items:center;">
+            <div class="xp-container">
+                <span class="level-badge" id="levelDisplay">LVL 1</span>
+                <div class="xp-bar-wrapper">
+                    <div class="xp-bar-fill" id="xpBar"></div>
+                </div>
+                <span class="xp-text" id="xpText">0 XP</span>
             </div>
-          </div>
-          <div class="term-input-line">
-            <span class="term-prompt">user@mindstep:~$</span>
-            <input type="text" id="termInput" autocomplete="off" spellcheck="false">
-          </div>
+            <div class="progress-container" id="progressBar"></div>
         </div>
-      </div>
+        <div style="display:flex; gap:10px;">
+            <button class="icon-btn" onclick="toggleTheme()" title="Switch Theme"><i
+                    class="fas fa-palette"></i></button>
+            <div
+                style="font-size:0.85rem; color:var(--text-dim); display:flex; gap:8px; align-items:center; background:#18181b; padding:6px 12px; border-radius:20px; border:1px solid var(--border);">
+                <div style="width:6px; height:6px; background:var(--success); border-radius:50%;"></div>
+                <span id="saveStatus">Synced</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="workspace mode-reading" id="mainWorkspace" style="opacity:0;">
+
+        <div class="guide-panel">
+            <div class="guide-content" id="guideContent"></div>
+            <div style="padding: 0 30px 30px 30px;">
+                <div id="hintBox" class="hint-box">
+                    <div style="color:var(--warning); font-weight:700; margin-bottom:5px;"><i
+                            class="fas fa-lightbulb"></i> Concept Hint</div>
+                    <div id="hintText" style="color:var(--text);"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="ide-panel">
+            <div class="toolbar">
+                <div class="file-tab">
+                    <i class="fas fa-file-code" id="langIcon" style="color:var(--primary);"></i> <span
+                        id="langName">server.js</span>
+                </div>
+                <div class="toolbar-actions">
+                    <button class="icon-btn" onclick="copyCode()" title="Copy Code"><i class="far fa-copy"></i></button>
+                    <button class="icon-btn" onclick="resetCode()" title="Reset Code"><i
+                            class="fas fa-undo"></i></button>
+                </div>
+            </div>
+
+            <div class="editor-container">
+                <div id="monaco-editor"></div>
+            </div>
+
+            <div id="projectUploadArea" class="project-upload-container">
+                <div class="upload-box" onclick="document.getElementById('projectFileInput').click()">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <h2 id="uploadTitle">Submit Project</h2>
+                    <p id="uploadHint" style="color:var(--text-dim); margin-bottom:20px;"></p>
+
+                    <input type="file" id="projectFileInput" accept=".zip,.pdf,.docx" style="display:none;"
+                        onchange="handleProjectUpload(this.files[0])">
+
+                    <button class="btn btn-run" style="margin: 0 auto; pointer-events: none;">
+                        <i class="fas fa-paper-plane"></i> Choose File
+                    </button>
+                    <div id="uploadStatus" style="margin-top:20px; font-weight: 500;"></div>
+                    <div id="adminFeedback"
+                        style="margin-top:20px; display:none; color:var(--text-dim); font-size:0.9rem;"></div>
+                </div>
+            </div>
+
+            <div class="terminal" id="terminalArea">
+                <div class="term-header" onclick="toggleTerminal()">
+                    <span><i class="fas fa-terminal" style="margin-right:8px; opacity:0.7;"></i> TERMINAL /
+                        PREVIEW</span>
+                    <div style="display:flex; gap:10px;">
+                        <button class="icon-btn" style="width:auto; padding:0 10px; font-size:0.8rem;">
+                            <i class="fas fa-expand" id="termExpandIcon"></i> <span id="termExpandText">Expand</span>
+                        </button>
+                        <button class="icon-btn" onclick="event.stopPropagation(); clearTerminal()" title="Clear"><i
+                                class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+                <div class="term-body" id="termBody" onclick="document.getElementById('termInput').focus()">
+                    <div id="termLog" class="term-log">
+                        <div style="color:var(--text-dim); margin-bottom:10px; font-style:italic;">
+                            # Welcome to MindStep Shell v1.0 <br>
+                            # Step 1: Write Code. Step 2: Check Logic. Step 3: Action.
+                        </div>
+                    </div>
+                    <div class="term-input-line">
+                        <span class="term-prompt">user@mindstep:~$</span>
+                        <input type="text" id="termInput" autocomplete="off" spellcheck="false">
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <div class="footer">
-    <button class="btn btn-secondary" id="prevBtn" disabled><i class="fas fa-arrow-left"></i> Previous</button>
-    <div style="font-size:0.8rem; color:var(--text-dim); font-family:var(--font-code);">Write Code & Check Logic</div>
-    <button class="btn btn-run" id="runBtn">Check Logic <i class="fas fa-check-circle"></i></button>
-  </div>
+    <div class="footer">
+        <button class="btn btn-secondary" id="prevBtn" disabled><i class="fas fa-arrow-left"></i> Previous</button>
+        <div style="font-size:0.8rem; color:var(--text-dim); font-family:var(--font-code);">Write Code & Check Logic
+        </div>
+        <button class="btn btn-run" id="runBtn">Check Logic <i class="fas fa-check-circle"></i></button>
+    </div>
 
-<script>
-require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' }});
+    <script>
+        require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' } });
 
-document.addEventListener("DOMContentLoaded", () => {
-  const state = {
-    steps: [], idx: 0, userCode: {}, passed: new Set(),
-    lessonId: new URLSearchParams(location.search).get("lesson"),
-    userId: JSON.parse(localStorage.getItem("mindstep_user") || '{"_id":"guest"}')._id,
-    defaults: {}, mockMode: false, failCounts: {},
-    xp: parseInt(localStorage.getItem("mindstep_xp") || "0"),
-    editorInstance: null,
-    
-    fileName: "server.js",
-    isLogicValid: false,
-    cmdHistory: [],
-    cmdHistoryIdx: -1
-  };
+        document.addEventListener("DOMContentLoaded", () => {
+            const state = {
+                steps: [], idx: 0, userCode: {}, passed: new Set(),
+                lessonId: new URLSearchParams(location.search).get("lesson"),
+                courseId: new URLSearchParams(location.search).get("course"),
+                userId: JSON.parse(localStorage.getItem("mindstep_user") || '{"_id":"guest"}')._id,
+                defaults: {}, mockMode: false, failCounts: {},
+                xp: parseInt(localStorage.getItem("mindstep_xp") || "0"),
+                editorInstance: null,
 
-  const els = {
-    termLog: document.getElementById("termLog"),
-    termInput: document.getElementById("termInput"),
-    termBody: document.getElementById("termBody"),
-    terminalArea: document.getElementById("terminalArea"),
-    termExpandIcon: document.getElementById("termExpandIcon"),
-    termExpandText: document.getElementById("termExpandText"),
-    runBtn: document.getElementById("runBtn"),
-    prevBtn: document.getElementById("prevBtn"),
-    guide: document.getElementById("guideContent"),
-    ws: document.getElementById("mainWorkspace"),
-    dots: document.getElementById("progressBar"),
-    xpBar: document.getElementById("xpBar"),
-    xpText: document.getElementById("xpText"),
-    lvlDisplay: document.getElementById("levelDisplay"),
-    hintBox: document.getElementById("hintBox"),
-    hintText: document.getElementById("hintText"),
-    langName: document.getElementById("langName"),
-    saveStatus: document.getElementById("saveStatus")
-  };
+                fileName: "server.js",
+                isLogicValid: false,
+                cmdHistory: [],
+                cmdHistoryIdx: -1
+            };
 
-  // --- TERMINAL UI ---
-  window.toggleTerminal = (forceState) => {
-      const isCurrentlyExpanded = els.terminalArea.classList.contains('expanded');
-      const shouldExpand = forceState !== undefined ? forceState : !isCurrentlyExpanded;
+            const els = {
+                termLog: document.getElementById("termLog"),
+                termInput: document.getElementById("termInput"),
+                termBody: document.getElementById("termBody"),
+                terminalArea: document.getElementById("terminalArea"),
+                termExpandIcon: document.getElementById("termExpandIcon"),
+                termExpandText: document.getElementById("termExpandText"),
+                runBtn: document.getElementById("runBtn"),
+                prevBtn: document.getElementById("prevBtn"),
+                guide: document.getElementById("guideContent"),
+                ws: document.getElementById("mainWorkspace"),
+                dots: document.getElementById("progressBar"),
+                xpBar: document.getElementById("xpBar"),
+                xpText: document.getElementById("xpText"),
+                lvlDisplay: document.getElementById("levelDisplay"),
+                hintBox: document.getElementById("hintBox"),
+                hintText: document.getElementById("hintText"),
+                langName: document.getElementById("langName"),
+                saveStatus: document.getElementById("saveStatus")
+            };
 
-      if(shouldExpand) {
-          els.terminalArea.classList.add('expanded');
-          els.termExpandIcon.className = "fas fa-compress";
-          els.termExpandText.innerText = "Minimize";
-          scrollToBottom();
-          els.termInput.focus();
-      } else {
-          els.terminalArea.classList.remove('expanded');
-          els.termExpandIcon.className = "fas fa-expand";
-          els.termExpandText.innerText = "Expand";
-      }
-  };
+            // --- TERMINAL UI ---
+            window.toggleTerminal = (forceState) => {
+                const isCurrentlyExpanded = els.terminalArea.classList.contains('expanded');
+                const shouldExpand = forceState !== undefined ? forceState : !isCurrentlyExpanded;
 
-  window.clearTerminal = () => {
-      els.termLog.innerHTML = `<div style="color:var(--text-dim); font-style:italic;"># Terminal cleared.</div>`;
-  };
-
-  function scrollToBottom() {
-      els.termBody.scrollTop = els.termBody.scrollHeight;
-  }
-
-  function addLog(msg, type='log') {
-      const color = type === 'error' ? 'var(--error)' : (type === 'success' ? 'var(--success)' : (type==='warning'?'var(--warning)':'var(--text-dim)'));
-      els.termLog.innerHTML += `<div class="term-line" style="color:${color};">${msg}</div>`;
-      scrollToBottom();
-  }
-
-  window.addEventListener("focusin", (e) => {
-      if (window.innerWidth < 900 && e.target.id === "termInput") {
-          els.terminalArea.classList.add('expanded');
-          els.termExpandIcon.className = "fas fa-compress";
-          els.termExpandText.innerText = "Minimize";
-      }
-  });
-
-  // --- INIT & MOCK DATA ---
-  function initMonaco() {
-    return new Promise((resolve) => {
-        require(['vs/editor/editor.main'], function () {
-            state.editorInstance = monaco.editor.create(document.getElementById('monaco-editor'), {
-                value: "", language: 'javascript', theme: 'vs-dark',
-                fontSize: 15, fontFamily: "'JetBrains Mono', monospace",
-                automaticLayout: true, minimap: { enabled: false },
-                scrollBeyondLastLine: false, padding: { top: 16, bottom: 16 }
-            });
-            state.editorInstance.onDidChangeModelContent(() => {
-                const code = state.editorInstance.getValue();
-                const step = state.steps[state.idx];
-                
-                // Auto Save Indicator
-                els.saveStatus.innerText = "Saving...";
-                setTimeout(()=>els.saveStatus.innerText="Synced", 500);
-
-                if (state.isLogicValid) {
-                   state.isLogicValid = false;
-                   els.runBtn.className = "btn btn-run";
-                   els.runBtn.innerHTML = `Check Logic <i class="fas fa-check-circle"></i>`;
-                   els.runBtn.disabled = false;
+                if (shouldExpand) {
+                    els.terminalArea.classList.add('expanded');
+                    els.termExpandIcon.className = "fas fa-compress";
+                    els.termExpandText.innerText = "Minimize";
+                    scrollToBottom();
+                    els.termInput.focus();
+                } else {
+                    els.terminalArea.classList.remove('expanded');
+                    els.termExpandIcon.className = "fas fa-expand";
+                    els.termExpandText.innerText = "Expand";
                 }
+            };
 
-                if(step && step.type === 'task') {
-                    state.userCode[step.data._id] = code;
-                    localStorage.setItem(`draft_${state.userId}_${step.data._id}`, code);
+            window.clearTerminal = () => {
+                els.termLog.innerHTML = `<div style="color:var(--text-dim); font-style:italic;"># Terminal cleared.</div>`;
+            };
+
+            function scrollToBottom() {
+                els.termBody.scrollTop = els.termBody.scrollHeight;
+            }
+
+            function addLog(msg, type = 'log') {
+                const color = type === 'error' ? 'var(--error)' : (type === 'success' ? 'var(--success)' : (type === 'warning' ? 'var(--warning)' : 'var(--text-dim)'));
+                els.termLog.innerHTML += `<div class="term-line" style="color:${color};">${msg}</div>`;
+                scrollToBottom();
+            }
+
+            window.addEventListener("focusin", (e) => {
+                if (window.innerWidth < 900 && e.target.id === "termInput") {
+                    els.terminalArea.classList.add('expanded');
+                    els.termExpandIcon.className = "fas fa-compress";
+                    els.termExpandText.innerText = "Minimize";
                 }
             });
-            state.editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => els.runBtn.click());
-            resolve();
-        });
-    });
-  }
 
-  async function init() {
-    if(localStorage.getItem("theme") === "neon") document.body.classList.add("theme-neon");
-    updateXP();
-    await initMonaco();
-    setupTerminalInput();
-    
-    try {
-      if(!state.lessonId) throw new Error("No ID");
-      const res = await fetch(`/api/lesson/${state.lessonId}/details`);
-      const data = await res.json();
-      if(!data.success) throw new Error("API Fail");
-      loadData(data);
-    } catch(e) {
-      state.mockMode = true; 
-      loadMockData();
-    }
-  }
+            // --- INIT & MOCK DATA ---
+            function initMonaco() {
+                return new Promise((resolve) => {
+                    require(['vs/editor/editor.main'], function () {
+                        state.editorInstance = monaco.editor.create(document.getElementById('monaco-editor'), {
+                            value: "", language: 'javascript', theme: 'vs-dark',
+                            fontSize: 15, fontFamily: "'JetBrains Mono', monospace",
+                            automaticLayout: true, minimap: { enabled: false },
+                            scrollBeyondLastLine: false, padding: { top: 16, bottom: 16 }
+                        });
+                        state.editorInstance.onDidChangeModelContent(() => {
+                            const code = state.editorInstance.getValue();
+                            const step = state.steps[state.idx];
 
-  function loadMockData() {
-    loadData({
-      lesson: { 
-          title: "Express Basics", 
-          description: "Learn to create a server and API endpoints.",
-          lesson: {
-              intro: "Express.js is a minimal and flexible Node.js web application framework.",
-              learningOutcomes: ["Setup Server", "Create Routes", "Handle Data"],
-              deepExplanation: ["Express simplifies the server creation process."],
-              conceptBreakdown: [{concept: "Server", explanation: "Computes requests"}],
-              summary: "Express is essential for Node backend."
-          }
-      },
-      tasks: [
-        { 
-            _id: "demo_task_1", 
-            title: "1. Setup Server", 
-            description: "Initialize an Express app and listen on port 3000.\n\nType: Server Task", 
-            type: "server",
-            validation: { patterns: ["express", "app\\.listen", "3000"], hints: ["Use app.listen(3000)"] },
-            language: "javascript"
-        },
-        {
-            _id: "demo_project_task",
-            title: "Final Project",
-            description: "Upload your project zip.",
-            type: "project" 
-        }
-      ]
-    });
-  }
+                            // Auto Save Indicator
+                            els.saveStatus.innerText = "Saving...";
+                            setTimeout(() => els.saveStatus.innerText = "Synced", 500);
 
-  function loadData(data) {
-    state.steps = [];
-    const mainDoc = data.lesson || {};
-    const richContent = mainDoc.lesson || mainDoc || {}; 
+                            if (state.isLogicValid) {
+                                state.isLogicValid = false;
+                                els.runBtn.className = "btn btn-run";
+                                els.runBtn.innerHTML = `Check Logic <i class="fas fa-check-circle"></i>`;
+                                els.runBtn.disabled = false;
+                            }
 
-    // ✅✅✅ NEW: VIDEO, NOTES, PDF INJECTION ✅✅✅
-    let mediaHtml = "";
+                            if (step && step.type === 'task') {
+                                state.userCode[step.data._id] = code;
+                                localStorage.setItem(`draft_${state.userId}_${step.data._id}`, code);
+                            }
+                        });
+                        state.editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => els.runBtn.click());
+                        resolve();
+                    });
+                });
+            }
 
-    // 1. VIDEO
-    if (mainDoc.video) {
-        let url = mainDoc.video;
-        // Convert watch -> embed
-        if (url.includes("youtube.com/watch")) {
-            const videoId = url.split("v=")[1].split("&")[0];
-            url = `https://www.youtube.com/embed/${videoId}`;
-        } else if (url.includes("youtu.be/")) {
-            const videoId = url.split("youtu.be/")[1];
-            url = `https://www.youtube.com/embed/${videoId}`;
-        }
+            async function init() {
+                // Lesson ID Guard
+                if (!state.lessonId) {
+                    showToast("Invalid lesson link", "error");
+                    return;
+                }
 
-        mediaHtml += `
+                // Load Task Progress First
+                try {
+                    const progressRes = await fetch(`/api/progress/${state.userId}/${state.lessonId}`);
+                    const progressData = await progressRes.json();
+                    if (progressData.success) {
+                        progressData.passedTaskIds.forEach(id => state.passed.add(id));
+                    }
+                } catch (e) { console.warn("Failed to load progress"); }
+
+                if (localStorage.getItem("theme") === "neon") document.body.classList.add("theme-neon");
+                updateXP();
+                await initMonaco();
+                setupTerminalInput();
+
+                try {
+                    const res = await fetch(`/api/lesson/${state.lessonId}/details`);
+                    const data = await res.json();
+                    if (!data.success) throw new Error("API Fail");
+                    loadData(data);
+                } catch (e) {
+                    state.mockMode = true;
+                    loadMockData();
+                }
+            }
+
+            function loadMockData() {
+                loadData({
+                    lesson: {
+                        title: "Express Basics",
+                        description: "Learn to create a server and API endpoints.",
+                        lesson: {
+                            intro: "Express.js is a minimal and flexible Node.js web application framework.",
+                            learningOutcomes: ["Setup Server", "Create Routes", "Handle Data"],
+                            deepExplanation: ["Express simplifies the server creation process."],
+                            conceptBreakdown: [{ concept: "Server", explanation: "Computes requests" }],
+                            summary: "Express is essential for Node backend."
+                        }
+                    },
+                    tasks: [
+                        {
+                            _id: "demo_task_1",
+                            title: "1. Setup Server",
+                            description: "Initialize an Express app and listen on port 3000.\n\nType: Server Task",
+                            type: "server",
+                            validation: { patterns: ["express", "app\\.listen", "3000"], hints: ["Use app.listen(3000)"] },
+                            language: "javascript"
+                        },
+                        {
+                            _id: "demo_project_task",
+                            title: "Final Project",
+                            description: "Upload your project zip.",
+                            type: "project"
+                        }
+                    ]
+                });
+            }
+
+            function loadData(data) {
+                state.steps = [];
+                const mainDoc = data.lesson || {};
+                const richContent = mainDoc.lesson || mainDoc || {};
+
+                // VIDEO, NOTES, PDF INJECTION
+                let mediaHtml = "";
+
+                // 1. VIDEO
+                if (mainDoc.video) {
+                    let url = mainDoc.video;
+                    if (url.includes("youtube.com/watch")) {
+                        const videoId = url.split("v=")[1].split("&")[0];
+                        url = `https://www.youtube.com/embed/${videoId}`;
+                    } else if (url.includes("youtu.be/")) {
+                        const videoId = url.split("youtu.be/")[1];
+                        url = `https://www.youtube.com/embed/${videoId}`;
+                    }
+
+                    mediaHtml += `
             <div class="theory-section">
                 <h3 style="color:var(--accent);">🎥 Lesson Video</h3>
                 <div style="position:relative; padding-top:56.25%; margin-bottom:20px;">
@@ -500,149 +1098,170 @@ document.addEventListener("DOMContentLoaded", () => {
                     </iframe>
                 </div>
             </div>`;
-    }
+                }
 
-    // 2. NOTES
-    if (mainDoc.notes) {
-        mediaHtml += `
+                // 2. NOTES (With XSS Protection)
+                if (mainDoc.notes) {
+                    const safeNotes = mainDoc.notes.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
+                    mediaHtml += `
             <div class="theory-section">
                 <h3 style="color:var(--accent);">📝 Instructor Notes</h3>
                 <div style="color:var(--text-dim); line-height:1.7; background:rgba(255,255,255,0.02); padding:15px; border-radius:8px; border:1px solid var(--border);">
-                    ${mainDoc.notes.replace(/\n/g, '<br>')}
+                    ${safeNotes}
                 </div>
             </div>`;
-    }
+                }
 
-    // 3. PDF
-    if (mainDoc.pdf) {
-        mediaHtml += `
+                // 3. PDF
+                if (mainDoc.pdf) {
+                    mediaHtml += `
             <div class="theory-section" style="margin-bottom:20px;">
                 <a href="${mainDoc.pdf}" target="_blank" class="action-btn" style="width:100%; justify-content:center; background:rgba(56,189,248,0.1); border:1px solid var(--accent); color:var(--accent); text-decoration:none;">
                     <i class="fas fa-file-pdf"></i> Download Study Material (PDF)
                 </a>
             </div>`;
-    }
-    // ✅✅✅ END NEW CONTENT ✅✅✅
+                }
 
-    let theoryHtml = "";
-    if (richContent.intro) theoryHtml += `<p style="font-size: 1.1rem; line-height: 1.6; color: var(--text);">${richContent.intro}</p><hr style="border-color:var(--border); margin: 20px 0;">`;
-    else if (mainDoc.description) theoryHtml += `<p style="font-size: 1.1rem; line-height: 1.6; color: var(--text);">${mainDoc.description}</p><hr style="border-color:var(--border); margin: 20px 0;">`;
+                let theoryHtml = "";
+                if (richContent.intro) theoryHtml += `<p style="font-size: 1.1rem; line-height: 1.6; color: var(--text);">${richContent.intro}</p><hr style="border-color:var(--border); margin: 20px 0;">`;
+                else if (mainDoc.description) theoryHtml += `<p style="font-size: 1.1rem; line-height: 1.6; color: var(--text);">${mainDoc.description}</p><hr style="border-color:var(--border); margin: 20px 0;">`;
 
-    if (richContent.learningOutcomes && richContent.learningOutcomes.length > 0) {
-        theoryHtml += `<div class="theory-section"><h3>🎯 What you will learn</h3><ul>${richContent.learningOutcomes.map(item => `<li>${item}</li>`).join('')}</ul></div>`;
-    }
-    if (richContent.deepExplanation && richContent.deepExplanation.length > 0) {
-        theoryHtml += `<div class="theory-section"><h3>📖 Core Concepts</h3>${richContent.deepExplanation.map(text => `<p>${text}</p>`).join('')}</div>`;
-    }
-    if (richContent.conceptBreakdown && richContent.conceptBreakdown.length > 0) {
-        theoryHtml += `<div class="theory-section"><h3>⚡ Key Terms</h3><div class="concept-grid">${richContent.conceptBreakdown.map(c => `<div class="concept-card"><span class="concept-term">${c.concept}</span><span style="font-size:0.9rem;">${c.explanation}</span></div>`).join('')}</div></div>`;
-    }
-    if (richContent.realWorldAnalogy && richContent.realWorldAnalogy.length > 0) {
-        theoryHtml += `<div class="theory-section"><h3>🌍 Real World Analogy</h3><div class="analogy-box"><ul style="margin:0; padding-left:20px; color:inherit;">${richContent.realWorldAnalogy.map(a => `<li>${a}</li>`).join('')}</ul></div></div>`;
-    }
-    if (richContent.example && richContent.example.code) {
-        theoryHtml += `<div class="theory-section"><h3>💻 Example: ${richContent.example.description || "Code Snippet"}</h3><pre class="code-block"><code>${richContent.example.code}</code></pre></div>`;
-    }
-    if (richContent.commonMistakes && richContent.commonMistakes.length > 0) {
-        theoryHtml += `<div class="theory-section"><h3>⚠️ Common Mistakes</h3><div class="mistake-box"><ul style="margin:0; padding-left:20px; color:inherit;">${richContent.commonMistakes.map(m => `<li>${m}</li>`).join('')}</ul></div></div>`;
-    }
-    if (richContent.summary) {
-        theoryHtml += `<hr style="border-color:var(--border); margin: 20px 0;"><p style="font-style:italic; color:var(--accent);">💡 <strong>Summary:</strong> ${richContent.summary}</p>`;
-    }
+                if (richContent.learningOutcomes && richContent.learningOutcomes.length > 0) {
+                    theoryHtml += `<div class="theory-section"><h3>🎯 What you will learn</h3><ul>${richContent.learningOutcomes.map(item => `<li>${item}</li>`).join('')}</ul></div>`;
+                }
+                if (richContent.deepExplanation && richContent.deepExplanation.length > 0) {
+                    theoryHtml += `<div class="theory-section"><h3>📖 Core Concepts</h3>${richContent.deepExplanation.map(text => `<p>${text}</p>`).join('')}</div>`;
+                }
+                if (richContent.conceptBreakdown && richContent.conceptBreakdown.length > 0) {
+                    theoryHtml += `<div class="theory-section"><h3>⚡ Key Terms</h3><div class="concept-grid">${richContent.conceptBreakdown.map(c => `<div class="concept-card"><span class="concept-term">${c.concept}</span><span style="font-size:0.9rem;">${c.explanation}</span></div>`).join('')}</div></div>`;
+                }
+                if (richContent.realWorldAnalogy && richContent.realWorldAnalogy.length > 0) {
+                    theoryHtml += `<div class="theory-section"><h3>🌍 Real World Analogy</h3><div class="analogy-box"><ul style="margin:0; padding-left:20px; color:inherit;">${richContent.realWorldAnalogy.map(a => `<li>${a}</li>`).join('')}</ul></div></div>`;
+                }
+                if (richContent.example && richContent.example.code) {
+                    theoryHtml += `<div class="theory-section"><h3>💻 Example: ${richContent.example.description || "Code Snippet"}</h3><pre class="code-block"><code>${richContent.example.code}</code></pre></div>`;
+                }
+                if (richContent.commonMistakes && richContent.commonMistakes.length > 0) {
+                    theoryHtml += `<div class="theory-section"><h3>⚠️ Common Mistakes</h3><div class="mistake-box"><ul style="margin:0; padding-left:20px; color:inherit;">${richContent.commonMistakes.map(m => `<li>${m}</li>`).join('')}</ul></div></div>`;
+                }
+                if (richContent.summary) {
+                    theoryHtml += `<hr style="border-color:var(--border); margin: 20px 0;"><p style="font-style:italic; color:var(--accent);">💡 <strong>Summary:</strong> ${richContent.summary}</p>`;
+                }
 
-    // Combine Media + Theory
-    const fullTheoryHtml = mediaHtml + theoryHtml;
+                // Combine Media + Theory
+                const fullTheoryHtml = mediaHtml + theoryHtml;
 
-    state.steps.push({ type: 'theory', data: { title: mainDoc.title || "Module", html: fullTheoryHtml || "<p>No content available.</p>" } });
+                state.steps.push({ type: 'theory', data: { title: mainDoc.title || "Module", html: fullTheoryHtml || "<p>No content available.</p>" } });
 
-    (data.tasks || []).forEach(t => {
-        state.steps.push({ type: t.type === 'project' ? 'project' : 'task', data: t }); 
-        state.defaults[t._id] = "";
-        state.failCounts[t._id] = 0;
-        const draft = localStorage.getItem(`draft_${state.userId}_${t._id}`);
-        if (draft) state.userCode[t._id] = draft;
-    });
+                (data.tasks || []).forEach(t => {
+                    state.steps.push({ type: t.type === 'project' ? 'project' : 'task', data: t });
+                    state.defaults[t._id] = "";
+                    state.failCounts[t._id] = 0;
+                    const draft = localStorage.getItem(`draft_${state.userId}_${t._id}`);
+                    if (draft) state.userCode[t._id] = draft;
+                });
 
-    if (data.lesson && data.lesson.type === "project") {
-        state.steps.push({
-            type: "project",
-            data: data.lesson
-        });
-    }
+                if (data.lesson && data.lesson.type === "project") {
+                    state.steps.push({
+                        type: "project",
+                        data: data.lesson
+                    });
+                }
 
-    state.steps.push({ type: 'finish' });
-    
-    // 🔥 AUTO RESUME FEATURE 🔥
-    const lastStep = localStorage.getItem(`lastStep_${state.lessonId}`);
-    if (lastStep) renderStep(Number(lastStep));
-    else renderStep(0);
-    
-    document.getElementById("loadingOverlay").style.opacity = '0';
-    setTimeout(()=>document.getElementById("loadingOverlay").style.display='none', 500);
-    els.ws.style.opacity = '1';
-  }
+                state.steps.push({ type: 'finish' });
 
-  // --- 🔥 RENDER STEP (SWITCHES UI) 🔥 ---
-  window.renderStep = (i) => {
-    // 🔥 AUTO RESUME SAVE 🔥
-    localStorage.setItem(`lastStep_${state.lessonId}`, i);
+                // 🔥 AUTO RESUME FEATURE (FIXED) 🔥
+                let stepToRender = 0;
+                const savedStep = localStorage.getItem(`lastStep_${state.lessonId}`);
 
-    if (i > 0 && state.steps[i-1].type !== 'theory' && !state.passed.has(state.steps[i-1].data._id)) {
-        showToast("Complete previous task first!", "error"); return;
-    }
+                if (savedStep) {
+                    const stepIndex = parseInt(savedStep);
+                    // Safety Check: If trying to jump ahead without passing previous tasks
+                    if (stepIndex > 0 && state.passed.size === 0) {
+                        console.warn("Resetting progress due to mismatch");
+                        localStorage.removeItem(`lastStep_${state.lessonId}`);
+                        stepToRender = 0;
+                    } else {
+                        stepToRender = stepIndex;
+                    }
+                }
 
-    toggleTerminal(false); 
-    state.isLogicValid = false;
-    els.termLog.innerHTML = `<div style="color:var(--text-dim); font-style:italic;"># Ready.</div>`;
+                renderStep(stepToRender);
 
-    state.idx = i;
-    const step = state.steps[i];
-    
-    els.dots.innerHTML = state.steps.map((s,idx) => {
-        let status = idx===i?'active':(idx<i?'completed':'');
-        let locked = (idx>0 && state.steps[idx-1].type!=='theory' && !state.passed.has(state.steps[idx-1].data._id));
-        return `<div class="step-pill ${status} ${locked?'locked':''}" onclick="${!locked ? `renderStep(${idx})` : ''}"></div>`;
-    }).join("");
+                document.getElementById("loadingOverlay").style.opacity = '0';
+                setTimeout(() => document.getElementById("loadingOverlay").style.display = 'none', 500);
+                els.ws.style.opacity = '1';
+            }
 
-    els.prevBtn.disabled = i === 0;
-    els.prevBtn.onclick = () => renderStep(i-1);
-    els.hintBox.style.display = 'none';
+            // --- 🔥 RENDER STEP (SWITCHES UI) 🔥 ---
+            window.renderStep = (i) => {
+                // 🔥 AUTO RESUME SAVE 🔥
+                localStorage.setItem(`lastStep_${state.lessonId}`, i);
 
-    // RESET UI STATES
-    document.getElementById('projectUploadArea').style.display = 'none';
-    document.querySelector('.editor-container').style.display = 'block';
-    if(step.type !== 'theory' && step.type !== 'finish') els.terminalArea.style.display = 'flex';
+                // ✅ FIX: Strict Previous Step Check
+                if (i > 0) {
+                    const prevStep = state.steps[i - 1];
+                    if (prevStep && (prevStep.type === 'task' || prevStep.type === 'project')) {
+                        if (!state.passed.has(prevStep.data._id)) {
+                            showToast("Complete previous task first!", "error");
+                            return;
+                        }
+                    }
+                }
 
-    if(step.type === 'theory') {
-        els.ws.className = "workspace mode-reading";
-        els.guide.innerHTML = `<div class="badge badge-theory"><i class="fas fa-book-open"></i> Theory</div><h1>${step.data.title}</h1><hr>${step.data.html}`;
-        els.runBtn.innerHTML = `Start Coding <i class="fas fa-arrow-right"></i>`;
-        els.runBtn.className = "btn btn-run";
-        els.runBtn.style.display = 'block';
-        els.runBtn.onclick = () => renderStep(i+1);
-        els.terminalArea.style.display = 'none';
-    } 
-    // 🔥 PROJECT UPLOAD STEP LOGIC (FIXED) 🔥
-    else if(step.type === 'project') {
-        els.ws.className = "workspace mode-coding";
-        document.querySelector('.editor-container').style.display = 'none'; // Hide Editor
-        els.terminalArea.style.display = 'none';     // Hide Terminal
-        document.getElementById('projectUploadArea').style.display = 'flex'; // Show Upload Box
-        
-        // ✅ FIX 2: Dynamic UI Text based on Project Type
-        const titleEl = document.getElementById("uploadTitle");
-        const hintEl = document.getElementById("uploadHint");
-        const projType = step.data.projectType || (step.data.type === 'project' ? 'planning' : 'code');
+                toggleTerminal(false);
+                state.isLogicValid = false;
+                els.termLog.innerHTML = `<div style="color:var(--text-dim); font-style:italic;"># Ready.</div>`;
 
-        if (projType === 'planning') {
-            titleEl.innerText = "Submit File";
-            hintEl.innerHTML = "Upload your project plan as a <b>.zip</b>,<b>.pdf</b> or <b>.docx</b> file.";
-        } else {
-            titleEl.innerText = "Submit Final Project";
-            hintEl.innerHTML = "Compress your complete project folder into a single <b>.zip</b> file.";
-        }
+                state.idx = i;
+                const step = state.steps[i];
 
-        els.guide.innerHTML = `
+                els.dots.innerHTML = state.steps.map((s, idx) => {
+                    let status = idx === i ? 'active' : (idx < i ? 'completed' : '');
+                    // Visual lock only
+                    let locked = (idx > 0 && state.steps[idx - 1].type !== 'theory' && !state.passed.has(state.steps[idx - 1].data._id));
+                    return `<div class="step-pill ${status} ${locked ? 'locked' : ''}" onclick="${!locked ? `renderStep(${idx})` : ''}"></div>`;
+                }).join("");
+
+                els.prevBtn.disabled = i === 0;
+                els.prevBtn.onclick = () => renderStep(i - 1);
+                els.hintBox.style.display = 'none';
+
+                // RESET UI STATES
+                document.getElementById('projectUploadArea').style.display = 'none';
+                document.querySelector('.editor-container').style.display = 'block';
+                if (step.type !== 'theory' && step.type !== 'finish') els.terminalArea.style.display = 'flex';
+
+                if (step.type === 'theory') {
+                    els.ws.className = "workspace mode-reading";
+                    els.guide.innerHTML = `<div class="badge badge-theory"><i class="fas fa-book-open"></i> Theory</div><h1>${step.data.title}</h1><hr>${step.data.html}`;
+                    els.runBtn.innerHTML = `Start Coding <i class="fas fa-arrow-right"></i>`;
+                    els.runBtn.className = "btn btn-run";
+                    els.runBtn.style.display = 'block';
+                    els.runBtn.onclick = () => renderStep(i + 1);
+                    els.terminalArea.style.display = 'none';
+                }
+                // 🔥 PROJECT UPLOAD STEP LOGIC (FIXED) 🔥
+                else if (step.type === 'project') {
+                    els.ws.className = "workspace mode-coding";
+                    document.querySelector('.editor-container').style.display = 'none'; // Hide Editor
+                    els.terminalArea.style.display = 'none';     // Hide Terminal
+                    document.getElementById('projectUploadArea').style.display = 'flex'; // Show Upload Box
+
+                    // ✅ FIX 2: Dynamic UI Text based on Project Type
+                    const titleEl = document.getElementById("uploadTitle");
+                    const hintEl = document.getElementById("uploadHint");
+                    const projType = step.data.projectType || (step.data.type === 'project' ? 'planning' : 'code');
+
+                    if (projType === 'planning') {
+                        titleEl.innerText = "Submit File";
+                        hintEl.innerHTML = "Upload your project plan as a <b>.zip</b>,<b>.pdf</b> or <b>.docx</b> file.";
+                    } else {
+                        titleEl.innerText = "Submit Final Project";
+                        hintEl.innerHTML = "Compress your complete project folder into a single <b>.zip</b> file.";
+                    }
+
+                    els.guide.innerHTML = `
             <div class="badge badge-task"><i class="fas fa-trophy"></i> Final Project</div>
             <h1>${step.data.title}</h1>
             <hr>
@@ -654,16 +1273,16 @@ document.addEventListener("DOMContentLoaded", () => {
                 3. Upload the file here.
             </div>
         `;
-        
-        els.runBtn.style.display = 'none';
-    }
-    // CODING TASK STEP
-    else if(step.type === 'task') {
-        els.ws.className = "workspace mode-coding";
-        els.terminalArea.style.display = 'flex';
-        els.runBtn.style.display = 'block';
-        
-        const fileInputHtml = `
+
+                    els.runBtn.style.display = 'none';
+                }
+                // CODING TASK STEP
+                else if (step.type === 'task') {
+                    els.ws.className = "workspace mode-coding";
+                    els.terminalArea.style.display = 'flex';
+                    els.runBtn.style.display = 'block';
+
+                    const fileInputHtml = `
             <div class="file-input-group">
                 <label>1. File Name</label>
                 <div class="file-input-wrapper">
@@ -673,97 +1292,113 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
         `;
 
-        els.guide.innerHTML = `
+                    // ✅ FIX: Specific MongoDB Hint
+                    let mongoHint = "";
+                    if (step.data.type === 'mongodb' && step.data.language === 'json') {
+                        mongoHint = `<div class="hint-box" style="display:block; border-color:var(--accent); background:rgba(56, 189, 248, 0.1);">
+              <i class="fas fa-info-circle"></i> <b>Note:</b><br>
+              This is a MongoDB document task.<br>
+              You only need to create a valid JSON object.<br>
+              No code execution is required.</div>`;
+                    }
+
+                    els.guide.innerHTML = `
             <div class="badge badge-task"><i class="fas fa-code"></i> Task ${i}</div>
             <h1>${step.data.title}</h1>
             <hr>
             ${fileInputHtml}
             <p style="white-space:pre-wrap;">${step.data.description}</p>
+            ${mongoHint}
         `;
 
-        const fnInput = document.getElementById("fileNameInput");
-        fnInput.addEventListener("input", (e) => {
-            state.fileName = e.target.value.trim() || "untitled";
-            els.langName.innerText = state.fileName;
-        });
-        
-        const lang = (step.data.language || "javascript").toLowerCase();
-        if(lang === 'react' || lang === 'jsx') state.fileName = "App.jsx";
-        else if(lang === 'java') state.fileName = "Main.java";
-        else if(lang === 'python') state.fileName = "script.py";
-        else if(lang === 'html') state.fileName = "index.html";
-        else state.fileName = "server.js";
+                    const fnInput = document.getElementById("fileNameInput");
+                    fnInput.addEventListener("input", (e) => {
+                        state.fileName = e.target.value.trim() || "untitled";
+                        els.langName.innerText = state.fileName;
+                    });
 
-        els.langName.innerText = state.fileName;
-        document.getElementById("fileNameInput").value = state.fileName;
+                    const lang = (step.data.language || "javascript").toLowerCase();
+                    if (lang === 'react' || lang === 'jsx') state.fileName = "App.jsx";
+                    else if (lang === 'java') state.fileName = "Main.java";
+                    else if (lang === 'python') state.fileName = "script.py";
+                    else if (lang === 'html') state.fileName = "index.html";
+                    else if (lang === 'json') state.fileName = "document.json"; // ✅ FIX: MongoDB JSON filename
+                    else state.fileName = "server.js";
 
-        monaco.editor.setModelLanguage(state.editorInstance.getModel(), lang);
-        state.editorInstance.setValue(state.userCode[step.data._id] || "");
+                    els.langName.innerText = state.fileName;
+                    document.getElementById("fileNameInput").value = state.fileName;
 
-        if(state.passed.has(step.data._id)) setSuccessBtn();
-        else {
-            els.runBtn.innerHTML = `Check Logic <i class="fas fa-check-circle"></i>`;
-            els.runBtn.className = "btn btn-run";
-            els.runBtn.onclick = () => runCode(step.data);
-            els.runBtn.disabled = false;
-        }
-    }
-    else if(step.type === 'finish') finishLesson();
-  };
+                    monaco.editor.setModelLanguage(state.editorInstance.getModel(), lang);
+                    state.editorInstance.setValue(state.userCode[step.data._id] || "");
 
-  // 🔥 SUBMIT PROJECT FUNCTION (WITH ANIMATION) 🔥
-  window.handleProjectUpload = async (file) => {
-    // ✅ SECURITY CHECK: GUEST GUARD (IMPROVED)
-    if (!state.userId || state.userId === "guest") {
-        showToast("Login required to submit project", "error");
-        setTimeout(() => window.location.href = "LoginPage.html", 1500); // Redirect logic
-        return;
-    }
+                    if (state.passed.has(step.data._id)) setSuccessBtn();
+                    else {
+                        els.runBtn.innerHTML = `Check Logic <i class="fas fa-check-circle"></i>`;
+                        els.runBtn.className = "btn btn-run";
+                        els.runBtn.onclick = () => runCode(step.data);
+                        els.runBtn.disabled = false;
+                    }
+                }
+                else if (step.type === 'finish') finishLesson();
+            };
 
-    if (!file) return;
+            // 🔥 SUBMIT PROJECT FUNCTION (WITH ANIMATION) 🔥
+            window.handleProjectUpload = async (file) => {
+                // ✅ SECURITY CHECK: GUEST GUARD (IMPROVED)
+                if (!state.userId || state.userId === "guest") {
+                    showToast("Login required to submit project", "error");
+                    setTimeout(() => window.location.href = "LoginPage.html", 1500); // Redirect logic
+                    return;
+                }
 
-    if (file.size > 50 * 1024 * 1024) { 
-        showToast("File is too large (Max 50MB)", "error");
-        return;
-    }
+                if (!file) return;
 
-    const statusText = document.getElementById('uploadStatus');
-    statusText.innerHTML = `<span style="color:var(--warning)"><i class="fas fa-spinner fa-spin"></i> Uploading...</span>`;
+                if (file.size > 50 * 1024 * 1024) {
+                    showToast("File is too large (Max 50MB)", "error");
+                    return;
+                }
 
-    const formData = new FormData();
-    formData.append('projectFile', file);
-    formData.append('userId', state.userId);
-    formData.append('lessonId', state.lessonId);
-    
-    // ✅ POLISH 1: Robust Project Type Logic
-    const step = state.steps[state.idx];
-    const stepData = step.data;
-    // Default to 'planning' if it's the specific project step, otherwise 'code'
-    const projType = stepData.projectType || (step.type === 'project' ? 'planning' : 'code');
-    formData.append('projectType', projType); 
+                const statusText = document.getElementById('uploadStatus');
+                statusText.innerHTML = `<span style="color:var(--warning)"><i class="fas fa-spinner fa-spin"></i> Uploading...</span>`;
 
-    try {
-        const res = await fetch('/api/project/upload', {
-            method: 'POST',
-            body: formData
-        });
-        const data = await res.json();
+                const formData = new FormData();
+                formData.append('projectFile', file);
+                formData.append('userId', state.userId);
+                formData.append('lessonId', state.lessonId);
 
-        if (data.success) {
-            statusText.innerHTML = `<span style="color:var(--success)"><i class="fas fa-check-circle"></i> Upload Complete!</span>`;
-            
-            // ✅ FIX 3: Smart Feedback Logic
-            const adminFb = document.getElementById("adminFeedback");
-            adminFb.style.display = "block";
-            
-            let fileIcon = "fa-file-archive";
-            let typeText = "Project Archive";
-            if (projType === 'planning') {
-                fileIcon = "fa-file-pdf";
-                typeText = "Planning Document";
-            }
+                // ✅ FIX: Attach Course ID for Progress Tracking
+                if (state.courseId) {
+                    formData.append('courseId', state.courseId);
+                }
 
-            adminFb.innerHTML = `
+                // ✅ POLISH 1: Robust Project Type Logic
+                const step = state.steps[state.idx];
+                const stepData = step.data;
+                const projType = stepData.projectType || (step.type === 'project' ? 'planning' : 'code');
+                formData.append('projectType', projType);
+
+                try {
+                    const res = await fetch('/api/project/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await res.json();
+
+                    if (data.success) {
+                        statusText.innerHTML = `<span style="color:var(--success)"><i class="fas fa-check-circle"></i> Upload Complete!</span>`;
+
+                        // ✅ FIX 3: Smart Feedback Logic
+                        const adminFb = document.getElementById("adminFeedback");
+                        adminFb.style.display = "block";
+
+                        let fileIcon = "fa-file-archive";
+                        let typeText = "Project Archive";
+                        if (projType === 'planning') {
+                            fileIcon = "fa-file-pdf";
+                            typeText = "Planning Document";
+                        }
+
+                        adminFb.innerHTML = `
                 <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:6px; margin-bottom:10px;">
                     <i class="fas ${fileIcon}" style="color:var(--accent)"></i> 
                     <b>${typeText} Received</b><br>
@@ -772,213 +1407,418 @@ document.addEventListener("DOMContentLoaded", () => {
                 <b>Admin Review:</b> Pending (ETA: 24–48 hrs) <i class="fas fa-clock" style="color:var(--warning)"></i>
             `;
 
-            confetti({ particleCount: 250, spread: 120, origin: { y: 0.6 } });
-            showToast("Project Submitted Successfully! 🎓", "success");
-            
-            state.passed.add(state.steps[state.idx].data._id);
-            updateXP(100, false); // ✅ FIX: Visual Only XP
-            
-            setTimeout(() => {
-                finishLesson();
-            }, 4000); // Increased time to read success msg
-        } else {
-            throw new Error(data.message);
+                        confetti({ particleCount: 250, spread: 120, origin: { y: 0.6 } });
+                        showToast("Project Submitted Successfully! 🎓", "success");
+
+                        state.passed.add(state.steps[state.idx].data._id);
+                        updateXP(100, false);
+
+                        // ✅ FIX: REMOVED AUTO-COMPLETE
+                        showToast("Waiting for admin approval", "warning");
+
+                    } else {
+                        throw new Error(data.message);
+                    }
+                } catch (err) {
+                    statusText.innerHTML = `<span style="color:var(--error)"><i class="fas fa-times-circle"></i> Upload Failed</span>`;
+                    showToast(err.message, "error");
+                }
+            };
+
+            // --- LOGIC CHECK (Step 1) ---
+            async function runCode(task) {
+                if (['html', 'css'].includes(task.language)) {
+                    addLog("[INFO] Frontend preview only. No server execution.", "warning");
+                    const code = state.editorInstance.getValue();
+                    const iframe = document.createElement("iframe");
+                    iframe.style.width = "100%";
+                    iframe.style.height = "350px";
+                    iframe.style.border = "1px solid #333";
+                    iframe.style.background = "#fff";
+                    iframe.srcdoc = code;
+                    els.termLog.appendChild(iframe);
+                    handleSuccess(task);
+                    return;
+                }
+
+                // 🔥 FIX: MongoDB JSON Guard (NO EXECUTION)
+                if (task.type === "mongodb" && task.language === "json") {
+                    const code = state.editorInstance.getValue();
+                    toggleTerminal(true);
+                    els.termLog.innerHTML = "";
+                    addLog("[INFO] Validating MongoDB document structure...", "log");
+
+                    try {
+                        const parsed = JSON.parse(code);
+
+                        if (typeof parsed !== "object" || Array.isArray(parsed) || parsed === null) {
+                            throw new Error("Document must be a valid JSON object.");
+                        }
+
+                        // 🔥 REAL INSERT
+                        const res = await fetch("/api/mongo/insert", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                data: parsed,
+                                userId: state.userId,
+                                lessonId: state.lessonId,
+                                taskId: task._id
+                            })
+                        });
+
+                        const data = await res.json();
+
+                        if (!data.success) throw new Error(data.message);
+
+                        addLog("[SUCCESS] Document saved to MongoDB.", "success");
+                        addLog("Inserted ID: " + data.insertedId, "log");
+
+                        const btn = document.createElement("button");
+                        btn.className = "action-btn";
+                        btn.innerHTML = `<i class="fas fa-database"></i> View in DB`;
+                        btn.onclick = () => viewSavedData(data.insertedId);
+
+                        els.termLog.appendChild(btn);
+                        scrollToBottom();
+
+                        handleSuccess(task);
+
+                    } catch (e) {
+                        addLog("[ERROR] " + e.message, "error");
+                        handleFailure(task);
+                    }
+
+                    return;
+                }
+
+                async function viewSavedData(id) {
+                    addLog("Fetching document...", "log");
+
+                    const res = await fetch(`/api/mongo/get/${id}`);
+                    const data = await res.json();
+
+                    if (data.success) {
+                        addLog("----- Stored Document -----", "success");
+                        addLog(JSON.stringify(data.document, null, 2), "log");
+                    } else {
+                        addLog("Document not found", "error");
+                    }
+                }
+
+                const code = state.editorInstance.getValue();
+                if (!code.trim()) return showToast("Code is empty!", "error");
+
+                toggleTerminal(true);
+                els.termLog.innerHTML = '';
+
+                addLog("[SYSTEM] Analyzing code structure...", "log");
+                els.runBtn.disabled = true;
+                els.runBtn.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> Checking...`;
+
+                setTimeout(() => {
+                    const analysis = validateLogic(code, task);
+
+                    if (analysis.passed) {
+                        state.isLogicValid = true;
+                        addLog("[SUCCESS] Logic Verified.", "success");
+
+                        els.runBtn.className = "btn btn-secondary";
+                        els.runBtn.innerHTML = "Logic OK - Wait for Action";
+                        els.runBtn.disabled = true;
+
+                        const title = task.title.toLowerCase();
+                        const hasListen = code.includes("app.listen");
+                        const lang = (task.language || "javascript").toLowerCase();
+
+                        // ===============================
+                        // 🔥 REACT LIVE COMPILER (BABEL)
+                        // ===============================
+                        // Detect React: by language OR by code patterns (JSX, Component, React)
+                        const titleLower = task.title.toLowerCase();
+                        const isReact = lang === "react" || lang === "jsx" || 
+                                       titleLower.includes("react") ||
+                                       titleLower.includes("jsx") ||
+                                       code.includes("function ServerComponent") ||
+                                       code.includes("function App") ||
+                                       code.includes("function Counter") ||
+                                       code.includes("export default") ||
+                                       code.includes("React.createElement") ||
+                                       /React\.createElement\s*\(/.test(code) ||
+                                       /return\s*\(\s*[<]/.test(code) ||
+                                       /<[A-Z][a-zA-Z0-9]*[\s>\/]/.test(code) || // Component: <MyComponent
+                                       /<[a-z]+[\s>\/]/.test(code); // HTML element: <div, <h1, etc.
+                        
+                        if (isReact) {
+                            toggleTerminal(true);
+                            els.termLog.innerHTML = "";
+
+                            addLog("[INFO] Rendering React Live Preview...", "success");
+
+                            const userCode = state.editorInstance.getValue();
+                            // Strip ALL imports and exports
+                            let cleanCode = userCode
+                                .replace(/^import\s+.*?from\s+['"].*?['"];?$/gm, "")
+                                .replace(/^export\s+(default\s+)?/gm, "")
+                                .trim();
+
+                            const iframe = document.createElement("iframe");
+                            iframe.style.width = "100%";
+                            iframe.style.height = "500px";
+                            iframe.style.border = "2px solid #6366f1";
+                            iframe.style.borderRadius = "8px";
+                            iframe.style.background = "#ffffff";
+                            iframe.style.marginTop = "10px";
+                            iframe.style.display = "block";
+                            // Minimal sandbox - just allow scripts
+                            iframe.setAttribute('sandbox', 'allow-scripts');
+
+                            const htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"><\/script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"><\/script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"><\/script>
+</head>
+<body style="margin:0; padding:20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto; background:#fff; color:#333;">
+    <div id="root"></div>
+    <div id="status" style="color:#666; font-size:0.85rem; margin-top:10px; padding:10px; background:#f5f5f5; border-radius:4px; display:none;">Initializing...</div>
+    <div id="error" style="color:#d32f2f; padding:15px; display:none; background:#ffebee; border:1px solid #ffcdd2; border-radius:4px; white-space:pre-wrap; font-family:monospace; font-size:0.9rem;"></div>
+
+    <script type="text/babel">
+        function showError(msg) {
+            document.getElementById('error').style.display = 'block';
+            document.getElementById('error').innerHTML = '<b>❌ React Error:</b><br/>' + msg;
+            console.error('React Error:', msg);
         }
-    } catch (err) {
-        statusText.innerHTML = `<span style="color:var(--error)"><i class="fas fa-times-circle"></i> Upload Failed</span>`;
-        showToast(err.message, "error");
-    }
-  };
 
-  // --- LOGIC CHECK (Step 1) ---
-  async function runCode(task) {
-    // ✅ FRONTEND GUARD: Skip backend for HTML/CSS tasks
-    if (['html','css'].includes(task.language)) {
-        addLog("[INFO] Frontend preview only. No server execution.", "warning");
-        const code = state.editorInstance.getValue();
-        const iframe = document.createElement("iframe");
-        iframe.style.width = "100%";
-        iframe.style.height = "350px";
-        iframe.style.border = "1px solid #333";
-        iframe.style.background = "#fff";
-        iframe.srcdoc = code;
-        els.termLog.appendChild(iframe);
-        handleSuccess(task);
-        return;
-    }
+        // Wait for React to load
+        if (!window.React || !window.ReactDOM) {
+            showError('React libraries failed to load from CDN. Please check your internet connection.');
+            console.error('React or ReactDOM not available');
+        } else {
+            console.log('React libraries loaded successfully');
+            
+            window.addEventListener('error', function(e) {
+                showError(e.message);
+            });
 
-    const code = state.editorInstance.getValue();
-    if(!code.trim()) return showToast("Code is empty!", "error");
+            try {
+                // Make React hooks globally available
+                const { useState, useEffect, useReducer, useContext, useCallback, useMemo } = window.React;
+                
+                // Execute user code
+                ${cleanCode}
+                
+                console.log('✓ Code executed successfully');
+                
+                // Auto-detect what to render
+                let Component = null;
+                let elementToRender = null;
+                
+                // 1. Try component functions
+                if (typeof Counter !== 'undefined') {
+                    console.log('✓ Found Counter component');
+                    Component = Counter;
+                }
+                else if (typeof ServerComponent !== 'undefined') {
+                    console.log('✓ Found ServerComponent');
+                    Component = ServerComponent;
+                }
+                else if (typeof App !== 'undefined') {
+                    console.log('✓ Found App');
+                    Component = App;
+                }
+                else if (typeof Main !== 'undefined') {
+                    console.log('✓ Found Main');
+                    Component = Main;
+                }
+                
+                // 2. Try common JSX element variable names
+                if (!Component) {
+                    if (typeof element !== 'undefined') {
+                        console.log('✓ Found element variable');
+                        elementToRender = element;
+                    }
+                    else if (typeof jsx !== 'undefined') {
+                        console.log('✓ Found jsx variable');
+                        elementToRender = jsx;
+                    }
+                    else if (typeof result !== 'undefined') {
+                        console.log('✓ Found result variable');
+                        elementToRender = result;
+                    }
+                }
+                
+                // 3. Check what we have
+                if (!Component && !elementToRender) {
+                    console.warn('Available variables in scope:', Object.keys(window).filter(k => !k.startsWith('_')).slice(0, 20));
+                    throw new Error('Could not find a React component or JSX element. Try defining: element, jsx, result, App, ServerComponent, or Main.');
+                }
+                
+                console.log('✓ Preparing to render...');
+                
+                const root = window.ReactDOM.createRoot(document.getElementById('root'));
+                if (Component) {
+                    console.log('→ Rendering component');
+                    root.render(<Component />);
+                } else if (elementToRender) {
+                    console.log('→ Rendering element:', elementToRender);
+                    root.render(elementToRender);
+                }
+                
+                console.log('✓ Render complete');
+            } catch(error) {
+                console.error('❌ Error:', error, error.stack);
+                showError((error.message || error.toString()) + '\\n\\nCheck browser console for details.');
+            }
+        }
+    <\/script>
+</body>
+</html>`;
 
-    toggleTerminal(true);
-    els.termLog.innerHTML = ''; 
+                            iframe.srcdoc = htmlContent;
+                            els.termLog.appendChild(iframe);
+                            scrollToBottom();
+                            addLog("[SUCCESS] React component rendered successfully!", "success");
 
-    addLog("[SYSTEM] Analyzing code structure...", "log");
-    els.runBtn.disabled = true;
-    els.runBtn.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> Checking...`;
+                            handleSuccess(task);
+                            return;
+                        }
 
-    setTimeout(() => {
-        const analysis = validateLogic(code, task);
+                        if (lang === 'javascript' && !code.includes("require(") && !code.includes("app.listen") && !title.includes("server")) {
+                            addLog("[JS] Running in browser context...", "success");
+                            try {
+                                const iframe = document.createElement("iframe");
+                                iframe.style.display = "none";
+                                document.body.appendChild(iframe);
 
-        if (analysis.passed) {
-             state.isLogicValid = true; 
-             addLog("[SUCCESS] Logic Verified.", "success");
-             
-             els.runBtn.className = "btn btn-secondary";
-             els.runBtn.innerHTML = "Logic OK - Wait for Action";
-             els.runBtn.disabled = true;
+                                let output = [];
+                                iframe.contentWindow.console.log = (...args) => output.push(args.join(' '));
 
-             const title = task.title.toLowerCase();
-             const hasListen = code.includes("app.listen");
-             const lang = (task.language || "javascript").toLowerCase();
+                                try {
+                                    iframe.contentWindow.eval(code);
+                                } catch (e) {
+                                    output.push("Error: " + e.message);
+                                }
 
-             // Pure Frontend JS (Console Logic)
-             if (lang === 'javascript' && !code.includes("require(") && !code.includes("app.listen") && !title.includes("server")) {
-                 addLog("[JS] Running in browser context...", "success");
-                 try {
-                     const iframe = document.createElement("iframe");
-                     iframe.style.display = "none";
-                     document.body.appendChild(iframe);
-                     
-                     let output = [];
-                     iframe.contentWindow.console.log = (...args) => output.push(args.join(' '));
-                     
-                     try {
-                         iframe.contentWindow.eval(code);
-                     } catch(e) {
-                         output.push("Error: " + e.message);
-                     }
-                     
-                     if(output.length > 0) addLog(output.join('\n'), "log");
-                     else addLog("(Code ran with no console output)", "warning");
-                     
-                     document.body.removeChild(iframe);
-                     handleSuccess(task);
-                 } catch (err) {
-                     addLog(err.message, "error");
-                 }
-                 return;
-             }
+                                if (output.length > 0) addLog(output.join('\n'), "log");
+                                else addLog("(Code ran with no console output)", "warning");
 
-             // Backend & Other Logic
-             if (!hasListen && (task.type === 'route' || title.includes("route") || title.includes("api"))) {
-                 const match = code.match(/app\.(get|post)\(['"]([^'"]+)['"]/);
-                 const method = match ? match[1].toUpperCase() : "GET";
-                 const url = match ? match[2] : "/";
+                                document.body.removeChild(iframe);
+                                handleSuccess(task);
+                            } catch (err) {
+                                addLog(err.message, "error");
+                            }
+                            return;
+                        }
 
-                 addLog(`[INFO] Route defined: ${method} ${url}`, "log");
-                 addLog(`[ACTION REQUIRED] Click "Simulate Request" below to test this API.`, "warning");
-                 
-                 const btnId = `simBtn_${Date.now()}`;
-                 const html = `
+                        if (!hasListen && (task.type === 'route' || title.includes("route") || title.includes("api"))) {
+                            const match = code.match(/app\.(get|post)\(['"]([^'"]+)['"]/);
+                            const method = match ? match[1].toUpperCase() : "GET";
+                            const url = match ? match[2] : "/";
+
+                            addLog(`[INFO] Route defined: ${method} ${url}`, "log");
+                            addLog(`[ACTION REQUIRED] Click "Simulate Request" below to test this API.`, "warning");
+
+                            const btnId = `simBtn_${Date.now()}`;
+                            const html = `
                     <div style="margin-top:10px;">
                         <button id="${btnId}" class="action-btn" onclick="triggerRouteAction('${method}', '${url}')">
                             <i class="fas fa-play"></i> Simulate Request
                         </button>
                     </div>
                  `;
-                 els.termLog.innerHTML += html;
-             } 
-             else if (title.includes("mongodb") || title.includes("json") || title.includes("object") || title.includes("data")) {
-                 addLog(`[INFO] Data structure detected.`, "log");
-                 addLog(`[ACTION REQUIRED] Click "Preview Data" to verify format.`, "warning");
-                 
-                 const btnId = `dataBtn_${Date.now()}`;
-                 const html = `
-                    <div style="margin-top:10px;">
-                        <button id="${btnId}" class="action-btn" onclick="triggerDataAction()">
-                            <i class="fas fa-database"></i> Preview Data
-                        </button>
-                    </div>
-                 `;
-                 els.termLog.innerHTML += html;
-             }
-             else if (task.language === 'java' || task.language === 'python') {
-                 addLog(`[ACTION REQUIRED] Type 'run' or 'python/java filename' to execute.`, "warning");
-                 els.termInput.focus();
-             }
-             else {
-                 addLog(`[ACTION REQUIRED] Type 'node ${state.fileName}' below to run.`, "warning");
-                 els.termInput.focus();
-             }
-        } else {
-             state.isLogicValid = false;
-             addLog(`[ERROR] Logic Check Failed:\n${analysis.message}`, "error");
-             handleFailure(task);
-        }
-    }, 500);
-  }
-
-  function validateLogic(code, task) {
-      let missing = [];
-      const patterns = task.validation?.patterns || [];
-      patterns.forEach(p => {
-          if (!new RegExp(p, 'i').test(code)) missing.push(p);
-      });
-      if (missing.length > 0) return { passed: false, message: "Missing concepts: " + missing.join(", ") };
-      return { passed: true, message: "OK" };
-  }
-
-  // --- ACTION HANDLERS (Step 2) ---
-  
-  window.triggerRouteAction = (method, url) => {
-    const btn = event.target.closest('button');
-    if(btn) { btn.disabled = true; btn.innerHTML = `<i class="fas fa-check"></i> Request Sent`; }
-
-    const task = state.steps[state.idx].data;
-    const code = state.editorInstance.getValue();
-    
-    let json;
-    let status = "200 OK";
-
-    if (method === "POST") {
-        status = "201 Created";
-        json = JSON.stringify({
-            id: 1,
-            name: "New Product",
-            price: 500,
-            category: "Demo",
-            createdAt: new Date().toISOString()
-        }, null, 2);
-    } else {
-        json = extractJsonFromCode(code);
-    }
-
-    addApiPreview(method, url, json, status); 
-    handleSuccess(task); 
-  };
-
-  window.triggerDataAction = async () => {
-    const btn = event.target.closest('button');
-    if(btn) { btn.disabled = true; btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Saving...`; }
-
-    const task = state.steps[state.idx].data;
-    const code = state.editorInstance.getValue();
-    
-    if (!state.mockMode && (task.type === 'mongodb' || task.title.toLowerCase().includes('mongo'))) {
-        try {
-            const res = await fetch("/api/task/submit", { 
-                method: "POST", headers: {"Content-Type":"application/json"}, 
-                body: JSON.stringify({userId:state.userId, lessonId:state.lessonId, taskId:task._id, code:code}) 
-            });
-            const data = await res.json();
-            
-            if(data.passed) {
-                addLog(data.output, "success");
-                handleSuccess(task);
-            } else {
-                addLog(data.output, "error");
-                handleFailure(task);
+                            els.termLog.innerHTML += html;
+                        }
+                        // ✅ FIX: Removed confusing "data structure detected" logic for JSON tasks
+                        else if (task.language === 'java' || task.language === 'python') {
+                            addLog(`[ACTION REQUIRED] Type 'run' or 'python/java filename' to execute.`, "warning");
+                            els.termInput.focus();
+                        }
+                        else {
+                            addLog(`[ACTION REQUIRED] Type 'node ${state.fileName}' below to run.`, "warning");
+                            els.termInput.focus();
+                        }
+                    } else {
+                        state.isLogicValid = false;
+                        addLog(`[ERROR] Logic Check Failed:\n${analysis.message}`, "error");
+                        handleFailure(task);
+                    }
+                }, 500);
             }
-        } catch(e) {
-            addLog("Network Error: " + e.message, "error");
-        }
-        return;
-    }
 
-    const start = code.indexOf('{');
-    const content = extractBalancedBlock(code, start);
-    const html = `
+            function validateLogic(code, task) {
+                let missing = [];
+                const patterns = task.validation?.patterns || [];
+                patterns.forEach(p => {
+                    if (!new RegExp(p, 'i').test(code)) missing.push(p);
+                });
+                if (missing.length > 0) return { passed: false, message: "Missing concepts: " + missing.join(", ") };
+                return { passed: true, message: "OK" };
+            }
+
+            // --- ACTION HANDLERS (Step 2) ---
+
+            window.triggerRouteAction = (method, url) => {
+                const btn = event.target.closest('button');
+                if (btn) { btn.disabled = true; btn.innerHTML = `<i class="fas fa-check"></i> Request Sent`; }
+
+                const task = state.steps[state.idx].data;
+                const code = state.editorInstance.getValue();
+
+                let json;
+                let status = "200 OK";
+
+                if (method === "POST") {
+                    status = "201 Created";
+                    json = JSON.stringify({
+                        id: 1,
+                        name: "New Product",
+                        price: 500,
+                        category: "Demo",
+                        createdAt: new Date().toISOString()
+                    }, null, 2);
+                } else {
+                    json = extractJsonFromCode(code);
+                }
+
+                addApiPreview(method, url, json, status);
+                handleSuccess(task);
+            };
+
+            window.triggerDataAction = async () => {
+                const btn = event.target.closest('button');
+                if (btn) { btn.disabled = true; btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Saving...`; }
+
+                const task = state.steps[state.idx].data;
+                const code = state.editorInstance.getValue();
+
+                if (!state.mockMode && (task.type === 'mongodb' || task.title.toLowerCase().includes('mongo'))) {
+                    try {
+                        const res = await fetch("/api/task/submit", {
+                            method: "POST", headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ userId: state.userId, lessonId: state.lessonId, taskId: task._id, code: code })
+                        });
+                        const data = await res.json();
+
+                        if (data.passed) {
+                            addLog(data.output, "success");
+                            handleSuccess(task);
+                        } else {
+                            addLog(data.output, "error");
+                            handleFailure(task);
+                        }
+                    } catch (e) {
+                        addLog("Network Error: " + e.message, "error");
+                    }
+                    return;
+                }
+
+                const start = code.indexOf('{');
+                const content = extractBalancedBlock(code, start);
+                const html = `
         <div class="api-preview">
             <div class="api-header">
                 <div><span class="method-badge" style="background:var(--accent)">DATA</span> Object Preview</div>
@@ -987,220 +1827,223 @@ document.addEventListener("DOMContentLoaded", () => {
             <div class="api-body" style="white-space: pre-wrap;">${content || "{}"}</div>
         </div>
     `;
-    els.termLog.innerHTML += html;
-    scrollToBottom();
-    handleSuccess(task);
-  };
+                els.termLog.innerHTML += html;
+                scrollToBottom();
+                handleSuccess(task);
+            };
 
-  function setupTerminalInput() {
-      els.termInput.addEventListener("keydown", (e) => {
-          if (e.key === "Enter") {
-              const cmd = els.termInput.value.trim();
-              if(!cmd) return;
-              state.cmdHistory.push(cmd);
-              state.cmdHistoryIdx = state.cmdHistory.length;
-              els.termInput.value = "";
-              addLog(`user@mindstep:~$ ${cmd}`, "log");
-              processCommand(cmd);
-          } else if (e.key === "ArrowUp") {
-              e.preventDefault();
-              if(state.cmdHistoryIdx > 0) {
-                  state.cmdHistoryIdx--;
-                  els.termInput.value = state.cmdHistory[state.cmdHistoryIdx];
-              }
-          } else if (e.key === "ArrowDown") {
-              e.preventDefault();
-              if(state.cmdHistoryIdx < state.cmdHistory.length - 1) {
-                  state.cmdHistoryIdx++;
-                  els.termInput.value = state.cmdHistory[state.cmdHistoryIdx];
-              } else {
-                  state.cmdHistoryIdx = state.cmdHistory.length;
-                  els.termInput.value = "";
-              }
-          }
-      });
-  }
+            function setupTerminalInput() {
+                els.termInput.addEventListener("keydown", (e) => {
+                    if (e.key === "Enter") {
+                        const cmd = els.termInput.value.trim();
+                        if (!cmd) return;
+                        state.cmdHistory.push(cmd);
+                        state.cmdHistoryIdx = state.cmdHistory.length;
+                        els.termInput.value = "";
+                        addLog(`user@mindstep:~$ ${cmd}`, "log");
+                        processCommand(cmd);
+                    } else if (e.key === "ArrowUp") {
+                        e.preventDefault();
+                        if (state.cmdHistoryIdx > 0) {
+                            state.cmdHistoryIdx--;
+                            els.termInput.value = state.cmdHistory[state.cmdHistoryIdx];
+                        }
+                    } else if (e.key === "ArrowDown") {
+                        e.preventDefault();
+                        if (state.cmdHistoryIdx < state.cmdHistory.length - 1) {
+                            state.cmdHistoryIdx++;
+                            els.termInput.value = state.cmdHistory[state.cmdHistoryIdx];
+                        } else {
+                            state.cmdHistoryIdx = state.cmdHistory.length;
+                            els.termInput.value = "";
+                        }
+                    }
+                });
+            }
 
-  function processCommand(cmd) {
-      const parts = cmd.split(" ");
-      const task = state.steps[state.idx].data;
-      const code = state.editorInstance.getValue();
-      const hasListen = code.includes("app.listen");
+            function processCommand(cmd) {
+                const parts = cmd.split(" ");
+                const task = state.steps[state.idx].data;
+                const code = state.editorInstance.getValue();
+                const hasListen = code.includes("app.listen");
 
-      if (!hasListen && task.type !== 'server' && task.language === 'javascript') {
-           addLog(`[TIP] This is a Route task. Please click the "Simulate Request" button instead of running the server manually.`, "warning");
-           return;
-      }
-      
-      const validCmds = ["node", "python", "java", "javac", "run"];
-      if (!validCmds.includes(parts[0])) {
-          addLog(`[ERROR] bash: ${parts[0]}: command not found`, "error");
-          // ✅ POLISH 3: Helpful UX for invalid commands
-          addLog("Try: node <file>, python <file>, java <file>, or run", "warning");
-          return;
-      }
-      
-      if (!state.isLogicValid) {
-          addLog(`[ERROR] Logic errors detected. Click 'Check Logic' first.`, "error");
-          return;
-      }
+                // 🔥 FIX: Block Terminal for MongoDB JSON tasks
+                if (task.type === "mongodb" && task.language === "json") {
+                    addLog("[INFO] MongoDB JSON tasks do not support execution.", "warning");
+                    addLog("Click 'Check Logic' to validate the document structure.", "log");
+                    return;
+                }
 
-      addLog(`[INFO] Executing ${state.fileName}...`, "log");
-      
-      if(parts[0] === 'node' && hasListen) {
-          setTimeout(() => {
-              const portMatch = code.match(/app\.listen\(\s*(\d+)/);
-              const port = portMatch ? portMatch[1] : "3000";
-              addLog(`[SUCCESS] Server running on port ${port}`, "success");
-              handleSuccess(task); 
-          }, 800);
-          return;
-      }
+                if (!hasListen && task.type !== 'server' && task.language === 'javascript') {
+                    addLog(`[TIP] This is a Route task. Please click the "Simulate Request" button instead of running the server manually.`, "warning");
+                    return;
+                }
 
-      if(!state.mockMode) {
-          fetch("/api/task/submit", { 
-                method: "POST", headers: {"Content-Type":"application/json"}, 
-                body: JSON.stringify({userId:state.userId, lessonId:state.lessonId, taskId:task._id, code:code}) 
-          })
-          .then(res => res.json())
-          .then(data => {
-              if(data.passed) {
-                  addLog(data.output, "success");
-                  handleSuccess(task);
-              } else {
-                  addLog(data.output, "error");
-                  handleFailure(task);
-              }
-          })
-          .catch(e => addLog("Execution Error: " + e.message, "error"));
-      } else {
-          addLog("[MOCK] Execution success.", "success");
-          handleSuccess(task);
-      }
-  }
+                const validCmds = ["node", "python", "java", "javac", "run"];
+                if (!validCmds.includes(parts[0])) {
+                    addLog(`[ERROR] bash: ${parts[0]}: command not found`, "error");
+                    addLog("Try: node <file>, python <file>, java <file>, or run", "warning");
+                    return;
+                }
 
-  function extractJsonFromCode(code) {
-      const cleanCode = code.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
-      const textMatch = cleanCode.match(/res\.send\s*\(\s*(['"`])([\s\S]*?)\1\s*\)/);
-      if (textMatch) return textMatch[2];
-      const jsonStartIndex = cleanCode.search(/res(?:\.status\(\s*\d+\s*\))?\.json\s*\(\s*[\[\{]/);
-      if (jsonStartIndex !== -1) {
-          const start = cleanCode.indexOf('(', jsonStartIndex) + 1;
-          const content = extractBalancedBlock(cleanCode, start);
-          if (content) return content;
-      }
-      const varMatch = cleanCode.match(/res(?:\.status\(\s*\d+\s*\))?\.json\s*\(\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\)/);
-      if (varMatch && varMatch[1]) {
-          const varName = varMatch[1];
-          const defRegex = new RegExp(`(?:const|let|var)\\s+${varName}\\s*=\\s*`, 'g');
-          const defMatch = defRegex.exec(cleanCode);
-          if (defMatch) {
-              const valueStartIndex = defMatch.index + defMatch[0].length;
-              const content = extractBalancedBlock(cleanCode, valueStartIndex);
-              if (content) return content;
-          }
-          return `[INFO] Response uses variable '${varName}'.\nSimulating resolved output:\n[ { "id": 1, "data": "Sample" } ]`;
-      }
-      return "{ \"status\": \"success\" }";
-  }
+                if (!state.isLogicValid) {
+                    addLog(`[ERROR] Logic errors detected. Click 'Check Logic' first.`, "error");
+                    return;
+                }
 
-  function extractBalancedBlock(code, startIndex) {
-      let open = 0;
-      let startFound = false;
-      let blockStart = -1;
-      for (let i = startIndex; i < code.length; i++) {
-          const char = code[i];
-          if (!startFound) {
-              if (/\s/.test(char)) continue;
-              if (char === '[' || char === '{') {
-                  startFound = true;
-                  blockStart = i;
-                  open++;
-              } else {
-                  return null;
-              }
-          } else {
-              if (char === '[' || char === '{') open++;
-              if (char === ']' || char === '}') open--;
-              if (open === 0) return code.substring(blockStart, i + 1);
-          }
-      }
-      return null;
-  }
+                addLog(`[INFO] Executing ${state.fileName}...`, "log");
 
-  function addApiPreview(method, url, body, status = "200 OK") {
-      const html = `<div class="api-preview"><div class="api-header"><div><span class="method-badge">${method}</span> <span style="color:#a1a1aa">${url}</span></div><div style="color:var(--success); font-weight:bold;">${status}</div></div><div class="api-body" style="white-space: pre-wrap;">${body}</div></div>`;
-      els.termLog.innerHTML += html;
-      scrollToBottom();
-  }
+                if (parts[0] === 'node' && hasListen) {
+                    setTimeout(() => {
+                        const portMatch = code.match(/app\.listen\(\s*(\d+)/);
+                        const port = portMatch ? portMatch[1] : "3000";
+                        addLog(`[SUCCESS] Server running on port ${port}`, "success");
+                        handleSuccess(task);
+                    }, 800);
+                    return;
+                }
 
-  function handleSuccess(task) {
-    if(state.passed.has(task._id)) return;
-    state.passed.add(task._id);
-    confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
-    setSuccessBtn();
-    updateXP(25, false); // ✅ FIX: Visual only XP
-    if(!state.mockMode) {
-        fetch("/api/task/submit", { 
-            method: "POST", headers: {"Content-Type":"application/json"}, 
-            body: JSON.stringify({userId:state.userId, lessonId:state.lessonId, taskId:task._id, code:state.editorInstance.getValue(), passed:true}) 
-        }).catch(err => console.log("Sync skipped"));
-    }
-  }
+                if (!state.mockMode) {
+                    fetch("/api/task/submit", {
+                        method: "POST", headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ userId: state.userId, lessonId: state.lessonId, taskId: task._id, code: code })
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.passed) {
+                                addLog(data.output, "success");
+                                handleSuccess(task);
+                            } else {
+                                addLog(data.output, "error");
+                                handleFailure(task);
+                            }
+                        })
+                        .catch(e => addLog("Execution Error: " + e.message, "error"));
+                } else {
+                    addLog("[MOCK] Execution success.", "success");
+                    handleSuccess(task);
+                }
+            }
 
-  function handleFailure(task) {
-      els.runBtn.disabled = false;
-      els.runBtn.innerHTML = `Check Logic <i class="fas fa-check-circle"></i>`;
-      state.failCounts[task._id] = (state.failCounts[task._id] || 0) + 1;
-      
-      // ✅ ADD: Retry Tracker
-      if (state.failCounts[task._id] === 1) {
-         showToast("Try again. Hint unlocks after next fail.", "warning");
-      }
-      if(state.failCounts[task._id] >= 2) {
-          els.hintBox.style.display = 'block';
-          els.hintText.innerHTML = (task.validation && task.validation.hints && task.validation.hints[0]) || "Check the requirements.";
-      }
-  }
+            function extractJsonFromCode(code) {
+                const cleanCode = code.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
+                const textMatch = cleanCode.match(/res\.send\s*\(\s*(['"`])([\s\S]*?)\1\s*\)/);
+                if (textMatch) return textMatch[2];
+                const jsonStartIndex = cleanCode.search(/res(?:\.status\(\s*\d+\s*\))?\.json\s*\(\s*[\[\{]/);
+                if (jsonStartIndex !== -1) {
+                    const start = cleanCode.indexOf('(', jsonStartIndex) + 1;
+                    const content = extractBalancedBlock(cleanCode, start);
+                    if (content) return content;
+                }
+                const varMatch = cleanCode.match(/res(?:\.status\(\s*\d+\s*\))?\.json\s*\(\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\)/);
+                if (varMatch && varMatch[1]) {
+                    const varName = varMatch[1];
+                    const defRegex = new RegExp(`(?:const|let|var)\\s+${varName}\\s*=\\s*`, 'g');
+                    const defMatch = defRegex.exec(cleanCode);
+                    if (defMatch) {
+                        const valueStartIndex = defMatch.index + defMatch[0].length;
+                        const content = extractBalancedBlock(cleanCode, valueStartIndex);
+                        if (content) return content;
+                    }
+                    return `[INFO] Response uses variable '${varName}'.\nSimulating resolved output:\n[ { "id": 1, "data": "Sample" } ]`;
+                }
+                return "{ \"status\": \"success\" }";
+            }
 
-  function setSuccessBtn() {
-    els.runBtn.disabled = false;
-    els.runBtn.className = "btn btn-next";
-    els.runBtn.innerHTML = `Next Task <i class="fas fa-arrow-right"></i>`;
-    els.runBtn.onclick = () => renderStep(state.idx+1);
-  }
+            function extractBalancedBlock(code, startIndex) {
+                let open = 0;
+                let startFound = false;
+                let blockStart = -1;
+                for (let i = startIndex; i < code.length; i++) {
+                    const char = code[i];
+                    if (!startFound) {
+                        if (/\s/.test(char)) continue;
+                        if (char === '[' || char === '{') {
+                            startFound = true;
+                            blockStart = i;
+                            open++;
+                        } else {
+                            return null;
+                        }
+                    } else {
+                        if (char === '[' || char === '{') open++;
+                        if (char === ']' || char === '}') open--;
+                        if (open === 0) return code.substring(blockStart, i + 1);
+                    }
+                }
+                return null;
+            }
 
-  function updateXP(amount=0, persist=true) {
-      if(amount > 0) { 
-        state.xp += amount; 
-        if(persist) localStorage.setItem("mindstep_xp", state.xp); 
-      }
-      const lvl = Math.floor(state.xp / 100) + 1;
-      els.xpBar.style.width = `${state.xp % 100}%`;
-      els.xpText.innerText = `${state.xp} XP`;
-      els.lvlDisplay.innerText = `LVL ${lvl}`;
-  }
+            function addApiPreview(method, url, body, status = "200 OK") {
+                const html = `<div class="api-preview"><div class="api-header"><div><span class="method-badge">${method}</span> <span style="color:#a1a1aa">${url}</span></div><div style="color:var(--success); font-weight:bold;">${status}</div></div><div class="api-body" style="white-space: pre-wrap;">${body}</div></div>`;
+                els.termLog.innerHTML += html;
+                scrollToBottom();
+            }
 
-  function finishLesson() {
-    document.querySelector(".footer").style.display = 'none';
-    els.terminalArea.style.display = 'none';
-    els.ws.style.gridTemplateColumns = "1fr";
-    els.ws.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; text-align:center;"><i class="fas fa-trophy" style="font-size:5rem; color:var(--warning); margin-bottom:20px;"></i><h1 style="color:#fff;">Module Completed</h1><button class="btn btn-run" onclick="window.history.back()">Return</button></div>`;
-    updateXP(50, false); // Visual only
-    confetti({ particleCount: 300, spread: 100, origin: { y: 0.6 } });
-    if(!state.mockMode) fetch("/api/complete", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({userId:state.userId, lessonId:state.lessonId})});
-    
-    // ✅ POLISH 2: Reset Resume Point
-    localStorage.removeItem(`lastStep_${state.lessonId}`);
-  }
+            function handleSuccess(task) {
+                if (state.passed.has(task._id)) return;
+                state.passed.add(task._id);
+                confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+                setSuccessBtn();
+                updateXP(25, false); // ✅ FIX: Visual only XP
 
-  window.toggleTheme = () => { document.body.classList.toggle("theme-neon"); localStorage.setItem("theme", document.body.classList.contains("theme-neon") ? "neon" : "standard"); };
-  window.copyCode = () => { navigator.clipboard.writeText(state.editorInstance.getValue()); showToast("Copied", "success"); };
-  window.resetCode = () => { if(state.steps[state.idx].type==='task') state.editorInstance.setValue(""); };
-  function showToast(msg, type) { const t = document.getElementById("customToast"); t.innerHTML = `<i class="fas ${type==='success'?'fa-check-circle':'fa-triangle-exclamation'}" style="color:${type==='success'?'var(--success)':'var(--error)'}"></i> ${msg}`; t.style.borderColor = type==='success'?'var(--success)':'var(--error)'; t.style.transform = "translateX(0)"; setTimeout(()=>t.style.transform="translateX(150%)", 3000); }
+                // ✅ FIX: Removed duplicate fetch() here since it's handled in runCode/processCommand
+            }
 
-  init();
-});
-</script>
+            function handleFailure(task) {
+                els.runBtn.disabled = false;
+                els.runBtn.innerHTML = `Check Logic <i class="fas fa-check-circle"></i>`;
+                state.failCounts[task._id] = (state.failCounts[task._id] || 0) + 1;
+
+                // ✅ ADD: Retry Tracker
+                if (state.failCounts[task._id] === 1) {
+                    showToast("Try again. Hint unlocks after next fail.", "warning");
+                }
+                if (state.failCounts[task._id] >= 2) {
+                    els.hintBox.style.display = 'block';
+                    els.hintText.innerHTML = (task.validation && task.validation.hints && task.validation.hints[0]) || "Check the requirements.";
+                }
+            }
+
+            function setSuccessBtn() {
+                els.runBtn.disabled = false;
+                els.runBtn.className = "btn btn-next";
+                els.runBtn.innerHTML = `Next Task <i class="fas fa-arrow-right"></i>`;
+                els.runBtn.onclick = () => renderStep(state.idx + 1);
+            }
+
+            function updateXP(amount = 0, persist = true) {
+                if (amount > 0) {
+                    state.xp += amount;
+                    if (persist) localStorage.setItem("mindstep_xp", state.xp);
+                }
+                const lvl = Math.floor(state.xp / 100) + 1;
+                els.xpBar.style.width = `${state.xp % 100}%`;
+                els.xpText.innerText = `${state.xp} XP`;
+                els.lvlDisplay.innerText = `LVL ${lvl}`;
+            }
+
+            function finishLesson() {
+                document.querySelector(".footer").style.display = 'none';
+                els.terminalArea.style.display = 'none';
+                els.ws.style.gridTemplateColumns = "1fr";
+                els.ws.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; text-align:center;"><i class="fas fa-trophy" style="font-size:5rem; color:var(--warning); margin-bottom:20px;"></i><h1 style="color:#fff;">Module Completed</h1><button class="btn btn-run" onclick="window.history.back()">Return</button></div>`;
+                updateXP(50, false); // Visual only
+                confetti({ particleCount: 300, spread: 100, origin: { y: 0.6 } });
+                if (!state.mockMode) fetch("/api/complete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: state.userId, lessonId: state.lessonId }) });
+
+                // ✅ POLISH 2: Reset Resume Point
+                localStorage.removeItem(`lastStep_${state.lessonId}`);
+            }
+
+            window.toggleTheme = () => { document.body.classList.toggle("theme-neon"); localStorage.setItem("theme", document.body.classList.contains("theme-neon") ? "neon" : "standard"); };
+            window.copyCode = () => { navigator.clipboard.writeText(state.editorInstance.getValue()); showToast("Copied", "success"); };
+            window.resetCode = () => { if (state.steps[state.idx].type === 'task') state.editorInstance.setValue(""); };
+            function showToast(msg, type) { const t = document.getElementById("customToast"); t.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-triangle-exclamation'}" style="color:${type === 'success' ? 'var(--success)' : 'var(--error)'}"></i> ${msg}`; t.style.borderColor = type === 'success' ? 'var(--success)' : 'var(--error)'; t.style.transform = "translateX(0)"; setTimeout(() => t.style.transform = "translateX(150%)", 3000); }
+
+            init();
+        });
+    </script>
 </body>
+
 </html>
