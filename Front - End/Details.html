@@ -1111,12 +1111,6 @@ document.addEventListener("DOMContentLoaded", () => {
     confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
     setSuccessBtn();
     updateXP(25);
-    if(!state.mockMode) {
-        fetch("/api/task/submit", { 
-            method: "POST", headers: {"Content-Type":"application/json"}, 
-            body: JSON.stringify({userId:state.userId, lessonId:state.lessonId, taskId:task._id, code:state.editorInstance.getValue(), passed:true}) 
-        }).catch(err => console.log("Sync skipped"));
-    }
   }
 
   function handleFailure(task) {

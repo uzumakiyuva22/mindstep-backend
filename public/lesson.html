@@ -492,6 +492,19 @@
             flex: 1;
         }
 
+        .preview-area {
+            width: 100%;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .preview-area iframe {
+            max-width: 100%;
+        }
+
         .term-line {
             margin-bottom: 6px;
             display: flex;
@@ -867,6 +880,7 @@
                     </div>
                 </div>
                 <div class="term-body" id="termBody" onclick="document.getElementById('termInput').focus()">
+                    <div id="previewArea" class="preview-area"></div>
                     <div id="termLog" class="term-log">
                         <div style="color:var(--text-dim); margin-bottom:10px; font-style:italic;">
                             # Welcome to MindStep Shell v1.0 <br>
@@ -897,8 +911,12 @@
                 steps: [], idx: 0, userCode: {}, passed: new Set(),
                 lessonId: new URLSearchParams(location.search).get("lesson"),
                 courseId: new URLSearchParams(location.search).get("course"),
+                reviewRequested: new URLSearchParams(location.search).get("review") === "true",
+                isReviewMode: false,
                 userId: JSON.parse(localStorage.getItem("mindstep_user") || '{"_id":"guest"}')._id,
                 defaults: {}, mockMode: false, failCounts: {},
+                taskProgress: {},
+                completedFromServer: new Set(),
                 xp: parseInt(localStorage.getItem("mindstep_xp") || "0"),
                 editorInstance: null,
 
@@ -912,6 +930,7 @@
                 termLog: document.getElementById("termLog"),
                 termInput: document.getElementById("termInput"),
                 termBody: document.getElementById("termBody"),
+                previewArea: document.getElementById("previewArea"),
                 terminalArea: document.getElementById("terminalArea"),
                 termExpandIcon: document.getElementById("termExpandIcon"),
                 termExpandText: document.getElementById("termExpandText"),
@@ -929,6 +948,74 @@
                 saveStatus: document.getElementById("saveStatus")
             };
 
+            function getAllowedProjectFormats(stepData) {
+                const raw = stepData?.submission?.allowedFormats;
+                if (Array.isArray(raw) && raw.length > 0) {
+                    return raw.map(f => String(f).toLowerCase().replace(/^\./, "")).filter(Boolean);
+                }
+                return ["zip"];
+            }
+
+            async function loadTaskProgress() {
+                if (!state.userId || state.userId === "guest" || !state.lessonId) return false;
+                try {
+                    const progressRes = await fetch(`/api/progress/${state.userId}/${state.lessonId}`);
+                    const progressData = await progressRes.json();
+                    if (!progressData.success) return false;
+
+                    state.isReviewMode = Boolean(progressData.lessonCompleted) || state.reviewRequested;
+                    state.completedFromServer = new Set(progressData.passedTaskIds || []);
+                    const before = state.passed.size;
+                    // Do not preload "passed" in review mode. User must pass again in-session.
+                    if (!state.isReviewMode) {
+                        (progressData.passedTaskIds || []).forEach(id => state.passed.add(id));
+                    }
+                    state.taskProgress = progressData.taskProgress || {};
+                    return state.passed.size !== before;
+                } catch (e) {
+                    console.warn("Failed to load progress");
+                    return false;
+                }
+            }
+
+            function formatAttemptDate(value) {
+                if (!value) return "N/A";
+                const d = new Date(value);
+                if (Number.isNaN(d.getTime())) return "N/A";
+                return d.toLocaleString("en-US", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit"
+                });
+            }
+
+            async function syncTaskProgress(task, passed, output = "") {
+                if (state.mockMode) return;
+                if (!task || !task._id || !state.userId || state.userId === "guest" || !state.lessonId) return;
+
+                try {
+                    const res = await fetch("/api/task/progress", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            userId: state.userId,
+                            lessonId: state.lessonId,
+                            taskId: task._id,
+                            passed: Boolean(passed),
+                            output
+                        })
+                    });
+                    const data = await res.json();
+                    if (data && data.success && data.progress) {
+                        state.taskProgress[task._id] = data.progress;
+                    }
+                } catch (e) {
+                    console.warn("Progress sync failed:", e && e.message ? e.message : e);
+                }
+            }
+
             // --- TERMINAL UI ---
             window.toggleTerminal = (forceState) => {
                 const isCurrentlyExpanded = els.terminalArea.classList.contains('expanded');
@@ -938,7 +1025,7 @@
                     els.terminalArea.classList.add('expanded');
                     els.termExpandIcon.className = "fas fa-compress";
                     els.termExpandText.innerText = "Minimize";
-                    scrollToBottom();
+                    els.termBody.scrollTop = 0;
                     els.termInput.focus();
                 } else {
                     els.terminalArea.classList.remove('expanded');
@@ -958,7 +1045,12 @@
             function addLog(msg, type = 'log') {
                 const color = type === 'error' ? 'var(--error)' : (type === 'success' ? 'var(--success)' : (type === 'warning' ? 'var(--warning)' : 'var(--text-dim)'));
                 els.termLog.innerHTML += `<div class="term-line" style="color:${color};">${msg}</div>`;
-                scrollToBottom();
+                
+                // Smart auto-scroll: only scroll if user is already near bottom
+                const isNearBottom = els.termBody.scrollHeight - els.termBody.scrollTop <= els.termBody.clientHeight + 50;
+                if (isNearBottom) {
+                    els.termBody.scrollTop = els.termBody.scrollHeight;
+                }
             }
 
             window.addEventListener("focusin", (e) => {
@@ -966,6 +1058,13 @@
                     els.terminalArea.classList.add('expanded');
                     els.termExpandIcon.className = "fas fa-compress";
                     els.termExpandText.innerText = "Minimize";
+                }
+            });
+
+            window.addEventListener("focus", async () => {
+                const changed = await loadTaskProgress();
+                if (changed && typeof state.idx === "number" && state.steps.length) {
+                    renderStep(state.idx);
                 }
             });
 
@@ -1013,13 +1112,7 @@
                 }
 
                 // Load Task Progress First
-                try {
-                    const progressRes = await fetch(`/api/progress/${state.userId}/${state.lessonId}`);
-                    const progressData = await progressRes.json();
-                    if (progressData.success) {
-                        progressData.passedTaskIds.forEach(id => state.passed.add(id));
-                    }
-                } catch (e) { console.warn("Failed to load progress"); }
+                await loadTaskProgress();
 
                 if (localStorage.getItem("theme") === "neon") document.body.classList.add("theme-neon");
                 updateXP();
@@ -1159,6 +1252,9 @@
                     state.failCounts[t._id] = 0;
                     const draft = localStorage.getItem(`draft_${state.userId}_${t._id}`);
                     if (draft) state.userCode[t._id] = draft;
+                    if (t.type === "project" && state.completedFromServer.has(t._id)) {
+                        state.passed.add(t._id);
+                    }
                 });
 
                 if (data.lesson && data.lesson.type === "project") {
@@ -1201,7 +1297,7 @@
                 // ✅ FIX: Strict Previous Step Check
                 if (i > 0) {
                     const prevStep = state.steps[i - 1];
-                    if (prevStep && (prevStep.type === 'task' || prevStep.type === 'project')) {
+                    if (!state.isReviewMode && prevStep && (prevStep.type === 'task' || prevStep.type === 'project')) {
                         if (!state.passed.has(prevStep.data._id)) {
                             showToast("Complete previous task first!", "error");
                             return;
@@ -1219,7 +1315,7 @@
                 els.dots.innerHTML = state.steps.map((s, idx) => {
                     let status = idx === i ? 'active' : (idx < i ? 'completed' : '');
                     // Visual lock only
-                    let locked = (idx > 0 && state.steps[idx - 1].type !== 'theory' && !state.passed.has(state.steps[idx - 1].data._id));
+                    let locked = (!state.isReviewMode && idx > 0 && state.steps[idx - 1].type !== 'theory' && !state.passed.has(state.steps[idx - 1].data._id));
                     return `<div class="step-pill ${status} ${locked ? 'locked' : ''}" onclick="${!locked ? `renderStep(${idx})` : ''}"></div>`;
                 }).join("");
 
@@ -1248,17 +1344,18 @@
                     els.terminalArea.style.display = 'none';     // Hide Terminal
                     document.getElementById('projectUploadArea').style.display = 'flex'; // Show Upload Box
 
-                    // ✅ FIX 2: Dynamic UI Text based on Project Type
                     const titleEl = document.getElementById("uploadTitle");
                     const hintEl = document.getElementById("uploadHint");
-                    const projType = step.data.projectType || (step.data.type === 'project' ? 'planning' : 'code');
+                    const formats = getAllowedProjectFormats(step.data);
+                    const acceptList = formats.map(f => `.${f}`).join(",");
+                    const formatListHtml = formats.map(f => `<b>.${f}</b>`).join(", ");
 
-                    if (projType === 'planning') {
-                        titleEl.innerText = "Submit File";
-                        hintEl.innerHTML = "Upload your project plan as a <b>.zip</b>,<b>.pdf</b> or <b>.docx</b> file.";
-                    } else {
-                        titleEl.innerText = "Submit Final Project";
-                        hintEl.innerHTML = "Compress your complete project folder into a single <b>.zip</b> file.";
+                    titleEl.innerText = "Submit Final Project";
+                    hintEl.innerHTML = `Upload your file in one of these formats: ${formatListHtml}.`;
+                    document.getElementById("projectFileInput").setAttribute("accept", acceptList);
+                    if (state.isReviewMode) {
+                        titleEl.innerText = "Practice Mode";
+                        hintEl.innerHTML = "Lesson is completed. Practice is allowed; project upload stays disabled.";
                     }
 
                     els.guide.innerHTML = `
@@ -1266,21 +1363,42 @@
             <h1>${step.data.title}</h1>
             <hr>
             <p>${step.data.description}</p>
+            ${state.isReviewMode ? `<div class="hint-box" style="display:block; border-color:var(--accent); background:rgba(56, 189, 248, 0.12);"><i class="fas fa-eye"></i> Practice mode is active. Coding practice is allowed; progress will not be saved.</div>` : ""}
             <div class="hint-box" style="display:block; border-color:var(--success); background:rgba(34,197,94,0.1);">
                 <i class="fas fa-info-circle"></i> <b>Instructions:</b><br>
                 1. Complete your work locally.<br>
-                2. ${projType === 'planning' ? 'Export as PDF/DOCX' : 'Compress/Zip folder'}.<br>
+                2. Prepare the final file in: ${formats.map(f => "." + f).join(", ")}.<br>
                 3. Upload the file here.
             </div>
         `;
-
-                    els.runBtn.style.display = 'none';
+                    const projectAlreadyApproved = state.completedFromServer.has(step.data._id) || state.passed.has(step.data._id);
+                    if (projectAlreadyApproved) {
+                        els.runBtn.style.display = 'block';
+                        els.runBtn.disabled = false;
+                        els.runBtn.className = "btn btn-next";
+                        els.runBtn.innerHTML = `Next Task <i class="fas fa-arrow-right"></i>`;
+                        els.runBtn.onclick = () => renderStep(i + 1);
+                    } else {
+                        els.runBtn.style.display = 'none';
+                    }
                 }
                 // CODING TASK STEP
                 else if (step.type === 'task') {
                     els.ws.className = "workspace mode-coding";
                     els.terminalArea.style.display = 'flex';
                     els.runBtn.style.display = 'block';
+                    const currentTaskProgress = state.taskProgress[step.data._id] || {};
+                    const attempts = Number(currentTaskProgress.attempts || 0);
+                    const progressSummaryHtml = `
+            <div class="hint-box" style="display:block; border-color:var(--border); background:rgba(255,255,255,0.03); margin-top:12px;">
+              <i class="fas fa-chart-line"></i> Attempts: <b>${attempts}</b><br>
+              Last Attempt: <b>${formatAttemptDate(currentTaskProgress.lastAttemptAt)}</b>
+            </div>`;
+                    const reviewModeHtml = state.isReviewMode
+                        ? `<div class="hint-box" style="display:block; border-color:var(--accent); background:rgba(56, 189, 248, 0.12);">
+              <i class="fas fa-eye"></i> This lesson is already completed. You are in practice mode and DB updates are disabled.
+            </div>`
+                        : "";
 
                     const fileInputHtml = `
             <div class="file-input-group">
@@ -1309,6 +1427,8 @@
             ${fileInputHtml}
             <p style="white-space:pre-wrap;">${step.data.description}</p>
             ${mongoHint}
+            ${reviewModeHtml}
+            ${progressSummaryHtml}
         `;
 
                     const fnInput = document.getElementById("fileNameInput");
@@ -1318,12 +1438,46 @@
                     });
 
                     const lang = (step.data.language || "javascript").toLowerCase();
-                    if (lang === 'react' || lang === 'jsx') state.fileName = "App.jsx";
-                    else if (lang === 'java') state.fileName = "Main.java";
-                    else if (lang === 'python') state.fileName = "script.py";
-                    else if (lang === 'html') state.fileName = "index.html";
-                    else if (lang === 'json') state.fileName = "document.json"; // ✅ FIX: MongoDB JSON filename
-                    else state.fileName = "server.js";
+                    
+                    switch(lang) {
+                        case "react":
+                        case "jsx":
+                            state.fileName = "App.jsx";
+                            break;
+
+                        case "html":
+                            state.fileName = "index.html";
+                            break;
+
+                        case "css":
+                            state.fileName = "style.html";
+                            break;
+
+                        case "javascript":
+                        case "js":
+                            state.fileName = "script.js";
+                            break;
+
+                        case "node":
+                            state.fileName = "server.js";
+                            break;
+
+                        case "java":
+                            state.fileName = "Main.java";
+                            break;
+
+                        case "python":
+                            state.fileName = "script.py";
+                            break;
+
+                        case "mongodb":
+                        case "json":
+                            state.fileName = "document.json";
+                            break;
+
+                        default:
+                            state.fileName = "file.txt";
+                    }
 
                     els.langName.innerText = state.fileName;
                     document.getElementById("fileNameInput").value = state.fileName;
@@ -1331,7 +1485,7 @@
                     monaco.editor.setModelLanguage(state.editorInstance.getModel(), lang);
                     state.editorInstance.setValue(state.userCode[step.data._id] || "");
 
-                    if (state.passed.has(step.data._id)) setSuccessBtn();
+                    if (!state.isReviewMode && state.passed.has(step.data._id)) setSuccessBtn();
                     else {
                         els.runBtn.innerHTML = `Check Logic <i class="fas fa-check-circle"></i>`;
                         els.runBtn.className = "btn btn-run";
@@ -1344,6 +1498,11 @@
 
             // 🔥 SUBMIT PROJECT FUNCTION (WITH ANIMATION) 🔥
             window.handleProjectUpload = async (file) => {
+                if (state.isReviewMode) {
+                    showToast("Review mode: submission is disabled.", "warning");
+                    return;
+                }
+
                 // ✅ SECURITY CHECK: GUEST GUARD (IMPROVED)
                 if (!state.userId || state.userId === "guest") {
                     showToast("Login required to submit project", "error");
@@ -1371,11 +1530,19 @@
                     formData.append('courseId', state.courseId);
                 }
 
-                // ✅ POLISH 1: Robust Project Type Logic
                 const step = state.steps[state.idx];
                 const stepData = step.data;
-                const projType = stepData.projectType || (step.type === 'project' ? 'planning' : 'code');
+                const projType = stepData.projectType || "code";
+                const allowedFormats = getAllowedProjectFormats(stepData);
+                const fileExt = (file.name.split(".").pop() || "").toLowerCase();
+                if (!allowedFormats.includes(fileExt)) {
+                    showToast(`Allowed formats: ${allowedFormats.map(f => "." + f).join(", ")}`, "error");
+                    statusText.innerHTML = `<span style="color:var(--error)"><i class="fas fa-times-circle"></i> Upload Failed</span>`;
+                    return;
+                }
+
                 formData.append('projectType', projType);
+                formData.append('taskId', stepData._id || "");
 
                 try {
                     const res = await fetch('/api/project/upload', {
@@ -1387,16 +1554,13 @@
                     if (data.success) {
                         statusText.innerHTML = `<span style="color:var(--success)"><i class="fas fa-check-circle"></i> Upload Complete!</span>`;
 
-                        // ✅ FIX 3: Smart Feedback Logic
                         const adminFb = document.getElementById("adminFeedback");
                         adminFb.style.display = "block";
 
-                        let fileIcon = "fa-file-archive";
-                        let typeText = "Project Archive";
-                        if (projType === 'planning') {
-                            fileIcon = "fa-file-pdf";
-                            typeText = "Planning Document";
-                        }
+                        const uploadedExt = (file.name.split(".").pop() || "").toLowerCase();
+                        const isDoc = ["pdf", "docx"].includes(uploadedExt);
+                        const fileIcon = isDoc ? "fa-file-alt" : "fa-file-archive";
+                        const typeText = isDoc ? "Project Document" : "Project Submission";
 
                         adminFb.innerHTML = `
                 <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:6px; margin-bottom:10px;">
@@ -1411,6 +1575,8 @@
                         showToast("Project Submitted Successfully! 🎓", "success");
 
                         state.passed.add(state.steps[state.idx].data._id);
+                        await loadTaskProgress();
+                        renderStep(state.idx);
                         updateXP(100, false);
 
                         // ✅ FIX: REMOVED AUTO-COMPLETE
@@ -1428,15 +1594,32 @@
             // --- LOGIC CHECK (Step 1) ---
             async function runCode(task) {
                 if (['html', 'css'].includes(task.language)) {
-                    addLog("[INFO] Frontend preview only. No server execution.", "warning");
+                    toggleTerminal(true);
                     const code = state.editorInstance.getValue();
+                    
+                    // 🔥 USE MASTER VALIDATOR FOR HTML/CSS
+                    const validation = validateTask(code, task);
+                    
+                    if (!validation.passed) {
+                        addLog(`❌ ${validation.message}`, "error");
+                        handleFailure(task);
+                        return;
+                    }
+                    
+                    addLog(validation.message, "success");
+                    addLog("[INFO] Rendering HTML Preview...", "log");
                     const iframe = document.createElement("iframe");
                     iframe.style.width = "100%";
                     iframe.style.height = "350px";
                     iframe.style.border = "1px solid #333";
                     iframe.style.background = "#fff";
                     iframe.srcdoc = code;
-                    els.termLog.appendChild(iframe);
+                    els.previewArea.innerHTML = "";
+                    els.previewArea.appendChild(iframe);
+                    toggleTerminal(true);
+                    els.termBody.scrollTop = 0;
+                    addLog("[SUCCESS] Preview rendered.", "success");
+                    await syncTaskProgress(task, true, "Preview rendered.");
                     handleSuccess(task);
                     return;
                 }
@@ -1482,6 +1665,7 @@
                         els.termLog.appendChild(btn);
                         scrollToBottom();
 
+                        await syncTaskProgress(task, true, "Document saved to MongoDB.");
                         handleSuccess(task);
 
                     } catch (e) {
@@ -1516,8 +1700,8 @@
                 els.runBtn.disabled = true;
                 els.runBtn.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> Checking...`;
 
-                setTimeout(() => {
-                    const analysis = validateLogic(code, task);
+                setTimeout(async () => {
+                    const analysis = validateTask(code, task);
 
                     if (analysis.passed) {
                         state.isLogicValid = true;
@@ -1530,26 +1714,16 @@
                         const title = task.title.toLowerCase();
                         const hasListen = code.includes("app.listen");
                         const lang = (task.language || "javascript").toLowerCase();
+                        const course = (state.courseId || new URLSearchParams(window.location.search).get("course") || "").toLowerCase();
+                        const fileName = (state.fileName || "").trim().toLowerCase();
+                        const dotIdx = fileName.lastIndexOf(".");
+                        const fileExt = dotIdx >= 0 ? fileName.slice(dotIdx) : "";
 
                         // ===============================
                         // 🔥 REACT LIVE COMPILER (BABEL)
                         // ===============================
-                        // Detect React: by language OR by code patterns (JSX, Component, React)
-                        const titleLower = task.title.toLowerCase();
-                        const isReact = lang === "react" || lang === "jsx" || 
-                                       titleLower.includes("react") ||
-                                       titleLower.includes("jsx") ||
-                                       code.includes("function ServerComponent") ||
-                                       code.includes("function App") ||
-                                       code.includes("function Counter") ||
-                                       code.includes("export default") ||
-                                       code.includes("React.createElement") ||
-                                       /React\.createElement\s*\(/.test(code) ||
-                                       /return\s*\(\s*[<]/.test(code) ||
-                                       /<[A-Z][a-zA-Z0-9]*[\s>\/]/.test(code) || // Component: <MyComponent
-                                       /<[a-z]+[\s>\/]/.test(code); // HTML element: <div, <h1, etc.
-                        
-                        if (isReact) {
+                        // React preview must depend only on selected course.
+                        if (course === "react") {
                             toggleTerminal(true);
                             els.termLog.innerHTML = "";
 
@@ -1561,6 +1735,23 @@
                                 .replace(/^import\s+.*?from\s+['"].*?['"];?$/gm, "")
                                 .replace(/^export\s+(default\s+)?/gm, "")
                                 .trim();
+
+                            // Try to detect a user-defined component name from the code
+                            //  - function ComponentName() {...}
+                            //  - const ComponentName = () => {...}
+                            let detectedComponentName = null;
+                            const fnMatch = cleanCode.match(/function\s+([A-Z][A-Za-z0-9_]*)/);
+                            if (fnMatch && fnMatch[1]) {
+                                detectedComponentName = fnMatch[1];
+                            } else {
+                                const varMatch = cleanCode.match(/(?:const|let|var)\s+([A-Z][A-Za-z0-9_]*)\s*=\s*(?:\(|async|function|[A-Za-z0-9_])/);
+                                if (varMatch && varMatch[1]) detectedComponentName = varMatch[1];
+                            }
+
+                            const safeCode = cleanCode
+                                .replace(/<!DOCTYPE[\s\S]*?<body>/i, "")
+                                .replace(/<\/body>[\s\S]*?<\/html>/i, "")
+                                .replace(/<\/script>/gi, "<\\/script>");
 
                             const iframe = document.createElement("iframe");
                             iframe.style.width = "100%";
@@ -1608,8 +1799,16 @@
                 // Make React hooks globally available
                 const { useState, useEffect, useReducer, useContext, useCallback, useMemo } = window.React;
                 
+                ${detectedComponentName ? `const __DETECTED__ = "${detectedComponentName}";` : ''}
+
                 // Execute user code
-                ${cleanCode}
+                (function() {
+                    try {
+                        ${safeCode}
+                    } catch(e) {
+                        console.error("User Code Error:", e);
+                    }
+                })();
                 
                 console.log('✓ Code executed successfully');
                 
@@ -1617,25 +1816,38 @@
                 let Component = null;
                 let elementToRender = null;
                 
-                // 1. Try component functions
-                if (typeof Counter !== 'undefined') {
+                // 1. Try parent-detected component name first
+                if (typeof __DETECTED__ !== 'undefined') {
+                    try {
+                        const maybeDetected = eval(__DETECTED__);
+                        if (typeof maybeDetected === 'function') {
+                            Component = maybeDetected;
+                            console.log('✓ Using detected component:', __DETECTED__);
+                        }
+                    } catch (e) {
+                        console.warn('Detected component lookup failed:', e && e.message);
+                    }
+                }
+
+                // 2. Try component functions
+                if (!Component && typeof Counter !== 'undefined') {
                     console.log('✓ Found Counter component');
                     Component = Counter;
                 }
-                else if (typeof ServerComponent !== 'undefined') {
+                else if (!Component && typeof ServerComponent !== 'undefined') {
                     console.log('✓ Found ServerComponent');
                     Component = ServerComponent;
                 }
-                else if (typeof App !== 'undefined') {
+                else if (!Component && typeof App !== 'undefined') {
                     console.log('✓ Found App');
                     Component = App;
                 }
-                else if (typeof Main !== 'undefined') {
+                else if (!Component && typeof Main !== 'undefined') {
                     console.log('✓ Found Main');
                     Component = Main;
                 }
                 
-                // 2. Try common JSX element variable names
+                // 3. Try common JSX element variable names
                 if (!Component) {
                     if (typeof element !== 'undefined') {
                         console.log('✓ Found element variable');
@@ -1651,10 +1863,36 @@
                     }
                 }
                 
-                // 3. Check what we have
+                // 4. If nothing found yet, auto-scan window for capitalized functions
                 if (!Component && !elementToRender) {
-                    console.warn('Available variables in scope:', Object.keys(window).filter(k => !k.startsWith('_')).slice(0, 20));
-                    throw new Error('Could not find a React component or JSX element. Try defining: element, jsx, result, App, ServerComponent, or Main.');
+                    if (typeof __DETECTED__ !== 'undefined') {
+                        try {
+                            if (typeof window[__DETECTED__] !== 'undefined') {
+                                Component = window[__DETECTED__];
+                                console.log('✓ Using parent-detected component:', __DETECTED__);
+                            } else if (typeof eval(__DETECTED__) !== 'undefined') {
+                                Component = eval(__DETECTED__);
+                                console.log('✓ Using parent-detected component via eval:', __DETECTED__);
+                            }
+                        } catch (e) {
+                            console.warn('Parent-detected component not found in iframe scope:', e && e.message);
+                        }
+                    }
+
+                    if (!Component && !elementToRender) {
+                        for (let k in window) {
+                            if (/^[A-Z]/.test(k) && typeof window[k] === 'function') {
+                                Component = window[k];
+                                console.log('✓ Auto-detected component from window:', k);
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!Component && !elementToRender) {
+                        console.warn('Available variables in scope:', Object.keys(window).filter(k => !k.startsWith('_')).slice(0, 20));
+                        throw new Error('Could not find a React component or JSX element. Try defining: element, jsx, result, App, ServerComponent, or Main.');
+                    }
                 }
                 
                 console.log('✓ Preparing to render...');
@@ -1679,15 +1917,97 @@
 </html>`;
 
                             iframe.srcdoc = htmlContent;
-                            els.termLog.appendChild(iframe);
+                            els.previewArea.innerHTML = "";
+                            els.previewArea.appendChild(iframe);
+                            toggleTerminal(true);
+                            els.termBody.scrollTop = 0;
                             scrollToBottom();
                             addLog("[SUCCESS] React component rendered successfully!", "success");
 
+                            await syncTaskProgress(task, true, "React preview rendered.");
                             handleSuccess(task);
                             return;
                         }
 
-                        if (lang === 'javascript' && !code.includes("require(") && !code.includes("app.listen") && !title.includes("server")) {
+                        if (fileExt === ".html") {
+                            addLog("[INFO] Rendering HTML Preview...", "log");
+                            const iframe = document.createElement("iframe");
+                            iframe.style.width = "100%";
+                            iframe.style.height = "350px";
+                            iframe.style.border = "1px solid #333";
+                            iframe.style.background = "#fff";
+                            iframe.srcdoc = code;
+                            els.previewArea.innerHTML = "";
+                            els.previewArea.appendChild(iframe);
+                            toggleTerminal(true);
+                            els.termBody.scrollTop = 0;
+                            addLog("[SUCCESS] Preview rendered.", "success");
+                            await syncTaskProgress(task, true, "HTML preview rendered.");
+                            handleSuccess(task);
+                            return;
+                        }
+
+                        // 🔥 DOM MANIPULATION TASK - Proper iframe execution
+                        if (task.type === "dom") {
+                            toggleTerminal(true);
+                            els.previewArea.innerHTML = "";
+                            els.termLog.innerHTML = "";
+                            addLog("[INFO] Rendering DOM Preview...", "log");
+
+                            const htmlBase = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto; margin: 20px; background: #fff; color: #333; }
+h2, p, div, button { margin: 10px 0; }
+button { padding: 8px 16px; background: #6366f1; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
+button:hover { background: #4f46e5; }
+#error { color: #d32f2f; padding: 15px; background: #ffebee; border: 1px solid #ffcdd2; border-radius: 4px; margin-top: 10px; display: none; white-space: pre-wrap; font-family: monospace; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<h2 id="myElement">Original Text</h2>
+<p id="message">Ready for DOM manipulation...</p>
+<button id="myBtn">Click Me</button>
+<div id="container"></div>
+<div id="error"></div>
+</body>
+</html>`;
+
+                            const iframe = document.createElement("iframe");
+                            iframe.style.width = "100%";
+                            iframe.style.height = "400px";
+                            iframe.style.border = "1px solid var(--border)";
+                            iframe.style.borderRadius = "6px";
+                            iframe.srcdoc = htmlBase;
+
+                            els.previewArea.appendChild(iframe);
+
+                            // Wait for iframe to load, then execute user code
+                            iframe.onload = async () => {
+                                try {
+                                    iframe.contentWindow.eval(code);
+                                    addLog("[SUCCESS] DOM manipulation executed!", "success");
+                                    await syncTaskProgress(task, true, "DOM execution successful.");
+                                    handleSuccess(task);
+                                } catch (error) {
+                                    const errorDiv = iframe.contentDocument.getElementById('error');
+                                    if (errorDiv) {
+                                        errorDiv.style.display = 'block';
+                                        errorDiv.innerHTML = `<b>❌ Error:</b><br/>${error.message}`;
+                                    }
+                                    addLog(`[ERROR] ${error.message}`, "error");
+                                    await syncTaskProgress(task, false, error.message || "DOM execution failed");
+                                    handleFailure(task);
+                                }
+                            };
+
+                            scrollToBottom();
+                            return;
+                        }
+
+                        if ((fileExt === ".js" || (!fileExt && lang === "javascript")) && !code.includes("require(") && !code.includes("app.listen") && !title.includes("server")) {
                             addLog("[JS] Running in browser context...", "success");
                             try {
                                 const iframe = document.createElement("iframe");
@@ -1707,6 +2027,7 @@
                                 else addLog("(Code ran with no console output)", "warning");
 
                                 document.body.removeChild(iframe);
+                                await syncTaskProgress(task, true, "Browser JS execution completed.");
                                 handleSuccess(task);
                             } catch (err) {
                                 addLog(err.message, "error");
@@ -1734,7 +2055,7 @@
                         }
                         // ✅ FIX: Removed confusing "data structure detected" logic for JSON tasks
                         else if (task.language === 'java' || task.language === 'python') {
-                            addLog(`[ACTION REQUIRED] Type 'run' or 'python/java filename' to execute.`, "warning");
+                            addLog(`[ACTION REQUIRED] Type 'run <input>' or 'python/java filename <input>' to execute.`, "warning");
                             els.termInput.focus();
                         }
                         else {
@@ -1749,14 +2070,248 @@
                 }, 500);
             }
 
-            function validateLogic(code, task) {
-                let missing = [];
-                const patterns = task.validation?.patterns || [];
-                patterns.forEach(p => {
-                    if (!new RegExp(p, 'i').test(code)) missing.push(p);
-                });
-                if (missing.length > 0) return { passed: false, message: "Missing concepts: " + missing.join(", ") };
-                return { passed: true, message: "OK" };
+            // 🔥 MASTER VALIDATOR - Routes to Language-Specific Logic
+            function validateTask(code, task) {
+                const validationType = task.validation?.type;
+                
+                switch(validationType) {
+                    case "html":
+                        return validateHTML(code, task.validation.rules || {});
+                    case "css":
+                        return validateCSS(code, task.validation.rules || {});
+                    case "react":
+                    case "jsx":
+                        return validateReact(code, task.validation.rules || {});
+                    case "node":
+                    case "javascript":
+                        return validateNode(code, task.validation.rules || {});
+                    case "json":
+                    case "mongodb":
+                        return validateJSON(code, task.validation.rules || {});
+                    case "java":
+                        return validateJava(code, task.validation.rules || {});
+                    case "python":
+                        return validatePython(code, task.validation.rules || {});
+                    default:
+                        // Fallback: regex pattern matching for legacy tasks
+                        let missing = [];
+                        const patterns = task.validation?.patterns || [];
+                        patterns.forEach(p => {
+                            if (!new RegExp(p, 'i').test(code)) missing.push(p);
+                        });
+                        if (missing.length > 0) return { passed: false, message: "Missing concepts: " + missing.join(", ") };
+                        return { passed: true, message: "OK" };
+                }
+            }
+
+            // 🔥 HTML VALIDATOR
+            function validateHTML(code, rules) {
+                try {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(code, "text/html");
+
+                    // Check for parsing errors
+                    if (doc.body.textContent.includes("OpenTag")) {
+                        return { passed: false, message: "HTML parsing error. Check syntax." };
+                    }
+
+                    if (rules.requireBody && !doc.querySelector("body")) {
+                        return { passed: false, message: "Missing <body> tag." };
+                    }
+
+                    if (rules.requiredTags && Array.isArray(rules.requiredTags)) {
+                        for (let tag of rules.requiredTags) {
+                            if (!doc.querySelector(tag)) {
+                                return { passed: false, message: `Missing required <${tag}> tag.` };
+                            }
+                        }
+                    }
+
+                    if (rules.minListItems && code.match(/<li/gi)) {
+                        const liCount = code.match(/<li/gi).length;
+                        if (liCount < rules.minListItems) {
+                            return { passed: false, message: `Need at least ${rules.minListItems} <li> items. Found: ${liCount}` };
+                        }
+                    }
+
+                    if (rules.requireList && !code.match(/<ul|<ol/i)) {
+                        return { passed: false, message: "Missing list structure (<ul> or <ol>)." };
+                    }
+
+                    return { passed: true, message: "Valid HTML structure." };
+
+                } catch (e) {
+                    return { passed: false, message: `HTML validation error: ${e.message}` };
+                }
+            }
+
+            // 🔥 CSS VALIDATOR
+            function validateCSS(code, rules) {
+                if (rules.requireSelector && !code.match(/^[.\#]?[\w-]+\s*\{/m)) {
+                    return { passed: false, message: "Missing CSS selector." };
+                }
+
+                if (rules.requiredProperties && Array.isArray(rules.requiredProperties)) {
+                    for (let prop of rules.requiredProperties) {
+                        const regex = new RegExp(`${prop}\\s*:`, 'i');
+                        if (!regex.test(code)) {
+                            return { passed: false, message: `Missing CSS property: ${prop}` };
+                        }
+                    }
+                }
+
+                if (rules.requireMedia && !code.match(/@media/i)) {
+                    return { passed: false, message: "Missing @media query for responsive design." };
+                }
+
+                return { passed: true, message: "Valid CSS rules." };
+            }
+
+            // 🔥 REACT VALIDATOR
+            function validateReact(code, rules) {
+                if (rules.requireComponent && !code.match(/function\s+[A-Z]\w*|const\s+[A-Z]\w*\s*=/)) {
+                    return { passed: false, message: "Missing React functional component." };
+                }
+
+                if (rules.requireReturn && !code.includes("return")) {
+                    return { passed: false, message: "Component must have a return statement." };
+                }
+
+                if (rules.requireJSX && !code.match(/<[A-Za-z]/)) {
+                    return { passed: false, message: "JSX markup not found." };
+                }
+
+                if (rules.requireHooks && Array.isArray(rules.requireHooks)) {
+                    for (let hook of rules.requireHooks) {
+                        const hookRegex = new RegExp(`${hook}\\s*\\(`, 'i');
+                        if (!hookRegex.test(code)) {
+                            return { passed: false, message: `Missing required Hook: ${hook}` };
+                        }
+                    }
+                }
+
+                if (rules.requireState && !code.match(/useState|useReducer/)) {
+                    return { passed: false, message: "Component must manage state (useState or useReducer)." };
+                }
+
+                return { passed: true, message: "Valid React component." };
+            }
+
+            // 🔥 NODE.JS VALIDATOR
+            function validateNode(code, rules) {
+                if (rules.requireExpress && !code.match(/require.*express|import.*express/i)) {
+                    return { passed: false, message: "Must use Express.js framework." };
+                }
+
+                if (rules.requireRoute && !code.match(/app\.(get|post|put|delete)\s*\(/i)) {
+                    return { passed: false, message: "Missing route handler (app.get, app.post, etc)." };
+                }
+
+                if (rules.requireServer && !code.match(/app\.listen|server\.listen/i)) {
+                    return { passed: false, message: "Missing server listener (app.listen)." };
+                }
+
+                if (rules.requirePort && !code.match(/\d{4}|process\.env\.PORT/)) {
+                    return { passed: false, message: "Missing port number." };
+                }
+
+                if (rules.requireMiddleware && !code.match(/app\.use|middleware/i)) {
+                    return { passed: false, message: "Missing middleware setup." };
+                }
+
+                return { passed: true, message: "Valid Node.js code." };
+            }
+
+            // 🔥 JSON VALIDATOR (MongoDB Documents)
+            function validateJSON(code, rules) {
+                try {
+                    const obj = JSON.parse(code);
+
+                    if (rules.mustBeObject && typeof obj !== "object") {
+                        return { passed: false, message: "Must be a valid JSON object." };
+                    }
+
+                    if (rules.cannotBeArray && Array.isArray(obj)) {
+                        return { passed: false, message: "Cannot be an array. Must be a single object." };
+                    }
+
+                    if (rules.requiredFields && Array.isArray(rules.requiredFields)) {
+                        for (let field of rules.requiredFields) {
+                            if (!(field in obj)) {
+                                return { passed: false, message: `Missing required field: ${field}` };
+                            }
+                        }
+                    }
+
+                    if (rules.minFields && Object.keys(obj).length < rules.minFields) {
+                        return { passed: false, message: `Object must have at least ${rules.minFields} fields.` };
+                    }
+
+                    return { passed: true, message: "Valid JSON document." };
+
+                } catch (e) {
+                    return { passed: false, message: `JSON parsing error: ${e.message}` };
+                }
+            }
+
+            // 🔥 JAVA VALIDATOR
+            function validateJava(code, rules) {
+                if (rules.requireClass && !code.match(/public\s+class\s+\w+/i)) {
+                    return { passed: false, message: "Missing public class declaration." };
+                }
+
+                if (rules.requireMain && !code.match(/public\s+static\s+void\s+main\s*\(/i)) {
+                    return { passed: false, message: "Missing main method." };
+                }
+
+                if (rules.requirePackage && !code.match(/package\s+[\w.]+\s*;/)) {
+                    return { passed: false, message: "Missing package declaration." };
+                }
+
+                if (rules.requiredMethods && Array.isArray(rules.requiredMethods)) {
+                    for (let method of rules.requiredMethods) {
+                        const methodRegex = new RegExp(`(public|private)\\s+(static\\s+)?\\w+\\s+${method}\\s*\\(`, 'i');
+                        if (!methodRegex.test(code)) {
+                            return { passed: false, message: `Missing required method: ${method}` };
+                        }
+                    }
+                }
+
+                return { passed: true, message: "Valid Java code." };
+            }
+
+            // 🔥 PYTHON VALIDATOR
+            function validatePython(code, rules) {
+                if (rules.requireFunction && !code.match(/def\s+\w+\s*\(/)) {
+                    return { passed: false, message: "Missing function definition." };
+                }
+
+                if (rules.requireClass && !code.match(/class\s+\w+/)) {
+                    return { passed: false, message: "Missing class definition." };
+                }
+
+                if (rules.requiredFunctions && Array.isArray(rules.requiredFunctions)) {
+                    for (let func of rules.requiredFunctions) {
+                        const funcRegex = new RegExp(`def\\s+${func}\\s*\\(`);
+                        if (!funcRegex.test(code)) {
+                            return { passed: false, message: `Missing required function: ${func}` };
+                        }
+                    }
+                }
+
+                if (rules.requireImport && !code.match(/import\s+\w+|from\s+\w+\s+import/)) {
+                    return { passed: false, message: "Missing import statement." };
+                }
+
+                // Check indentation (basic)
+                const lines = code.split('\n');
+                for (let line of lines) {
+                    if (line.match(/^\s+/) && !line.match(/^\s{4}|\s{8}/)) {
+                        return { passed: false, message: "Incorrect indentation. Use 4-space indents." };
+                    }
+                }
+
+                return { passed: true, message: "Valid Python code." };
             }
 
             // --- ACTION HANDLERS (Step 2) ---
@@ -1785,6 +2340,7 @@
                 }
 
                 addApiPreview(method, url, json, status);
+                syncTaskProgress(task, true, "Route simulation completed.");
                 handleSuccess(task);
             };
 
@@ -1829,6 +2385,7 @@
     `;
                 els.termLog.innerHTML += html;
                 scrollToBottom();
+                await syncTaskProgress(task, true, "Data preview validated.");
                 handleSuccess(task);
             };
 
@@ -1861,11 +2418,17 @@
                 });
             }
 
+
             function processCommand(cmd) {
-                const parts = cmd.split(" ");
+                const parts = cmd.trim().split(/\s+/).filter(Boolean);
                 const task = state.steps[state.idx].data;
                 const code = state.editorInstance.getValue();
                 const hasListen = code.includes("app.listen");
+                const stdinText = parts.slice(1).join(" ");
+
+                if (state.isReviewMode) {
+                    addLog("[INFO] Practice mode is enabled. Runs are allowed; DB updates are skipped.", "warning");
+                }
 
                 // 🔥 FIX: Block Terminal for MongoDB JSON tasks
                 if (task.type === "mongodb" && task.language === "json") {
@@ -1882,12 +2445,19 @@
                 const validCmds = ["node", "python", "java", "javac", "run"];
                 if (!validCmds.includes(parts[0])) {
                     addLog(`[ERROR] bash: ${parts[0]}: command not found`, "error");
-                    addLog("Try: node <file>, python <file>, java <file>, or run", "warning");
+                    addLog("Try: node <file>, python <file> <input>, java <file> <input>, or run <input>", "warning");
                     return;
                 }
 
                 if (!state.isLogicValid) {
                     addLog(`[ERROR] Logic errors detected. Click 'Check Logic' first.`, "error");
+                    return;
+                }
+
+                const looksInteractive = /(?:\binput\s*\(|\bScanner\s*\(|System\.console\s*\(|BufferedReader\s*\()/i.test(code);
+                const cmdUsesRuntime = ["run", "python", "java"].includes(parts[0]);
+                if (looksInteractive && cmdUsesRuntime && !stdinText) {
+                    addLog(`[WARNING] This program expects input. Use 'run <input>' (example: run 2).`, "warning");
                     return;
                 }
 
@@ -1898,6 +2468,7 @@
                         const portMatch = code.match(/app\.listen\(\s*(\d+)/);
                         const port = portMatch ? portMatch[1] : "3000";
                         addLog(`[SUCCESS] Server running on port ${port}`, "success");
+                        syncTaskProgress(task, true, "Server start simulated.");
                         handleSuccess(task);
                     }, 800);
                     return;
@@ -1906,7 +2477,13 @@
                 if (!state.mockMode) {
                     fetch("/api/task/submit", {
                         method: "POST", headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ userId: state.userId, lessonId: state.lessonId, taskId: task._id, code: code })
+                        body: JSON.stringify({
+                            userId: state.userId,
+                            lessonId: state.lessonId,
+                            taskId: task._id,
+                            code: code,
+                            input: stdinText
+                        })
                     })
                         .then(res => res.json())
                         .then(data => {
@@ -2030,7 +2607,13 @@
                 els.ws.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; text-align:center;"><i class="fas fa-trophy" style="font-size:5rem; color:var(--warning); margin-bottom:20px;"></i><h1 style="color:#fff;">Module Completed</h1><button class="btn btn-run" onclick="window.history.back()">Return</button></div>`;
                 updateXP(50, false); // Visual only
                 confetti({ particleCount: 300, spread: 100, origin: { y: 0.6 } });
-                if (!state.mockMode) fetch("/api/complete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: state.userId, lessonId: state.lessonId }) });
+                if (!state.mockMode && !state.isReviewMode) {
+                    fetch("/api/complete", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ userId: state.userId, lessonId: state.lessonId })
+                    });
+                }
 
                 // ✅ POLISH 2: Reset Resume Point
                 localStorage.removeItem(`lastStep_${state.lessonId}`);
@@ -2045,5 +2628,4 @@
         });
     </script>
 </body>
-
 </html>

@@ -358,8 +358,11 @@ document.addEventListener("DOMContentLoaded", () => {
           ${isDone ? '<i class="fas fa-undo"></i> Review' : '<i class="fas fa-play"></i> Start'}
         </button>
       `;
-      // Pass both lesson ID and course slug to next page
-      item.onclick = () => window.location.href = `lesson.html?lesson=${lesson._id}&course=${courseSlug}`;
+      // Pass review mode for completed lessons
+      item.onclick = () => {
+        const reviewQuery = isDone ? "&review=true" : "";
+        window.location.href = `lesson.html?lesson=${lesson._id}&course=${courseSlug}${reviewQuery}`;
+      };
       listEl.appendChild(item);
 
       // --- RENDER TIMELINE NODE ---
