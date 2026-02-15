@@ -256,6 +256,7 @@ const MindStepDoc = mongoose.models.MindStepDoc || mongoose.model("MindStepDoc",
 const Task = require("./models/Task");
 const Course = require("./models/Course");
 const Lesson = require("./models/Lesson");
+const issuesRouter = require("./routes/issues");
 
 function requireAdminMiddleware(req, res, next) {
     const header = req.headers.authorization;
@@ -1080,6 +1081,8 @@ app.get("/api/mongo/get/:id", async (req, res) => {
         });
     }
 });
+
+app.use("/api/issues", issuesRouter);
 
 app.use((err, req, res, next) => {
     if (err instanceof multer.MulterError || (err && typeof err.message === "string" && (err.message.includes("archives") || err.message.includes("Invalid file type")))) {

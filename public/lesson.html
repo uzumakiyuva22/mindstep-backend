@@ -705,6 +705,85 @@
             border: 1px solid var(--border);
         }
 
+        /* ADDED: Bug report modal styles */
+        .issue-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(2px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 300;
+        }
+
+        .issue-modal.active {
+            display: flex;
+        }
+
+        .issue-modal-card {
+            width: 100%;
+            max-width: 620px;
+            background: #111114;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 18px 60px rgba(0, 0, 0, 0.6);
+            overflow: hidden;
+        }
+
+        .issue-modal-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            background: #17171b;
+        }
+
+        .issue-modal-title {
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .issue-modal-body {
+            padding: 18px 20px;
+            display: grid;
+            gap: 12px;
+        }
+
+        .issue-field label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            margin-bottom: 6px;
+        }
+
+        .issue-field input,
+        .issue-field textarea {
+            width: 100%;
+            background: #0b0b0f;
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-family: var(--font-main);
+            font-size: 0.9rem;
+        }
+
+        .issue-field textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .issue-modal-foot {
+            padding: 14px 20px 18px 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
         @keyframes fadeIn {
             from {
                 opacity: 0;
@@ -781,6 +860,10 @@
             #fileNameInput {
                 width: 100%;
             }
+
+            .issue-modal-card {
+                max-width: 100%;
+            }
         }
     </style>
 </head>
@@ -809,6 +892,10 @@
             <div class="progress-container" id="progressBar"></div>
         </div>
         <div style="display:flex; gap:10px;">
+            <!-- ADDED: Report Issue button -->
+            <button class="btn btn-secondary" style="padding:8px 14px;" onclick="openIssueModal()">
+                <i class="fas fa-bug"></i> Report Issue
+            </button>
             <button class="icon-btn" onclick="toggleTheme()" title="Switch Theme"><i
                     class="fas fa-palette"></i></button>
             <div
@@ -903,6 +990,36 @@
         <button class="btn btn-run" id="runBtn">Check Logic <i class="fas fa-check-circle"></i></button>
     </div>
 
+    <!-- ADDED: Bug report modal -->
+    <div class="issue-modal" id="issueModal">
+        <div class="issue-modal-card" role="dialog" aria-modal="true" aria-labelledby="issueModalTitle">
+            <div class="issue-modal-head">
+                <div class="issue-modal-title" id="issueModalTitle"><i class="fas fa-bug"></i> Report an Issue</div>
+                <button class="icon-btn" type="button" onclick="closeIssueModal()" title="Close"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="issueForm">
+                <div class="issue-modal-body">
+                    <div class="issue-field">
+                        <label for="issueErrorMessage">Error Message</label>
+                        <input id="issueErrorMessage" name="errorMessage" type="text" maxlength="300" required>
+                    </div>
+                    <div class="issue-field">
+                        <label for="issueDescription">Description</label>
+                        <textarea id="issueDescription" name="description" maxlength="5000" required></textarea>
+                    </div>
+                    <div class="issue-field">
+                        <label for="issueScreenshot">Screenshot (Optional, max 5MB)</label>
+                        <input id="issueScreenshot" name="screenshot" type="file" accept="image/*">
+                    </div>
+                </div>
+                <div class="issue-modal-foot">
+                    <button type="button" class="btn btn-secondary" onclick="closeIssueModal()">Cancel</button>
+                    <button type="submit" class="btn btn-run" id="issueSubmitBtn"><i class="fas fa-paper-plane"></i> Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' } });
 
@@ -945,7 +1062,13 @@
                 hintBox: document.getElementById("hintBox"),
                 hintText: document.getElementById("hintText"),
                 langName: document.getElementById("langName"),
-                saveStatus: document.getElementById("saveStatus")
+                saveStatus: document.getElementById("saveStatus"),
+                issueModal: document.getElementById("issueModal"),
+                issueForm: document.getElementById("issueForm"),
+                issueErrorMessage: document.getElementById("issueErrorMessage"),
+                issueDescription: document.getElementById("issueDescription"),
+                issueScreenshot: document.getElementById("issueScreenshot"),
+                issueSubmitBtn: document.getElementById("issueSubmitBtn")
             };
 
             function getAllowedProjectFormats(stepData) {
@@ -2618,6 +2741,94 @@ button:hover { background: #4f46e5; }
                 // ✅ POLISH 2: Reset Resume Point
                 localStorage.removeItem(`lastStep_${state.lessonId}`);
             }
+
+            // ADDED: Issue modal open/close handlers
+            function openIssueModal() {
+                if (!els.issueModal) return;
+                if (!state.userId || state.userId === "guest") {
+                    showToast("Please login to report an issue.", "warning");
+                    return;
+                }
+                if (!state.courseId || !state.lessonId) {
+                    showToast("Missing course or lesson context.", "warning");
+                    return;
+                }
+                els.issueModal.classList.add("active");
+            }
+
+            function closeIssueModal() {
+                if (!els.issueModal) return;
+                els.issueModal.classList.remove("active");
+                if (els.issueForm) els.issueForm.reset();
+            }
+
+            // ADDED: Submit bug report to backend
+            async function submitIssueForm(event) {
+                event.preventDefault();
+
+                const errorMessage = (els.issueErrorMessage?.value || "").trim();
+                const description = (els.issueDescription?.value || "").trim();
+                const screenshot = els.issueScreenshot?.files?.[0] || null;
+
+                if (!errorMessage || !description) {
+                    showToast("Error message and description are required.", "warning");
+                    return;
+                }
+
+                if (screenshot && screenshot.size > 5 * 1024 * 1024) {
+                    showToast("Screenshot must be 5MB or less.", "warning");
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append("userId", state.userId);
+                formData.append("courseId", state.courseId);
+                formData.append("lessonId", state.lessonId);
+                formData.append("errorMessage", errorMessage);
+                formData.append("description", description);
+                if (screenshot) formData.append("screenshot", screenshot);
+
+                const originalBtnHtml = els.issueSubmitBtn.innerHTML;
+                els.issueSubmitBtn.disabled = true;
+                els.issueSubmitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Submitting`;
+
+                try {
+                    const response = await fetch("/api/issues", {
+                        method: "POST",
+                        body: formData
+                    });
+                    const data = await response.json();
+                    if (!response.ok || !data.success) {
+                        throw new Error(data.message || "Failed to submit issue");
+                    }
+                    showToast("Issue submitted successfully.", "success");
+                    closeIssueModal();
+                } catch (err) {
+                    showToast(err.message || "Issue submission failed.", "warning");
+                } finally {
+                    els.issueSubmitBtn.disabled = false;
+                    els.issueSubmitBtn.innerHTML = originalBtnHtml;
+                }
+            }
+
+            if (els.issueForm) {
+                els.issueForm.addEventListener("submit", submitIssueForm);
+            }
+
+            if (els.issueModal) {
+                els.issueModal.addEventListener("click", (event) => {
+                    if (event.target === els.issueModal) closeIssueModal();
+                });
+            }
+
+            document.addEventListener("keydown", (event) => {
+                if (event.key === "Escape" && els.issueModal?.classList.contains("active")) {
+                    closeIssueModal();
+                }
+            });
+
+            window.openIssueModal = openIssueModal;
+            window.closeIssueModal = closeIssueModal;
 
             window.toggleTheme = () => { document.body.classList.toggle("theme-neon"); localStorage.setItem("theme", document.body.classList.contains("theme-neon") ? "neon" : "standard"); };
             window.copyCode = () => { navigator.clipboard.writeText(state.editorInstance.getValue()); showToast("Copied", "success"); };
