@@ -2628,7 +2628,7 @@ button:hover { background: #4f46e5; }
             function extractJsonFromCode(code) {
                 const cleanCode = code.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
                 const textMatch = cleanCode.match(/res\.send\s*\(\s*(['"`])([\s\S]*?)\1\s*\)/);
-                if (textMatch) return textMatch[2];
+                 if (textMatch) return textMatch[2];
                 const jsonStartIndex = cleanCode.search(/res(?:\.status\(\s*\d+\s*\))?\.json\s*\(\s*[\[\{]/);
                 if (jsonStartIndex !== -1) {
                     const start = cleanCode.indexOf('(', jsonStartIndex) + 1;
