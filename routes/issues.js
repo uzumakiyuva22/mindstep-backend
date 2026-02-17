@@ -4,15 +4,17 @@ const path = require("path");
 const multer = require("multer");
 const mongoose = require("mongoose");
 const Issue = require("../models/Issue");
+const auth = require("../middleware/auth");
 
 const router = express.Router();
-const ISSUES_UPLOAD_DIR = path.join(__dirname, "..", "public", "uploads", "issues");
-const ADMIN_SECRET = process.env.ADMIN_SECRET || "";
 
+// 1. Setup Upload Directory
+const ISSUES_UPLOAD_DIR = path.join(__dirname, "..", "public", "uploads", "issues");
 if (!fs.existsSync(ISSUES_UPLOAD_DIR)) {
   fs.mkdirSync(ISSUES_UPLOAD_DIR, { recursive: true });
 }
 
+// 2. Multer Configuration
 const screenshotStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, ISSUES_UPLOAD_DIR),
   filename: (req, file, cb) => {
@@ -23,13 +25,14 @@ const screenshotStorage = multer.diskStorage({
 
 const uploadIssueScreenshot = multer({
   storage: screenshotStorage,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB Limit
   fileFilter: (req, file, cb) => {
     if (file.mimetype && file.mimetype.startsWith("image/")) return cb(null, true);
     cb(new Error("Only image files are allowed for screenshot"));
   },
 });
 
+// 3. Helper Functions
 function isValidObjectId(value) {
   return mongoose.Types.ObjectId.isValid(value);
 }
@@ -39,44 +42,40 @@ function buildScreenshotPath(file) {
   return `/uploads/issues/${file.filename}`;
 }
 
+// 4. Admin Middleware
 function requireAdmin(req, res, next) {
-  const authHeader = req.headers.authorization || "";
-  if (!authHeader.startsWith("Bearer ")) {
+  const adminSecret = req.headers.admin_secret;
+  if (!adminSecret || adminSecret !== process.env.ADMIN_SECRET) {
     return res.status(401).json({ success: false, message: "Unauthorized" });
   }
-  const token = authHeader.split(" ")[1];
-  if (!token || token !== ADMIN_SECRET) {
-    return res.status(403).json({ success: false, message: "Forbidden" });
-  }
-  return next();
+  next();
 }
 
-// POST /api/issues (user reports bug)
-router.post("/", uploadIssueScreenshot.single("screenshot"), async (req, res) => {
-  try {
-    const { courseId, lessonId, userId, errorMessage, description } = req.body;
+// ================= ROUTES =================
 
-    if (!courseId || !lessonId || !userId || !errorMessage || !description) {
+// POST /api/issues (User reports a bug)
+router.post("/", auth, uploadIssueScreenshot.single("screenshot"), async (req, res) => {
+  try {
+    const { courseId, lessonId, errorMessage, description } = req.body;
+
+    if (!courseId || !lessonId || !errorMessage || !description) {
       return res.status(400).json({
         success: false,
-        message: "courseId, lessonId, userId, errorMessage and description are required",
+        message: "All fields are required",
       });
     }
 
-    if (!isValidObjectId(lessonId)) {
-      return res.status(400).json({ success: false, message: "Invalid lessonId" });
-    }
-
-    const issue = await Issue.create({
+    const newIssue = new Issue({
       courseId: String(courseId).trim(),
       lessonId,
-      userId: String(userId).trim(),
+      userId: req.user.id,
       errorMessage: String(errorMessage).trim(),
       description: String(description).trim(),
       screenshot: buildScreenshotPath(req.file),
     });
 
-    return res.status(201).json({ success: true, issue });
+    await newIssue.save();
+    return res.status(201).json({ success: true, issue: newIssue });
   } catch (err) {
     if (err instanceof multer.MulterError) {
       if (err.code === "LIMIT_FILE_SIZE") {
@@ -97,11 +96,12 @@ router.post("/", uploadIssueScreenshot.single("screenshot"), async (req, res) =>
       });
     }
 
+    console.error("Issue Create Error:", err);
     return res.status(500).json({ success: false, message: "Failed to create issue" });
   }
 });
 
-// GET /api/issues (admin list)
+// GET /api/issues (Admin lists issues)
 router.get("/", requireAdmin, async (req, res) => {
   try {
     const { status, courseId, lessonId, userId, page = 1, limit = 20 } = req.query;
@@ -117,20 +117,17 @@ router.get("/", requireAdmin, async (req, res) => {
 
     if (courseId) query.courseId = String(courseId).trim();
 
-    if (lessonId) {
-      if (!isValidObjectId(lessonId)) {
-        return res.status(400).json({ success: false, message: "Invalid lessonId filter" });
-      }
-      query.lessonId = lessonId;
-    }
+    if (lessonId) query.lessonId = String(lessonId).trim();
 
     if (userId) query.userId = String(userId).trim();
 
     const safePage = Math.max(parseInt(page, 10) || 1, 1);
     const safeLimit = Math.min(Math.max(parseInt(limit, 10) || 20, 1), 100);
 
+    // ✅ FIXED: Population logic ensures user details appear in Admin Dashboard
     const [issues, total] = await Promise.all([
       Issue.find(query)
+        .populate("userId", "username email") // Fetch username & email
         .sort({ createdAt: -1 })
         .skip((safePage - 1) * safeLimit)
         .limit(safeLimit),
@@ -148,11 +145,12 @@ router.get("/", requireAdmin, async (req, res) => {
       },
     });
   } catch (err) {
+    console.error("Issue Fetch Error:", err);
     return res.status(500).json({ success: false, message: "Failed to fetch issues" });
   }
 });
 
-// PATCH /api/issues/:id (admin update status + reply)
+// PATCH /api/issues/:id (Admin updates status + reply)
 router.patch("/:id", requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
@@ -200,6 +198,7 @@ router.patch("/:id", requireAdmin, async (req, res) => {
       });
     }
 
+    console.error("Issue Update Error:", err);
     return res.status(500).json({ success: false, message: "Failed to update issue" });
   }
 });

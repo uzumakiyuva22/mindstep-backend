@@ -315,12 +315,18 @@ document.addEventListener("DOMContentLoaded", () => {
         completedCount = progData.completed || 0;
         percent = progData.percentage || 0;
 
-        // ✅ FIX 3: Reconstruct Completed IDs based on Sequential Order
-        lessons.forEach((lesson, index) => {
+        // Prefer backend lesson ids (accurate even if lessons are not sequentially completed).
+        if (Array.isArray(progData.completedLessonIds) && progData.completedLessonIds.length > 0) {
+          progData.completedLessonIds.forEach(id => completedIds.add(String(id)));
+          completedCount = completedIds.size;
+        } else {
+          // Backward-compatible fallback.
+          lessons.forEach((lesson, index) => {
             if (index < completedCount) {
-                completedIds.add(String(lesson._id));
+              completedIds.add(String(lesson._id));
             }
-        });
+          });
+        }
 
       } catch(e) { console.warn("Progress fetch failed:", e); }
 

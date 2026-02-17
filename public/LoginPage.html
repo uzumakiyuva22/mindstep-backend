@@ -432,6 +432,8 @@
 
             if(data.success) {
                 if(isLogin) {
+                    localStorage.setItem("token", data.token);
+                    localStorage.setItem("user", JSON.stringify(data.user));
                     localStorage.setItem("mindstep_user", JSON.stringify(data.user));
                     window.location.href = "MainPage.html";
                 } else {

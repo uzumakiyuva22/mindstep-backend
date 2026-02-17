@@ -995,7 +995,8 @@
         <div class="issue-modal-card" role="dialog" aria-modal="true" aria-labelledby="issueModalTitle">
             <div class="issue-modal-head">
                 <div class="issue-modal-title" id="issueModalTitle"><i class="fas fa-bug"></i> Report an Issue</div>
-                <button class="icon-btn" type="button" onclick="closeIssueModal()" title="Close"><i class="fas fa-times"></i></button>
+                <button class="icon-btn" type="button" onclick="closeIssueModal()" title="Close"><i
+                        class="fas fa-times"></i></button>
             </div>
             <form id="issueForm">
                 <div class="issue-modal-body">
@@ -1014,7 +1015,8 @@
                 </div>
                 <div class="issue-modal-foot">
                     <button type="button" class="btn btn-secondary" onclick="closeIssueModal()">Cancel</button>
-                    <button type="submit" class="btn btn-run" id="issueSubmitBtn"><i class="fas fa-paper-plane"></i> Submit</button>
+                    <button type="submit" class="btn btn-run" id="issueSubmitBtn"><i class="fas fa-paper-plane"></i>
+                        Submit</button>
                 </div>
             </form>
         </div>
@@ -1040,7 +1042,8 @@
                 fileName: "server.js",
                 isLogicValid: false,
                 cmdHistory: [],
-                cmdHistoryIdx: -1
+                cmdHistoryIdx: -1,
+                pendingInputCommand: null
             };
 
             const els = {
@@ -1071,7 +1074,22 @@
                 issueSubmitBtn: document.getElementById("issueSubmitBtn")
             };
 
+            function inferProjectType(stepData) {
+                const explicit = String(stepData?.projectType || "").trim().toLowerCase();
+                if (explicit === "planning" || explicit === "code") return explicit;
+
+                const title = String(stepData?.title || "");
+                const description = String(stepData?.description || "");
+                if (/planning/i.test(`${title} ${description}`)) return "planning";
+                return "code";
+            }
+
             function getAllowedProjectFormats(stepData) {
+                const inferredType = inferProjectType(stepData);
+                // Planning submissions are document-based (no zip).
+                if (inferredType === "planning") {
+                    return ["docx", "pdf"];
+                }
                 const raw = stepData?.submission?.allowedFormats;
                 if (Array.isArray(raw) && raw.length > 0) {
                     return raw.map(f => String(f).toLowerCase().replace(/^\./, "")).filter(Boolean);
@@ -1167,8 +1185,12 @@
 
             function addLog(msg, type = 'log') {
                 const color = type === 'error' ? 'var(--error)' : (type === 'success' ? 'var(--success)' : (type === 'warning' ? 'var(--warning)' : 'var(--text-dim)'));
-                els.termLog.innerHTML += `<div class="term-line" style="color:${color};">${msg}</div>`;
-                
+                const line = document.createElement("div");
+                line.className = "term-line";
+                line.style.color = color;
+                line.textContent = String(msg);
+                els.termLog.appendChild(line);
+
                 // Smart auto-scroll: only scroll if user is already near bottom
                 const isNearBottom = els.termBody.scrollHeight - els.termBody.scrollTop <= els.termBody.clientHeight + 50;
                 if (isNearBottom) {
@@ -1430,6 +1452,7 @@
 
                 toggleTerminal(false);
                 state.isLogicValid = false;
+                state.pendingInputCommand = null;
                 els.termLog.innerHTML = `<div style="color:var(--text-dim); font-style:italic;"># Ready.</div>`;
 
                 state.idx = i;
@@ -1478,7 +1501,7 @@
                     document.getElementById("projectFileInput").setAttribute("accept", acceptList);
                     if (state.isReviewMode) {
                         titleEl.innerText = "Practice Mode";
-                        hintEl.innerHTML = "Lesson is completed. Practice is allowed; project upload stays disabled.";
+                        hintEl.innerHTML = "Lesson is completed. Practice is allowed; project re-submission is enabled.";
                     }
 
                     els.guide.innerHTML = `
@@ -1486,7 +1509,7 @@
             <h1>${step.data.title}</h1>
             <hr>
             <p>${step.data.description}</p>
-            ${state.isReviewMode ? `<div class="hint-box" style="display:block; border-color:var(--accent); background:rgba(56, 189, 248, 0.12);"><i class="fas fa-eye"></i> Practice mode is active. Coding practice is allowed; progress will not be saved.</div>` : ""}
+            ${state.isReviewMode ? `<div class="hint-box" style="display:block; border-color:var(--accent); background:rgba(56, 189, 248, 0.12);"><i class="fas fa-eye"></i> Practice mode is active. Coding progress is not saved, but project re-submission is allowed.</div>` : ""}
             <div class="hint-box" style="display:block; border-color:var(--success); background:rgba(34,197,94,0.1);">
                 <i class="fas fa-info-circle"></i> <b>Instructions:</b><br>
                 1. Complete your work locally.<br>
@@ -1561,8 +1584,8 @@
                     });
 
                     const lang = (step.data.language || "javascript").toLowerCase();
-                    
-                    switch(lang) {
+
+                    switch (lang) {
                         case "react":
                         case "jsx":
                             state.fileName = "App.jsx";
@@ -1622,8 +1645,7 @@
             // 🔥 SUBMIT PROJECT FUNCTION (WITH ANIMATION) 🔥
             window.handleProjectUpload = async (file) => {
                 if (state.isReviewMode) {
-                    showToast("Review mode: submission is disabled.", "warning");
-                    return;
+                    showToast("Practice mode: re-submission enabled. Uploading for admin review.", "warning");
                 }
 
                 // ✅ SECURITY CHECK: GUEST GUARD (IMPROVED)
@@ -1655,7 +1677,7 @@
 
                 const step = state.steps[state.idx];
                 const stepData = step.data;
-                const projType = stepData.projectType || "code";
+                const projType = inferProjectType(stepData);
                 const allowedFormats = getAllowedProjectFormats(stepData);
                 const fileExt = (file.name.split(".").pop() || "").toLowerCase();
                 if (!allowedFormats.includes(fileExt)) {
@@ -1719,16 +1741,16 @@
                 if (['html', 'css'].includes(task.language)) {
                     toggleTerminal(true);
                     const code = state.editorInstance.getValue();
-                    
+
                     // 🔥 USE MASTER VALIDATOR FOR HTML/CSS
                     const validation = validateTask(code, task);
-                    
+
                     if (!validation.passed) {
                         addLog(`❌ ${validation.message}`, "error");
                         handleFailure(task);
                         return;
                     }
-                    
+
                     addLog(validation.message, "success");
                     addLog("[INFO] Rendering HTML Preview...", "log");
                     const iframe = document.createElement("iframe");
@@ -1924,10 +1946,27 @@
                 
                 ${detectedComponentName ? `const __DETECTED__ = "${detectedComponentName}";` : ''}
 
-                // Execute user code
+                // Execute user code in isolated scope and expose detected outputs to window.
                 (function() {
                     try {
                         ${safeCode}
+
+                        // Component candidates
+                        if (typeof __DETECTED__ !== 'undefined') {
+                            try {
+                                const __candidate = eval(__DETECTED__);
+                                if (typeof __candidate === 'function') window.__MS_COMPONENT__ = __candidate;
+                            } catch (_) {}
+                        }
+                        if (typeof Counter !== 'undefined') window.__MS_COMPONENT__ = Counter;
+                        if (typeof ServerComponent !== 'undefined') window.__MS_COMPONENT__ = ServerComponent;
+                        if (typeof App !== 'undefined') window.__MS_COMPONENT__ = App;
+                        if (typeof Main !== 'undefined') window.__MS_COMPONENT__ = Main;
+
+                        // JSX element candidates
+                        if (typeof element !== 'undefined') window.__MS_ELEMENT__ = element;
+                        if (typeof jsx !== 'undefined') window.__MS_ELEMENT__ = jsx;
+                        if (typeof result !== 'undefined') window.__MS_ELEMENT__ = result;
                     } catch(e) {
                         console.error("User Code Error:", e);
                     }
@@ -1939,8 +1978,14 @@
                 let Component = null;
                 let elementToRender = null;
                 
-                // 1. Try parent-detected component name first
-                if (typeof __DETECTED__ !== 'undefined') {
+                // 1. Try component exported from isolated scope first
+                if (typeof window.__MS_COMPONENT__ === 'function') {
+                    Component = window.__MS_COMPONENT__;
+                    console.log('✓ Using exposed component from isolated scope');
+                }
+
+                // 2. Try parent-detected component name in current scope
+                if (!Component && typeof __DETECTED__ !== 'undefined') {
                     try {
                         const maybeDetected = eval(__DETECTED__);
                         if (typeof maybeDetected === 'function') {
@@ -1952,7 +1997,7 @@
                     }
                 }
 
-                // 2. Try component functions
+                // 3. Try component functions
                 if (!Component && typeof Counter !== 'undefined') {
                     console.log('✓ Found Counter component');
                     Component = Counter;
@@ -1970,8 +2015,14 @@
                     Component = Main;
                 }
                 
-                // 3. Try common JSX element variable names
-                if (!Component) {
+                // 4. Try exposed JSX element from isolated scope
+                if (!Component && typeof window.__MS_ELEMENT__ !== 'undefined') {
+                    elementToRender = window.__MS_ELEMENT__;
+                    console.log('✓ Using exposed JSX element from isolated scope');
+                }
+
+                // 5. Try common JSX element variable names
+                if (!Component && !elementToRender) {
                     if (typeof element !== 'undefined') {
                         console.log('✓ Found element variable');
                         elementToRender = element;
@@ -1986,7 +2037,7 @@
                     }
                 }
                 
-                // 4. If nothing found yet, auto-scan window for capitalized functions
+                // 6. If nothing found yet, auto-scan window for capitalized functions
                 if (!Component && !elementToRender) {
                     if (typeof __DETECTED__ !== 'undefined') {
                         try {
@@ -2178,7 +2229,7 @@ button:hover { background: #4f46e5; }
                         }
                         // ✅ FIX: Removed confusing "data structure detected" logic for JSON tasks
                         else if (task.language === 'java' || task.language === 'python') {
-                            addLog(`[ACTION REQUIRED] Type 'run <input>' or 'python/java filename <input>' to execute.`, "warning");
+                            addLog(`[ACTION REQUIRED] Type 'run' or 'python/java filename' and press Enter. Then provide input in the next line.`, "warning");
                             els.termInput.focus();
                         }
                         else {
@@ -2196,8 +2247,8 @@ button:hover { background: #4f46e5; }
             // 🔥 MASTER VALIDATOR - Routes to Language-Specific Logic
             function validateTask(code, task) {
                 const validationType = task.validation?.type;
-                
-                switch(validationType) {
+
+                switch (validationType) {
                     case "html":
                         return validateHTML(code, task.validation.rules || {});
                     case "css":
@@ -2520,6 +2571,14 @@ button:hover { background: #4f46e5; }
                         state.cmdHistory.push(cmd);
                         state.cmdHistoryIdx = state.cmdHistory.length;
                         els.termInput.value = "";
+                        if (state.pendingInputCommand) {
+                            const pendingCmd = state.pendingInputCommand;
+                            state.pendingInputCommand = null;
+                            addLog(`stdin> ${cmd}`, "log");
+                            processCommand(pendingCmd, cmd);
+                            return;
+                        }
+
                         addLog(`user@mindstep:~$ ${cmd}`, "log");
                         processCommand(cmd);
                     } else if (e.key === "ArrowUp") {
@@ -2542,12 +2601,12 @@ button:hover { background: #4f46e5; }
             }
 
 
-            function processCommand(cmd) {
+            function processCommand(cmd, forcedInput = null) {
                 const parts = cmd.trim().split(/\s+/).filter(Boolean);
                 const task = state.steps[state.idx].data;
                 const code = state.editorInstance.getValue();
                 const hasListen = code.includes("app.listen");
-                const stdinText = parts.slice(1).join(" ");
+                const stdinText = forcedInput !== null ? String(forcedInput) : parts.slice(1).join(" ");
 
                 if (state.isReviewMode) {
                     addLog("[INFO] Practice mode is enabled. Runs are allowed; DB updates are skipped.", "warning");
@@ -2568,7 +2627,7 @@ button:hover { background: #4f46e5; }
                 const validCmds = ["node", "python", "java", "javac", "run"];
                 if (!validCmds.includes(parts[0])) {
                     addLog(`[ERROR] bash: ${parts[0]}: command not found`, "error");
-                    addLog("Try: node <file>, python <file> <input>, java <file> <input>, or run <input>", "warning");
+                    addLog("Try: node <file>, python <file>, java <file>, or run. For interactive tasks, input is asked in next line.", "warning");
                     return;
                 }
 
@@ -2580,7 +2639,8 @@ button:hover { background: #4f46e5; }
                 const looksInteractive = /(?:\binput\s*\(|\bScanner\s*\(|System\.console\s*\(|BufferedReader\s*\()/i.test(code);
                 const cmdUsesRuntime = ["run", "python", "java"].includes(parts[0]);
                 if (looksInteractive && cmdUsesRuntime && !stdinText) {
-                    addLog(`[WARNING] This program expects input. Use 'run <input>' (example: run 2).`, "warning");
+                    state.pendingInputCommand = cmd;
+                    addLog(`[INPUT] Program is waiting for input. Type input now and press Enter.`, "warning");
                     return;
                 }
 
@@ -2628,7 +2688,7 @@ button:hover { background: #4f46e5; }
             function extractJsonFromCode(code) {
                 const cleanCode = code.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
                 const textMatch = cleanCode.match(/res\.send\s*\(\s*(['"`])([\s\S]*?)\1\s*\)/);
-                 if (textMatch) return textMatch[2];
+                if (textMatch) return textMatch[2];
                 const jsonStartIndex = cleanCode.search(/res(?:\.status\(\s*\d+\s*\))?\.json\s*\(\s*[\[\{]/);
                 if (jsonStartIndex !== -1) {
                     const start = cleanCode.indexOf('(', jsonStartIndex) + 1;
@@ -2766,12 +2826,29 @@ button:hover { background: #4f46e5; }
             async function submitIssueForm(event) {
                 event.preventDefault();
 
-                const errorMessage = (els.issueErrorMessage?.value || "").trim();
-                const description = (els.issueDescription?.value || "").trim();
-                const screenshot = els.issueScreenshot?.files?.[0] || null;
+                const errorMessage =
+                    document.getElementById("errorMessage")?.value?.trim() ||
+                    document.getElementById("issueErrorMessage")?.value?.trim() ||
+                    "";
+                const description =
+                    document.getElementById("description")?.value?.trim() ||
+                    document.getElementById("issueDescription")?.value?.trim() ||
+                    "";
+                const screenshot =
+                    (els.screenshotInput && els.screenshotInput.files[0]) ||
+                    (els.issueScreenshot && els.issueScreenshot.files[0]) ||
+                    null;
 
                 if (!errorMessage || !description) {
-                    showToast("Error message and description are required.", "warning");
+                    alert("Please fill error message and description.");
+                    return;
+                }
+                if (errorMessage.length < 3) {
+                    showToast("Error message must be at least 3 characters.", "warning");
+                    return;
+                }
+                if (description.length < 10) {
+                    showToast("Description must be at least 10 characters.", "warning");
                     return;
                 }
 
@@ -2781,12 +2858,47 @@ button:hover { background: #4f46e5; }
                 }
 
                 const formData = new FormData();
-                formData.append("userId", state.userId);
-                formData.append("courseId", state.courseId);
-                formData.append("lessonId", state.lessonId);
+                const storedUser = JSON.parse(
+                    localStorage.getItem("user") ||
+                    localStorage.getItem("mindstep_user") ||
+                    "null"
+                );
+
+                if (!storedUser || !storedUser._id) {
+                    console.error("User not logged in properly");
+                    alert("Invalid user session. Please login again.");
+                    return;
+                }
+
+                const token =
+                    localStorage.getItem("token") ||
+                    localStorage.getItem("mindstep_token");
+                if (!token) {
+                    alert("You are not logged in. Please login again.");
+                    return;
+                }
+                const params = new URLSearchParams(window.location.search);
+                const courseId = state.courseId || params.get("course");
+                const lessonId = state.lessonId || params.get("lesson");
+                if (!courseId || !lessonId) {
+                    showToast("Missing course or lesson context.", "warning");
+                    return;
+                }
+
+                formData.append("courseId", courseId);
+                formData.append("lessonId", lessonId);
                 formData.append("errorMessage", errorMessage);
                 formData.append("description", description);
-                if (screenshot) formData.append("screenshot", screenshot);
+                if (screenshot) {
+                    formData.append("screenshot", screenshot);
+                }
+
+                console.log("Sending Issue Data:", {
+                    courseId,
+                    lessonId,
+                    errorMessage,
+                    description
+                });
 
                 const originalBtnHtml = els.issueSubmitBtn.innerHTML;
                 els.issueSubmitBtn.disabled = true;
@@ -2795,11 +2907,17 @@ button:hover { background: #4f46e5; }
                 try {
                     const response = await fetch("/api/issues", {
                         method: "POST",
+                        headers: {
+                            "Authorization": `Bearer ${token}`
+                        },
                         body: formData
                     });
                     const data = await response.json();
                     if (!response.ok || !data.success) {
-                        throw new Error(data.message || "Failed to submit issue");
+                        const details = Array.isArray(data.errors) && data.errors.length
+                            ? ` ${data.errors.join(" ")}`
+                            : "";
+                        throw new Error((data.message || "Failed to submit issue") + details);
                     }
                     showToast("Issue submitted successfully.", "success");
                     closeIssueModal();
@@ -2839,4 +2957,5 @@ button:hover { background: #4f46e5; }
         });
     </script>
 </body>
+
 </html>

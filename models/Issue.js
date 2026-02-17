@@ -9,17 +9,19 @@ const IssueSchema = new mongoose.Schema(
       index: true,
     },
     lessonId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Lesson",
+      type: String,
       required: [true, "lessonId is required"],
+      trim: true,
       index: true,
     },
     userId: {
       type: String,
+      ref: "User",
       required: [true, "userId is required"],
       trim: true,
       index: true,
     },
+
     errorMessage: {
       type: String,
       required: [true, "errorMessage is required"],

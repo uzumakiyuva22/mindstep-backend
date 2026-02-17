@@ -16,6 +16,7 @@ const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
 const { v4: uuidv4 } = require("uuid");
 const cloudinary = require("cloudinary").v2;
@@ -351,10 +352,17 @@ app.get("/api/progress/:userId/:lessonId", async (req, res) => {
     try {
         const { userId, lessonId } = req.params;
         const lessonObjectId = new mongoose.Types.ObjectId(lessonId);
-        const lessonCompleted = await Completion.exists({
-            user_id: userId,
-            lesson_id: lessonObjectId
-        });
+        const [lessonCompletedByCompletion, lessonSubmittedForReview] = await Promise.all([
+            Completion.exists({
+                user_id: userId,
+                lesson_id: lessonObjectId
+            }),
+            Project.exists({
+                userId,
+                lessonId: lessonId.toString(),
+                status: { $in: ["pending", "approved"] }
+            })
+        ]);
 
         const progressRows = await TaskProgress.find(
             {
@@ -381,14 +389,14 @@ app.get("/api/progress/:userId/:lessonId", async (req, res) => {
             };
         });
 
-        // Include approved project submissions as passed for project tasks in this lesson.
-        const approvedProjects = await Project.find(
-            { userId, lessonId: lessonId.toString(), status: "approved" },
+        // Include project submissions (pending/approved) as passed for project tasks in this lesson.
+        const submittedProjects = await Project.find(
+            { userId, lessonId: lessonId.toString(), status: { $in: ["pending", "approved"] } },
             "taskId"
         ).lean();
 
-        if (approvedProjects.length > 0) {
-            const taskIdsFromProjects = approvedProjects
+        if (submittedProjects.length > 0) {
+            const taskIdsFromProjects = submittedProjects
                 .map(p => (p.taskId || "").toString())
                 .filter(id => mongoose.Types.ObjectId.isValid(id));
 
@@ -407,7 +415,7 @@ app.get("/api/progress/:userId/:lessonId", async (req, res) => {
             success: true,
             passedTaskIds: Array.from(passedTaskIds),
             taskProgress,
-            lessonCompleted: Boolean(lessonCompleted)
+            lessonCompleted: Boolean(lessonCompletedByCompletion || lessonSubmittedForReview)
         });
     } catch {
         res.status(500).json({ success: false });
@@ -422,23 +430,53 @@ app.get("/api/course-progress/:userId/:courseId", async (req, res) => {
         // Count Total Lessons in Course
         const lessons = await Lesson.find({ course_id: courseId }, "_id").lean();
         const lessonIds = lessons.map(l => l._id);
+        const lessonIdStrings = lessons.map(l => l._id.toString());
         const totalLessons = lessons.length;
 
-        // Count Completed Lessons by User in Course
-        // Match either Completion.course_id (new inserts) OR Completion.lesson_id in the course's lessons
-        const completed = await Completion.countDocuments({
-            user_id: userId,
-            $or: [
-                { course_id: courseId },
-                { lesson_id: { $in: lessonIds } }
-            ]
+        // Count completed lessons by user in course:
+        // 1) Completion records
+        // 2) Submitted project lessons that are pending/approved (review in progress or accepted)
+        const [completionRows, submittedProjectRows] = await Promise.all([
+            Completion.find(
+                {
+                    user_id: userId,
+                    $or: [
+                        { course_id: courseId },
+                        { lesson_id: { $in: lessonIds } }
+                    ]
+                },
+                "lesson_id"
+            ).lean(),
+            Project.find(
+                {
+                    userId,
+                    lessonId: { $in: lessonIdStrings },
+                    status: { $in: ["pending", "approved"] }
+                },
+                "lessonId"
+            ).lean()
+        ]);
+
+        const completedLessonIds = new Set();
+        completionRows.forEach(row => {
+            if (row.lesson_id) completedLessonIds.add(row.lesson_id.toString());
         });
+        submittedProjectRows.forEach(row => {
+            if (row.lessonId) completedLessonIds.add(String(row.lessonId));
+        });
+        const completed = completedLessonIds.size;
 
         const percentage = totalLessons
             ? Math.round((completed / totalLessons) * 100)
             : 0;
 
-        res.json({ success: true, percentage, total: totalLessons, completed });
+        res.json({
+            success: true,
+            percentage,
+            total: totalLessons,
+            completed,
+            completedLessonIds: Array.from(completedLessonIds)
+        });
     } catch (e) {
         res.status(500).json({ success: false });
     }
@@ -455,13 +493,36 @@ app.get("/api/course/:slug/progress/:userId", async (req, res) => {
             "_id"
         ).lean();
 
-        const completed = await Completion.countDocuments({
-            user_id: req.params.userId,
-            lesson_id: { $in: lessonIds.map(l => l._id) }
+        const lessonObjectIds = lessonIds.map(l => l._id);
+        const lessonIdStrings = lessonIds.map(l => l._id.toString());
+        const [completionRows, submittedProjectRows] = await Promise.all([
+            Completion.find(
+                {
+                    user_id: req.params.userId,
+                    lesson_id: { $in: lessonObjectIds }
+                },
+                "lesson_id"
+            ).lean(),
+            Project.find(
+                {
+                    userId: req.params.userId,
+                    lessonId: { $in: lessonIdStrings },
+                    status: { $in: ["pending", "approved"] }
+                },
+                "lessonId"
+            ).lean()
+        ]);
+
+        const completedLessonIds = new Set();
+        completionRows.forEach(row => {
+            if (row.lesson_id) completedLessonIds.add(row.lesson_id.toString());
+        });
+        submittedProjectRows.forEach(row => {
+            if (row.lessonId) completedLessonIds.add(String(row.lessonId));
         });
 
         const percent = lessonIds.length
-            ? Math.round((completed / lessonIds.length) * 100)
+            ? Math.round((completedLessonIds.size / lessonIds.length) * 100)
             : 0;
 
         res.json({ success: true, percent });
@@ -510,6 +571,19 @@ app.post('/api/project/upload', uploadProject.single('projectFile'), async (req,
             allowedFormats = lessonDoc.submission.allowedFormats.map(normalizeFormat).filter(Boolean);
         }
 
+        const planningByTitle = /planning/i.test(String(taskDoc?.title || lessonDoc?.title || ""));
+        const projectTypeCandidate = String(
+            taskDoc?.projectType || projectType || (planningByTitle ? "planning" : "code")
+        ).trim().toLowerCase();
+        const resolvedProjectType = ["planning", "code"].includes(projectTypeCandidate)
+            ? projectTypeCandidate
+            : (planningByTitle ? "planning" : "code");
+
+        if (resolvedProjectType === "planning") {
+            // Planning tasks must accept only planning documents.
+            allowedFormats = ["docx", "pdf"];
+        }
+
         const uploadedFormat = getFileFormat(req.file.originalname);
         if (allowedFormats.length > 0 && !allowedFormats.includes(uploadedFormat)) {
             fs.unlink(req.file.path, () => { });
@@ -522,7 +596,7 @@ app.post('/api/project/upload', uploadProject.single('projectFile'), async (req,
         const newProject = new Project({
             userId, courseId: courseId || "unknown", lessonId,
             taskId: (taskId || "").toString(),
-            projectType: (taskDoc?.projectType || projectType || "code"),
+            projectType: resolvedProjectType,
             originalName: req.file.originalname, storedName: req.file.filename,
             filePath: `/uploads/projects/${req.file.filename}`, fileSize: req.file.size, status: "pending"
         });
@@ -781,8 +855,17 @@ app.post("/api/login", async (req, res) => {
 
         const total = await Lesson.countDocuments();
         const done = await Completion.countDocuments({ user_id: user._id });
+        const token = jwt.sign(
+            { id: user._id },
+            process.env.JWT_SECRET,
+            { expiresIn: "1d" }
+        );
 
-        res.json({ success: true, user: { ...user.toObject(), percentage: total ? Math.round((done / total) * 100) : 0 } });
+        res.json({
+            success: true,
+            token,
+            user: { ...user.toObject(), percentage: total ? Math.round((done / total) * 100) : 0 }
+        });
     } catch { res.status(500).json({ success: false }); }
 });
 
@@ -1098,4 +1181,4 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => console.log(`🔥 MindStep running → http://localhost:${PORT}`));
 
-
+    
