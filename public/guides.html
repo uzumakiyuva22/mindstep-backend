@@ -2,594 +2,628 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
-  <title>MindStep — Ultimate Knowledge Hub</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MindStep - Course Guides</title>
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@600;700&display=swap" rel="stylesheet">
 
   <style>
     :root {
-      /* Advanced Sky Blue Palette */
-      --sky-primary: #33A1FD;
-      --sky-dark: #007AFF;
-      --sky-glow: rgba(51, 161, 253, 0.25);
-      --glass-bg: rgba(18, 20, 28, 0.85);
-      --glass-border: rgba(255, 255, 255, 0.08);
-      --bg-dark: #020204;
-      --text-main: #eef1f6;
-      --text-muted: #9ca3af;
-      --code-bg: #0f1117;
-      
-      --font-main: "Inter", -apple-system, sans-serif;
-      --font-code: "JetBrains Mono", monospace;
+      --bg: #04070f;
+      --panel: rgba(16, 20, 32, 0.9);
+      --panel-2: rgba(255, 255, 255, 0.03);
+      --border: rgba(148, 163, 184, 0.22);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-2: #8b5cf6;
     }
 
-    * { box-sizing: border-box; outline: none; }
-
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
     body {
-      margin: 0; padding: 0; font-family: var(--font-main);
-      background-color: var(--bg-dark);
-      background-image: 
-        radial-gradient(circle at 10% 0%, rgba(51, 161, 253, 0.1) 0%, transparent 60%),
-        radial-gradient(circle at 90% 100%, rgba(48, 209, 88, 0.05) 0%, transparent 60%);
-      background-attachment: fixed; color: var(--text-main);
-      height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+      margin: 0;
+      font-family: "Inter", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 12% 20%, rgba(56, 189, 248, 0.12), transparent 45%),
+        radial-gradient(circle at 85% 85%, rgba(139, 92, 246, 0.12), transparent 46%),
+        var(--bg);
+      min-height: 100vh;
     }
 
-    /* --- Navbar --- */
     nav {
-      padding: 16px 30px; display: flex; justify-content: space-between; align-items: center;
-      background: rgba(10, 10, 15, 0.9); backdrop-filter: blur(30px);
-      border-bottom: 1px solid var(--glass-border); z-index: 100;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 26px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(4, 7, 15, 0.88);
+      backdrop-filter: blur(14px);
     }
-    .logo-area { display: flex; align-items: center; gap: 10px; }
-    .logo {
-      font-weight: 800; font-size: 1.3rem; letter-spacing: -0.5px;
-      background: linear-gradient(135deg, #fff 30%, var(--sky-primary));
-      background-clip: text;
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: "Orbitron", sans-serif;
+      letter-spacing: 0.5px;
+      font-weight: 700;
     }
-    
-    .nav-actions { display: flex; gap: 15px; align-items: center; }
+    .brand i {
+      color: var(--accent);
+      font-size: 1.25rem;
+    }
+    .nav-links {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+    .nav-links a {
+      text-decoration: none;
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 0.9rem;
+      padding: 8px 12px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      transition: 0.2s ease;
+    }
+    .nav-links a:hover,
+    .nav-links a.active {
+      color: #fff;
+      border-color: var(--border);
+      background: rgba(255, 255, 255, 0.05);
+    }
 
-    .lang-switch {
-      display: flex; background: rgba(255,255,255,0.05); border-radius: 20px;
-      border: 1px solid var(--glass-border); overflow: hidden;
+    .page {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 18px;
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 18px;
     }
-    .lang-btn {
-      padding: 6px 14px; border: none; background: transparent; color: var(--text-muted);
-      font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: 0.3s;
-    }
-    .lang-btn.active { background: var(--sky-primary); color: #fff; }
 
-    .nav-btn {
-      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.05);
-      color: #fff; padding: 8px 16px; border-radius: 30px; text-decoration: none;
-      font-size: 0.85rem; font-weight: 600; transition: 0.3s;
-    }
-    .nav-btn:hover { background: rgba(255,255,255,0.15); }
-
-    /* --- Layout --- */
-    .layout-container {
-      display: grid; grid-template-columns: 300px 1fr; 
-      height: 100%; overflow: hidden;
-    }
-    @media (max-width: 900px) { .layout-container { grid-template-columns: 1fr; } }
-
-    /* --- Sidebar --- */
     .sidebar {
-      background: rgba(12, 14, 20, 0.7); border-right: 1px solid var(--glass-border);
-      padding: 25px 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      border-radius: 16px;
+      padding: 16px;
+      height: calc(100vh - 92px);
+      position: sticky;
+      top: 74px;
+      overflow: auto;
     }
-    .sidebar::-webkit-scrollbar { width: 4px; }
-    .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+    .side-title {
+      margin: 0 0 6px;
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+    .side-desc {
+      color: var(--muted);
+      font-size: 0.84rem;
+      line-height: 1.5;
+      margin: 0 0 14px;
+    }
+    .course-list {
+      display: grid;
+      gap: 8px;
+    }
+    .course-btn {
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 12px;
+      text-align: left;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .course-btn:hover {
+      border-color: rgba(56, 189, 248, 0.5);
+    }
+    .course-btn.active {
+      border-color: rgba(56, 189, 248, 0.75);
+      background: rgba(56, 189, 248, 0.1);
+    }
+    .course-name {
+      margin: 0 0 4px;
+      font-size: 0.94rem;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+    .course-meta {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
 
-    .course-select-label { 
-      font-size: 0.7rem; text-transform: uppercase; color: var(--sky-primary); 
-      font-weight: 800; letter-spacing: 1px; margin-bottom: 8px; padding-left: 5px; 
+    .content {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      border-radius: 16px;
+      padding: 22px;
+      min-height: calc(100vh - 92px);
     }
-    .course-selector {
-      width: 100%; padding: 14px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border);
-      border-radius: 12px; color: #fff; font-family: var(--font-main); font-size: 0.95rem; cursor: pointer;
-      outline: none; transition: 0.3s;
+    .guide-header h1 {
+      margin: 0;
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
     }
-    .course-selector option { background: #0d0e12; color: #fff; }
+    .guide-header p {
+      margin: 10px 0 0;
+      color: var(--muted);
+      line-height: 1.6;
+      max-width: 900px;
+    }
+    .quick-row {
+      margin-top: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .chip {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-size: 0.78rem;
+      color: #cbd5e1;
+      background: rgba(255, 255, 255, 0.02);
+    }
 
-    /* Topics List */
-    .topics-list { display: flex; flex-direction: column; gap: 8px; }
-    
-    .level-header {
-      font-size: 0.7rem; font-weight: 800; color: var(--text-muted); 
-      text-transform: uppercase; margin: 20px 0 8px 5px; letter-spacing: 0.5px;
-      border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px;
+    .block {
+      margin-top: 24px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.02);
+      overflow: hidden;
+    }
+    .block-head {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(2, 6, 23, 0.45);
+      font-weight: 700;
+      color: #dbeafe;
+      font-size: 0.92rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .block-body {
+      padding: 14px;
     }
 
-    .topic-btn {
-      width: 100%; padding: 12px 16px; border-radius: 12px;
-      background: transparent; border: 1px solid transparent;
-      color: rgba(255,255,255,0.8); text-align: left; font-size: 0.92rem; font-weight: 500;
-      cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 12px;
+    .lesson-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      background: rgba(15, 23, 42, 0.35);
+      margin-bottom: 12px;
     }
-    .topic-btn i { width: 20px; text-align: center; font-size: 0.9rem; opacity: 0.7; color: var(--sky-primary); }
-    .topic-btn:hover { background: rgba(255,255,255,0.05); color: #fff; }
-    
-    .topic-btn.active {
-      background: rgba(51, 161, 253, 0.15); border: 1px solid rgba(51, 161, 253, 0.3);
-      color: #fff; font-weight: 600; box-shadow: 0 4px 20px rgba(51, 161, 253, 0.1);
+    .lesson-title-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
     }
-    .topic-btn.active i { opacity: 1; }
+    .lesson-title {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+    .lesson-badges {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      color: #cbd5e1;
+      text-transform: uppercase;
+      letter-spacing: 0.2px;
+    }
+    .badge.theory { background: rgba(56, 189, 248, 0.15); color: #7dd3fc; }
+    .badge.project { background: rgba(245, 158, 11, 0.16); color: #fbbf24; }
+    .badge.practice { background: rgba(34, 197, 94, 0.16); color: #86efac; }
 
-    /* --- Content Area --- */
-    .content-area {
-      padding: 0; position: relative; overflow-y: auto; scroll-behavior: smooth;
+    .lesson-desc {
+      margin: 10px 0 0;
+      color: var(--muted);
+      line-height: 1.58;
+      font-size: 0.9rem;
     }
-    .content-area::-webkit-scrollbar { width: 8px; }
-    .content-area::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
+    .mini-grid {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 10px;
+    }
+    .mini-box {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.02);
+      padding: 10px;
+    }
+    .mini-box h4 {
+      margin: 0 0 8px;
+      font-size: 0.8rem;
+      color: #93c5fd;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .mini-box ul {
+      margin: 0;
+      padding-left: 18px;
+      color: #cbd5e1;
+      font-size: 0.84rem;
+      line-height: 1.45;
+    }
+    .mini-box li { margin-bottom: 5px; }
 
-    .guide-wrapper {
-      max-width: 950px; margin: 0 auto; padding: 60px 80px 120px 80px;
-      animation: fadeIn 0.5s ease-out;
+    .playbook {
+      display: grid;
+      gap: 10px;
     }
-    @media (max-width: 768px) { .guide-wrapper { padding: 30px 20px; } }
+    .playbook-item {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px;
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .playbook-item strong { color: #f8fafc; }
+    .playbook-item p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 0.88rem;
+    }
 
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      padding: 30px 18px;
+      margin-top: 16px;
+    }
 
-    /* Typography - Deep Content Style */
-    .guide-header { border-bottom: 1px solid var(--glass-border); padding-bottom: 30px; margin-bottom: 40px; }
-    .guide-title { font-size: 2.8rem; font-weight: 800; margin: 0 0 15px 0; color: #fff; letter-spacing: -1px; line-height: 1.1; }
-    .guide-subtitle { font-size: 1.25rem; color: var(--text-muted); line-height: 1.6; font-weight: 300; }
+    @media (max-width: 1080px) {
+      .page {
+        grid-template-columns: 1fr;
+      }
+      .sidebar {
+        position: static;
+        height: auto;
+      }
+      .content {
+        min-height: auto;
+      }
+    }
 
-    .prose h2 { 
-      font-size: 1.8rem; margin-top: 50px; margin-bottom: 20px; color: #fff; font-weight: 700; 
-      display: flex; align-items: center; gap: 12px;
+    @media (max-width: 700px) {
+      nav {
+        padding: 12px 14px;
+      }
+      .brand span {
+        display: none;
+      }
+      .nav-links {
+        gap: 6px;
+      }
+      .nav-links a {
+        padding: 6px 8px;
+        font-size: 0.8rem;
+      }
+      .content {
+        padding: 14px;
+      }
+      .guide-header h1 {
+        font-size: 1.4rem;
+      }
     }
-    .prose h2::before { 
-      content: ''; width: 6px; height: 26px; background: var(--sky-primary); 
-      border-radius: 4px; display: inline-block; 
-    }
-    
-    .prose h3 { font-size: 1.4rem; margin-top: 35px; margin-bottom: 12px; color: #e0e0e0; font-weight: 600; }
-    
-    .prose p { font-size: 1.05rem; line-height: 1.8; color: #d1d5db; margin-bottom: 25px; }
-    
-    .prose ul, .prose ol { padding-left: 25px; margin-bottom: 30px; color: #d1d5db; }
-    .prose li { margin-bottom: 12px; line-height: 1.6; font-size: 1.05rem; }
-    .prose li::marker { color: var(--sky-primary); font-weight: bold; }
-
-    /* Concept Maps & Roadmaps */
-    .roadmap { 
-      position: relative; margin: 40px 0; border-left: 2px solid rgba(255,255,255,0.1); 
-      padding-left: 30px; 
-    }
-    .roadmap-item { position: relative; margin-bottom: 40px; }
-    .roadmap-item::before {
-      content: ''; position: absolute; left: -37px; top: 4px; width: 14px; height: 14px;
-      background: #000; border: 3px solid var(--sky-primary); border-radius: 50%;
-      box-shadow: 0 0 15px var(--sky-primary);
-    }
-    .roadmap-title { font-weight: 700; color: #fff; margin-bottom: 8px; font-size: 1.15rem; }
-    .roadmap-desc { font-size: 1rem; color: var(--text-muted); line-height: 1.6; }
-
-    /* Code Blocks */
-    .code-block {
-      background: var(--code-bg); border: 1px solid var(--glass-border);
-      border-radius: 14px; padding: 25px; font-family: var(--font-code);
-      font-size: 0.95rem; color: #a9b7c6; overflow-x: auto; margin: 30px 0;
-      position: relative; box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
-    }
-    .code-block::after {
-      content: 'Example'; position: absolute; top: 10px; right: 15px; 
-      font-size: 0.7rem; text-transform: uppercase; color: rgba(255,255,255,0.2); font-weight: 800;
-    }
-    .kwd { color: #cc7832; } .str { color: #6a8759; } .num { color: #6897bb; } .cmt { color: #808080; }
-
-    /* Special Boxes */
-    .tip-box {
-      background: linear-gradient(90deg, rgba(51, 161, 253, 0.1), transparent);
-      border-left: 4px solid var(--sky-primary); padding: 25px; border-radius: 0 12px 12px 0; margin: 35px 0;
-    }
-    .tip-title { color: var(--sky-primary); font-weight: 800; margin-bottom: 10px; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 1px; }
-
-    .warn-box {
-      background: linear-gradient(90deg, rgba(255, 69, 58, 0.1), transparent);
-      border-left: 4px solid #FF453A; padding: 25px; border-radius: 0 12px 12px 0; margin: 35px 0;
-    }
-    .warn-title { color: #FF453A; font-weight: 800; margin-bottom: 10px; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 1px; }
-
-    @media (max-width: 900px) { .sidebar { display: none; } .guide-wrapper { padding: 20px; } }
   </style>
 </head>
-
 <body>
 
   <nav>
-    <div class="logo-area">
-      <i class="fas fa-graduation-cap" style="color:#33A1FD; font-size: 1.5rem;"></i>
-      <div class="logo">MindStep Guides</div>
+    <div class="brand">
+      <i class="fas fa-compass"></i>
+      <span>MindStep Guides</span>
     </div>
-    
-    <div class="nav-actions">
-      <div class="lang-switch">
-        <button class="lang-btn active" id="btn-en" onclick="setLanguage('en')">English</button>
-        <button class="lang-btn" id="btn-ta" onclick="setLanguage('ta')">தமிழ் (AI)</button>
-      </div>
-      <a href="MainPage.html" class="nav-btn"><i class="fas fa-times"></i> Close</a>
+    <div class="nav-links">
+      <a href="MainPage.html">Dashboard</a>
+      <a href="guides.html" class="active">Guides</a>
+      <a href="About.html">About</a>
     </div>
   </nav>
 
-  <div class="layout-container">
-    
-    <div class="sidebar">
-      <div>
-        <div class="course-select-label" id="lbl-course">Selected Guide</div>
-        <select id="courseSelector" class="course-selector">
-          <option value="java">Java Development</option>
-          <option value="python">Python Programming</option>
-          <option value="webdev">Full Stack (MERN)</option>
-          <option value="react">React.js Advanced</option>
-        </select>
+  <main class="page">
+    <aside class="sidebar">
+      <h3 class="side-title">Course Guide Index</h3>
+      <p class="side-desc">Choose a course to view lesson-by-lesson learning guide, implementation path, and submission checklist.</p>
+      <div class="course-list" id="courseList">
+        <div class="empty">Loading courses...</div>
       </div>
+    </aside>
 
-      <div class="topics-list" id="topicsList">
-        </div>
-    </div>
+    <section class="content" id="guideRoot">
+      <div class="guide-header">
+        <h1>Loading Guide...</h1>
+        <p>Fetching your course and lesson details.</p>
+      </div>
+    </section>
+  </main>
 
-    <div class="content-area">
-      <div id="guideContent" class="guide-wrapper">
-        </div>
-    </div>
+  <script>
+    const API_BASE = window.location.origin;
 
-  </div>
+    const state = {
+      courses: [],
+      activeSlug: null,
+      lessonsBySlug: new Map()
+    };
 
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-  
-  let currentLang = 'en'; 
-  
-  // --- 🔥 MASSIVE CONTENT DATABASE (AI-STYLE DEPTH) ---
-  const contentDB = {
-    
-    // ================= JAVA (DEEP DIVE) =================
-    "java": {
-      en: {
-        title: "Java Masterclass: From Logic to Enterprise",
-        levels: [
-          {
-            name: "Phase 1: The Foundation",
-            topics: [
-              {
-                id: "j1", title: "Architecture & Setup", icon: "fas fa-server",
-                html: `
-                  <div class="guide-header">
-                    <h1 class="guide-title">Java Architecture & Setup</h1>
-                    <p class="guide-subtitle">Understanding the JVM, JRE, and JDK before writing a single line of code.</p>
-                  </div>
-                  <div class="prose">
-                    <h2>How Java Actually Works?</h2>
-                    <p>Java is unique because it is both <strong>Compiled</strong> and <strong>Interpreted</strong>. This makes it "Platform Independent" (Write Once, Run Anywhere).</p>
-                    <ul>
-                      <li><strong>Source Code (.java):</strong> What you write (human readable).</li>
-                      <li><strong>Compiler (javac):</strong> Converts source code into <em>Bytecode (.class)</em>. This is not binary; it's a special intermediate language.</li>
-                      <li><strong>JVM (Java Virtual Machine):</strong> This is the engine that reads Bytecode and translates it to native machine code for your specific computer (Windows/Mac/Linux).</li>
-                    </ul>
-                    
-                    <div class="tip-box">
-                      <div class="tip-title">Interview Question</div>
-                      "Why is Java platform independent?" Answer: Because of the Bytecode. The Bytecode is the same everywhere; only the JVM changes for each OS.
-                    </div>
-
-                    <h2>Professional Setup Guide</h2>
-                    <p>Do not use Notepad. Professional developers use IDEs. Here is the industry standard setup:</p>
-                    <div class="roadmap">
-                      <div class="roadmap-item">
-                        <div class="roadmap-title">Step 1: Install OpenJDK 21 (LTS)</div>
-                        <div class="roadmap-desc">Long Term Support versions are stable. Avoid "latest" beta versions.</div>
-                      </div>
-                      <div class="roadmap-item">
-                        <div class="roadmap-title">Step 2: Environment Variables</div>
-                        <div class="roadmap-desc">Set <code>JAVA_HOME</code> in Windows so your terminal knows where Java lives.</div>
-                      </div>
-                      <div class="roadmap-item">
-                        <div class="roadmap-title">Step 3: IntelliJ IDEA</div>
-                        <div class="roadmap-desc">Download the Community Edition. It has intelligent code completion that saves hours.</div>
-                      </div>
-                    </div>
-                  </div>`
-              },
-              {
-                id: "j2", title: "Memory & Variables", icon: "fas fa-memory",
-                html: `
-                  <div class="guide-header">
-                    <h1 class="guide-title">Memory Management & Variables</h1>
-                    <p class="guide-subtitle">Deep dive into Stack vs. Heap memory and Primitive Data Types.</p>
-                  </div>
-                  <div class="prose">
-                    <h2>Stack vs. Heap Memory</h2>
-                    <p>Understanding memory separates beginners from pros. Java uses two main memory areas:</p>
-                    <ul>
-                      <li><strong>Stack Memory:</strong> Stores temporary variables and method calls. It is fast but small. When a method ends, this memory is cleared immediately.</li>
-                      <li><strong>Heap Memory:</strong> Stores <strong>Objects</strong>. It is large but slower. Objects live here until the "Garbage Collector" removes them.</li>
-                    </ul>
-
-                    <h2>Primitive Types</h2>
-                    <p>Java defines 8 primitive types that store simple values directly in the Stack:</p>
-                    <div class="code-block">
-                      <span class="kwd">int</span> count = 100;       <span class="cmt">// 4 bytes</span><br>
-                      <span class="kwd">long</span> bigNum = 5000L;   <span class="cmt">// 8 bytes (Use 'L')</span><br>
-                      <span class="kwd">double</span> price = 19.99;  <span class="cmt">// Decimal values</span><br>
-                      <span class="kwd">boolean</span> isActive = <span class="kwd">true</span>;
-                    </div>
-                    
-                    <div class="warn-box">
-                      <div class="warn-title">Critical Mistake</div>
-                      Never use <code>float</code> or <code>double</code> for financial calculations (money). They have precision errors. Use <code>BigDecimal</code> class instead.
-                    </div>
-                  </div>`
-              }
-            ]
-          },
-          {
-            name: "Phase 2: Object Oriented Design",
-            topics: [
-              {
-                id: "j3", title: "Deep Dive into OOP", icon: "fas fa-cubes",
-                html: `
-                  <div class="guide-header">
-                    <h1 class="guide-title">Advanced OOP Principles</h1>
-                    <p class="guide-subtitle">Moving beyond simple classes to architectural design.</p>
-                  </div>
-                  <div class="prose">
-                    <h2>Thinking in Objects</h2>
-                    <p>Don't just write functions. Model the problem. If you are building a Bank App, you need classes for <code>User</code>, <code>Account</code>, and <code>Transaction</code>.</p>
-                    
-                    <h3>1. Encapsulation (Security)</h3>
-                    <p>Never make variables <code>public</code>. Always use <code>private</code> and provide access via Getters/Setters. This protects data from being corrupted.</p>
-                    
-                    <h3>2. Polymorphism (Flexibility)</h3>
-                    <p>This allows you to treat different objects as the same parent type.</p>
-                    <div class="code-block">
-                      <span class="cmt">// Parent Class Reference = Child Class Object</span><br>
-                      Animal myPet = <span class="kwd">new</span> Dog();<br>
-                      myPet.makeSound(); <span class="cmt">// Runs Dog's version of sound</span>
-                    </div>
-                    <p>This is crucial for building plugin systems or flexible APIs.</p>
-                  </div>`
-              }
-            ]
-          }
-        ]
-      },
-      
-      ta: {
-        title: "ஜாவா: முழுமையான வழிகாட்டி (AI Tutor)",
-        levels: [
-          {
-            name: "பகுதி 1: அடித்தளம்",
-            topics: [
-              {
-                id: "j1", title: "அறிமுகம் & கட்டமைப்பு", icon: "fas fa-server",
-                html: `
-                  <div class="guide-header">
-                    <h1 class="guide-title">ஜாவா கட்டமைப்பு & நிறுவல்</h1>
-                    <p class="guide-subtitle">JVM, JRE என்றால் என்ன? ஜாவா எப்படி இயங்குகிறது?</p>
-                  </div>
-                  <div class="prose">
-                    <h2>ஜாவா எப்படி இயங்குகிறது?</h2>
-                    <p>ஜாவா ஒரு தனித்துவமான மொழி. இது <strong>Compiler</strong> மற்றும் <strong>Interpreter</strong> இரண்டையும் பயன்படுத்துகிறது. இதனால் தான் "ஒரு முறை எழுதுங்கள், எங்கும் இயக்கலாம்" (Write Once, Run Anywhere) என்று கூறப்படுகிறது.</p>
-                    <ul>
-                      <li><strong>Source Code (.java):</strong> நீங்கள் எழுதும் ஆங்கில குறியீடு.</li>
-                      <li><strong>Bytecode (.class):</strong> கம்பைலர் (javac) இதை உருவாக்கும். இது இயந்திர மொழி அல்ல, ஆனால் JVM-க்கு புரியும் ஒரு இடைநிலை மொழி.</li>
-                      <li><strong>JVM (Java Virtual Machine):</strong> இது தான் உண்மையான ஹீரோ. Bytecode-ஐ எடுத்து, உங்கள் கணினிக்கு (Windows/Mac) ஏற்றவாறு மாற்றுகிறது.</li>
-                    </ul>
-                    
-                    <div class="tip-box">
-                      <div class="tip-title">நேர்முகத் தேர்வு கேள்வி</div>
-                      "ஜாவா ஏன் Platform Independent?" பதில்: Bytecode காரணமாக. Bytecode எல்லா இடத்திலும் ஒன்றுதான்; JVM மட்டுமே மாறுகிறது.
-                    </div>
-
-                    <h2>நிறுவல் முறை (Setup)</h2>
-                    <div class="roadmap">
-                      <div class="roadmap-item">
-                        <div class="roadmap-title">படி 1: OpenJDK 21 பதிவிறக்கம்</div>
-                        <div class="roadmap-desc">LTS (Long Term Support) பதிப்பை மட்டுமே பயன்படுத்தவும்.</div>
-                      </div>
-                      <div class="roadmap-item">
-                        <div class="roadmap-title">படி 2: IntelliJ IDEA</div>
-                        <div class="roadmap-desc">இதுவே சிறந்த மென்பொருள். Community Edition இலவசம்.</div>
-                      </div>
-                    </div>
-                  </div>`
-              },
-              {
-                id: "j2", title: "நினைவகம் & மாறிகள்", icon: "fas fa-memory",
-                html: `
-                  <div class="guide-header">
-                    <h1 class="guide-title">நினைவகம் & மாறிகள் (Memory & Variables)</h1>
-                  </div>
-                  <div class="prose">
-                    <h2>Stack மற்றும் Heap வித்தியாசம்</h2>
-                    <p>ஜாவாவில் நினைவகம் இரண்டு வகையாக பிரிக்கப்பட்டுள்ளது:</p>
-                    <ul>
-                      <li><strong>Stack Memory:</strong> சிறியது, வேகமானது. இங்குதான் <code>int</code>, <code>double</code> போன்ற சாதாரண மாறிகள் (Variables) சேமிக்கப்படும்.</li>
-                      <li><strong>Heap Memory:</strong> பெரியது. இங்குதான் அனைத்து <strong>Objects</strong> (பொருட்கள்) சேமிக்கப்படும்.</li>
-                    </ul>
-
-                    <h2>தரவு வகைகள் (Data Types)</h2>
-                    <div class="code-block">
-                      <span class="kwd">int</span> count = 100;       <span class="cmt">// முழு எண்</span><br>
-                      <span class="kwd">long</span> bigNum = 5000L;   <span class="cmt">// பெரிய எண் (L சேர்க்கவும்)</span><br>
-                      <span class="kwd">double</span> price = 19.99;  <span class="cmt">// தசம எண்</span><br>
-                      <span class="kwd">boolean</span> isActive = <span class="kwd">true</span>;
-                    </div>
-                    
-                    <div class="warn-box">
-                      <div class="warn-title">முக்கிய குறிப்பு</div>
-                      பணம் தொடர்பான கணக்கீடுகளுக்கு (Money) <code>double</code> பயன்படுத்த வேண்டாம். துல்லியமான கணக்கீட்டிற்கு <code>BigDecimal</code> பயன்படுத்தவும்.
-                    </div>
-                  </div>`
-              }
-            ]
-          }
-        ]
-      }
-    },
-
-    // ================= WEB DEV =================
-    "webdev": {
-      en: {
-        title: "Full Stack Roadmap (MERN)",
-        levels: [
-          {
-            name: "Phase 1: Frontend Engineering",
-            topics: [
-              {
-                id: "w1", title: "Advanced HTML/CSS", icon: "fab fa-html5",
-                html: `
-                  <div class="guide-header"><h1 class="guide-title">Modern HTML5 & CSS3</h1></div>
-                  <div class="prose">
-                    <h2>Semantic HTML</h2>
-                    <p>Stop using <code>&lt;div&gt;</code> for everything. It hurts accessibility and SEO.</p>
-                    <ul>
-                      <li>Use <code>&lt;nav&gt;</code> for menus.</li>
-                      <li>Use <code>&lt;main&gt;</code> for primary content.</li>
-                      <li>Use <code>&lt;article&gt;</code> for blog posts.</li>
-                    </ul>
-                    <h2>CSS Grid vs Flexbox</h2>
-                    <p><strong>Flexbox</strong> is for 1D layouts (rows OR columns). <strong>Grid</strong> is for 2D layouts (rows AND columns).</p>
-                  </div>`
-              },
-              {
-                id: "w2", title: "JavaScript Under the Hood", icon: "fab fa-js",
-                html: `
-                  <div class="guide-header"><h1 class="guide-title">JavaScript: How it Works</h1></div>
-                  <div class="prose">
-                    <h2>The Event Loop</h2>
-                    <p>JavaScript is <strong>Single Threaded</strong>. It can only do one thing at a time. So how does it fetch data without freezing?</p>
-                    <p>It uses the <strong>Event Loop</strong>. Heavy tasks (like API calls) are sent to the Web APIs, and JS continues running.</p>
-                    <div class="code-block">
-                      console.log("Start");<br>
-                      setTimeout(() => console.log("Timeout"), 0);<br>
-                      console.log("End");
-                    </div>
-                    <p>Output: Start -> End -> Timeout. Why? Because <code>setTimeout</code> goes to the queue!</p>
-                  </div>`
-              }
-            ]
-          }
-        ]
-      },
-      ta: {
-        title: "இணைய தள உருவாக்கம் (Full Stack)",
-        levels: [
-          {
-            name: "பகுதி 1: முகப்பு வடிவமைப்பு",
-            topics: [
-              {
-                id: "w1", title: "HTML & CSS ஆழமாக", icon: "fab fa-html5",
-                html: `
-                  <div class="guide-header"><h1 class="guide-title">நவீன HTML5 & CSS3</h1></div>
-                  <div class="prose">
-                    <h2>Semantic HTML</h2>
-                    <p>எல்லாவற்றிற்கும் <code>&lt;div&gt;</code> பயன்படுத்த வேண்டாம். அது கூகுள் தேடலுக்கு (SEO) உதவாது.</p>
-                    <ul>
-                      <li>மெனுக்களுக்கு <code>&lt;nav&gt;</code> பயன்படுத்தவும்.</li>
-                      <li>முக்கிய பகுதிக்கு <code>&lt;main&gt;</code> பயன்படுத்தவும்.</li>
-                    </ul>
-                    <h2>CSS Grid vs Flexbox</h2>
-                    <p><strong>Flexbox:</strong> ஒரு வரிசையில் உள்ள பொருட்களை சீரமைக்க சிறந்தது.<br><strong>Grid:</strong> முழு பக்கத்தின் கட்டமைப்பை (Layout) வடிவமைக்க சிறந்தது.</p>
-                  </div>`
-              }
-            ]
-          }
-        ]
-      }
-    }
-  };
-
-  // --- LOGIC ---
-  const selector = document.getElementById("courseSelector");
-  const topicsList = document.getElementById("topicsList");
-  const contentArea = document.getElementById("guideContent");
-  const btnEn = document.getElementById("btn-en");
-  const btnTa = document.getElementById("btn-ta");
-
-  const urlParams = new URLSearchParams(window.location.search);
-  let activeCourse = urlParams.get("course") || "java";
-  
-  // Ensure valid course selection
-  if(!contentDB[activeCourse]) activeCourse = "java";
-  selector.value = activeCourse;
-
-  // --- RENDER FUNCTIONS ---
-  
-  window.setLanguage = function(lang) {
-    currentLang = lang;
-    
-    if(lang === 'ta') {
-      btnTa.classList.add('active');
-      btnEn.classList.remove('active');
-      document.getElementById("lbl-course").innerText = "பாடத்தை தேர்வு செய்க";
-    } else {
-      btnEn.classList.add('active');
-      btnTa.classList.remove('active');
-      document.getElementById("lbl-course").innerText = "Selected Guide";
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
     }
 
-    renderTopics();
-  };
+    function asArray(value) {
+      return Array.isArray(value) ? value.filter(Boolean) : [];
+    }
 
-  function renderTopics() {
-    const data = contentDB[activeCourse][currentLang] || contentDB[activeCourse]['en'];
-    topicsList.innerHTML = "";
+    function typeClass(type) {
+      const t = String(type || "").toLowerCase();
+      if (t === "project") return "project";
+      if (t === "practice") return "practice";
+      return "theory";
+    }
 
-    // Loop Levels
-    data.levels.forEach(level => {
-      const header = document.createElement("div");
-      header.className = "level-header";
-      header.innerText = level.name;
-      topicsList.appendChild(header);
+    function getLessonSteps(lessonDoc) {
+      const details = lessonDoc.lesson || {};
+      const stepCandidates = [
+        details.stepByStepImplementation,
+        details.stepByStepGuide,
+        details.projectUploadSection && details.projectUploadSection.uploadSteps,
+        details.userTask && details.userTask.instructions
+      ];
+      for (const candidate of stepCandidates) {
+        const list = asArray(candidate);
+        if (list.length) return list.slice(0, 5);
+      }
+      return [];
+    }
 
-      // Loop Topics
-      level.topics.forEach((topic, idx) => {
-        const btn = document.createElement("button");
-        btn.className = "topic-btn";
-        btn.innerHTML = `<i class="${topic.icon}"></i> ${topic.title}`;
-        
-        btn.onclick = () => {
-          document.querySelectorAll(".topic-btn").forEach(b => b.classList.remove("active"));
-          btn.classList.add("active");
-          showContent(topic.html);
-        };
+    function getLearningOutcomes(lessonDoc) {
+      const details = lessonDoc.lesson || {};
+      return asArray(details.learningOutcomes).slice(0, 4);
+    }
 
-        // Auto-select first item
-        if(topicsList.querySelectorAll(".topic-btn").length === 0) {
-            btn.classList.add("active");
-            showContent(topic.html);
+    function getConcepts(lessonDoc) {
+      const details = lessonDoc.lesson || {};
+      const concepts = asArray(details.conceptBreakdown).slice(0, 3).map((item) => {
+        if (item && typeof item === "object") {
+          const concept = item.concept || "Concept";
+          const explanation = item.explanation || "";
+          return `${concept}: ${explanation}`.trim();
         }
-        
-        topicsList.appendChild(btn);
+        return String(item);
       });
-    });
-  }
+      return concepts;
+    }
 
-  function showContent(html) {
-    contentArea.style.opacity = 0;
-    setTimeout(() => {
-      contentArea.innerHTML = html;
-      contentArea.style.opacity = 1;
-    }, 200);
-  }
+    function getUploadChecklist(lessonDoc) {
+      const details = lessonDoc.lesson || {};
+      const upload = details.projectUploadSection || {};
+      const checks = [];
 
-  selector.addEventListener("change", (e) => {
-    activeCourse = e.target.value;
-    renderTopics();
-  });
+      checks.push(...asArray(upload.allowedFiles).map((f) => `Allowed: ${f}`));
+      checks.push(...asArray(upload.notAllowed).slice(0, 3).map((f) => `Avoid: ${f}`));
 
-  // Init
-  renderTopics();
+      const criteria = asArray(details.adminEvaluationCriteria).slice(0, 3);
+      checks.push(...criteria.map((c) => `Review check: ${c}`));
 
-});
-</script>
+      return checks.slice(0, 6);
+    }
+
+    async function fetchCourses() {
+      const res = await fetch(`${API_BASE}/api/public/courses`);
+      const data = await res.json();
+      if (!data.success || !Array.isArray(data.results)) return [];
+      return data.results
+        .map((entry) => ({
+          course: entry.course,
+          lessonCount: Number(entry.lessonCount || 0)
+        }))
+        .filter((entry) => entry.course && entry.course.slug);
+    }
+
+    async function fetchLessonsForCourse(slug) {
+      if (state.lessonsBySlug.has(slug)) return state.lessonsBySlug.get(slug);
+      const res = await fetch(`${API_BASE}/api/course/${encodeURIComponent(slug)}/lessons`);
+      const data = await res.json();
+      const lessons = data.success && Array.isArray(data.lessons) ? data.lessons : [];
+      state.lessonsBySlug.set(slug, lessons);
+      return lessons;
+    }
+
+    function renderSidebar() {
+      const list = document.getElementById("courseList");
+      if (!state.courses.length) {
+        list.innerHTML = '<div class="empty">No courses available.</div>';
+        return;
+      }
+
+      list.innerHTML = state.courses.map((entry) => {
+        const c = entry.course;
+        const active = c.slug === state.activeSlug ? "active" : "";
+        return `
+          <button class="course-btn ${active}" data-slug="${escapeHtml(c.slug)}">
+            <p class="course-name">${escapeHtml(c.title || "Untitled Course")}</p>
+            <p class="course-meta">${entry.lessonCount} lessons - ${escapeHtml(c.category || "Learning Track")}</p>
+          </button>
+        `;
+      }).join("");
+
+      list.querySelectorAll(".course-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const slug = btn.getAttribute("data-slug");
+          if (!slug || slug === state.activeSlug) return;
+          state.activeSlug = slug;
+          const url = new URL(window.location.href);
+          url.searchParams.set("course", slug);
+          history.replaceState({}, "", url);
+          renderSidebar();
+          renderGuide();
+        });
+      });
+    }
+
+    function lessonCardHtml(lessonDoc, index) {
+      const outcomes = getLearningOutcomes(lessonDoc);
+      const concepts = getConcepts(lessonDoc);
+      const steps = getLessonSteps(lessonDoc);
+      const uploadChecklist = getUploadChecklist(lessonDoc);
+
+      const details = lessonDoc.lesson || {};
+      const intro = details.intro || lessonDoc.description || "No description available.";
+      const type = String(lessonDoc.type || "theory").toLowerCase();
+      const time = lessonDoc.estimatedTime ? `${lessonDoc.estimatedTime}` : "Flexible";
+
+      return `
+        <article class="lesson-card">
+          <div class="lesson-title-row">
+            <h3 class="lesson-title">${index + 1}. ${escapeHtml(lessonDoc.title || "Untitled Lesson")}</h3>
+            <div class="lesson-badges">
+              <span class="badge ${typeClass(type)}">${escapeHtml(type)}</span>
+              <span class="badge">${escapeHtml(time)}</span>
+            </div>
+          </div>
+          <p class="lesson-desc">${escapeHtml(intro)}</p>
+          <div class="mini-grid">
+            <div class="mini-box">
+              <h4>Learning outcomes</h4>
+              ${outcomes.length ? `<ul>${outcomes.map((o) => `<li>${escapeHtml(o)}</li>`).join("")}</ul>` : `<p class="lesson-desc">No outcomes listed.</p>`}
+            </div>
+            <div class="mini-box">
+              <h4>Implementation path</h4>
+              ${steps.length ? `<ul>${steps.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}</ul>` : `<p class="lesson-desc">No step list available.</p>`}
+            </div>
+            <div class="mini-box">
+              <h4>Core concepts</h4>
+              ${concepts.length ? `<ul>${concepts.map((c) => `<li>${escapeHtml(c)}</li>`).join("")}</ul>` : `<p class="lesson-desc">Concept notes not available.</p>`}
+            </div>
+          </div>
+          ${type === "project" ? `
+            <div class="mini-box" style="margin-top:10px;">
+              <h4>Project submission checklist</h4>
+              ${uploadChecklist.length ? `<ul>${uploadChecklist.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : `<p class="lesson-desc">Upload requirements will appear in lesson details.</p>`}
+            </div>
+          ` : ""}
+        </article>
+      `;
+    }
+
+    async function renderGuide() {
+      const root = document.getElementById("guideRoot");
+      const entry = state.courses.find((c) => c.course.slug === state.activeSlug);
+      if (!entry) {
+        root.innerHTML = `
+          <div class="guide-header">
+            <h1>Guide unavailable</h1>
+            <p>Select a course from the left panel.</p>
+          </div>
+        `;
+        return;
+      }
+
+      root.innerHTML = `
+        <div class="guide-header">
+          <h1>${escapeHtml(entry.course.title || "Course Guide")}</h1>
+          <p>${escapeHtml(entry.course.description || "Detailed guide for this course and all lessons.")}</p>
+          <div class="quick-row">
+            <span class="chip">${escapeHtml(entry.course.category || "Track")}</span>
+            <span class="chip">${entry.lessonCount} Lessons</span>
+            <span class="chip">Slug: ${escapeHtml(entry.course.slug)}</span>
+            <span class="chip"><a href="course.html?course=${encodeURIComponent(entry.course.slug)}" style="color:#7dd3fc;text-decoration:none;">Open Course</a></span>
+          </div>
+        </div>
+      `;
+
+      const lessons = await fetchLessonsForCourse(entry.course.slug);
+
+      const lessonBlock = lessons.length
+        ? lessons.map((lesson, i) => lessonCardHtml(lesson, i)).join("")
+        : `<div class="empty">No lessons found for this course.</div>`;
+
+      root.innerHTML += `
+        <section class="block">
+          <div class="block-head"><i class="fas fa-book-open"></i> Lesson-by-Lesson Guide</div>
+          <div class="block-body">${lessonBlock}</div>
+        </section>
+
+        <section class="block">
+          <div class="block-head"><i class="fas fa-route"></i> How to Use This Guide Effectively</div>
+          <div class="block-body playbook">
+            <div class="playbook-item">
+              <strong>1. Start from lesson order.</strong>
+              <p>Complete lessons in sequence. Later lessons assume earlier concepts are already clear.</p>
+            </div>
+            <div class="playbook-item">
+              <strong>2. Use lesson outcomes as checklist.</strong>
+              <p>Before moving next, ensure each outcome is practically done, not just read once.</p>
+            </div>
+            <div class="playbook-item">
+              <strong>3. For project lessons, follow upload rules exactly.</strong>
+              <p>Allowed file type, folder naming, and validation checks are enforced during admin review.</p>
+            </div>
+            <div class="playbook-item">
+              <strong>4. Track weak areas.</strong>
+              <p>If one lesson is difficult, revisit the same guide card and repeat only that section.</p>
+            </div>
+          </div>
+        </section>
+      `;
+    }
+
+    async function init() {
+      try {
+        state.courses = await fetchCourses();
+        if (!state.courses.length) {
+          document.getElementById("courseList").innerHTML = '<div class="empty">No courses found.</div>';
+          document.getElementById("guideRoot").innerHTML = '<div class="guide-header"><h1>No guide data</h1><p>Courses are not available right now.</p></div>';
+          return;
+        }
+
+        const querySlug = new URLSearchParams(window.location.search).get("course");
+        const validSlug = state.courses.some((entry) => entry.course.slug === querySlug) ? querySlug : null;
+        state.activeSlug = validSlug || state.courses[0].course.slug;
+
+        renderSidebar();
+        await renderGuide();
+      } catch (err) {
+        console.error(err);
+        document.getElementById("courseList").innerHTML = '<div class="empty">Failed to load courses.</div>';
+        document.getElementById("guideRoot").innerHTML = '<div class="guide-header"><h1>Guide load failed</h1><p>Please refresh and try again.</p></div>';
+      }
+    }
+
+    init();
+  </script>
 </body>
 </html>

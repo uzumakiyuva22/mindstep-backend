@@ -6,7 +6,7 @@
   <title>MindStep — Dashboard</title>
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;800&family=Source+Serif+4:wght@400;600;700&display=swap" rel="stylesheet">
 
   <style>
     :root {
@@ -23,6 +23,8 @@
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; outline: none; }
+
+    html { scroll-behavior: smooth; }
 
     body {
       min-height: 100vh;
@@ -112,6 +114,7 @@
       gap: 25px; z-index: 1; position: relative;
     }
 
+
     .course-card {
       background: var(--card-bg); border: 1px solid var(--glass-border);
       border-radius: 20px; padding: 25px;
@@ -151,6 +154,45 @@
       box-shadow: 0 5px 15px rgba(51, 161, 253, 0.25); transition: 0.2s;
     }
     .btn-start:hover { transform: scale(1.05); box-shadow: 0 10px 25px rgba(51, 161, 253, 0.4); }
+    .certificate-section {
+      display: none;
+      margin-top: 22px;
+      text-align: center;
+    }
+    .claim-certificate-btn {
+      position: relative;
+      overflow: hidden;
+      padding: 13px 26px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 214, 10, 0.52);
+      background: linear-gradient(130deg, #0ea5e9 0%, #8b5cf6 45%, #ec4899 100%);
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.3px;
+      transition: transform 0.25s, box-shadow 0.25s;
+      box-shadow: 0 12px 28px rgba(236, 72, 153, 0.34);
+      animation: claimPulse 2.4s ease-in-out infinite;
+    }
+    .claim-certificate-btn::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      transform: translateX(-120%);
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.34), transparent);
+      transition: transform 0.55s ease;
+    }
+    .claim-certificate-btn:hover {
+      transform: translateY(-1px) scale(1.02);
+      box-shadow: 0 16px 36px rgba(236, 72, 153, 0.44);
+      animation: none;
+    }
+    .claim-certificate-btn:hover::before { transform: translateX(120%); }
+    .cert-top-note {
+      margin-top: 11px;
+      color: var(--text-muted);
+      font-size: 0.86rem;
+    }
 
     /* --- Exit Modal --- */
     .modal-overlay {
@@ -183,6 +225,480 @@
     }
     .btn-confirm:hover { transform: scale(1.05); }
 
+    .premium-congrats-overlay {
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.28), transparent 40%),
+        radial-gradient(circle at 80% 80%, rgba(6, 182, 212, 0.24), transparent 42%),
+        linear-gradient(160deg, rgba(2, 6, 23, 0.95), rgba(3, 9, 22, 0.98));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s ease;
+      z-index: 1700;
+      overflow: hidden;
+    }
+    .premium-congrats-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .premium-congrats-overlay::before {
+      content: "";
+      position: absolute;
+      inset: -30%;
+      background: repeating-linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.04) 0px,
+        rgba(255, 255, 255, 0.04) 1px,
+        transparent 1px,
+        transparent 8px
+      );
+      transform: translateY(-30%);
+      animation: cinematicScan 6s linear infinite;
+      pointer-events: none;
+      opacity: 0.35;
+    }
+    .premium-cinematic {
+      width: min(620px, 94vw);
+      border-radius: 26px;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.92), rgba(10, 15, 30, 0.92));
+      box-shadow: 0 30px 120px rgba(2, 6, 23, 0.9), inset 0 0 40px rgba(56, 189, 248, 0.08);
+      padding: 34px 26px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      transform: scale(0.97);
+      animation: cinematicPulse 1.9s ease-in-out infinite alternate;
+    }
+    .premium-cinematic::before {
+      content: "";
+      position: absolute;
+      left: -30%;
+      top: -40%;
+      width: 60%;
+      height: 200%;
+      transform: rotate(18deg);
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.22), transparent);
+      animation: rewardSweep 2.4s ease-in-out infinite;
+    }
+    .premium-rank {
+      font-family: 'Orbitron', sans-serif;
+      letter-spacing: 3px;
+      font-size: 0.82rem;
+      color: #f8fafc;
+      opacity: 0.92;
+      text-transform: uppercase;
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      border: 1px solid rgba(250, 204, 21, 0.55);
+      background: rgba(245, 158, 11, 0.12);
+      border-radius: 999px;
+      padding: 8px 16px;
+      margin-bottom: 16px;
+    }
+    .premium-rank i { color: #fde047; }
+    .premium-cinematic h2 {
+      margin: 0;
+      font-family: 'Orbitron', sans-serif;
+      color: #e2e8f0;
+      letter-spacing: 1px;
+      font-size: clamp(1.5rem, 2.4vw, 2rem);
+      text-transform: uppercase;
+    }
+    .premium-cinematic p {
+      margin: 12px 0 0;
+      color: #cbd5e1;
+      font-size: 0.98rem;
+    }
+    .victory-emblem {
+      width: 68px;
+      height: 68px;
+      margin: 0 auto 12px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fde68a;
+      font-size: 1.35rem;
+      border: 2px solid rgba(250, 204, 21, 0.64);
+      background: radial-gradient(circle at 35% 30%, rgba(245, 158, 11, 0.5), rgba(99, 102, 241, 0.32));
+      box-shadow: 0 0 24px rgba(245, 158, 11, 0.5);
+      animation: emblemPulse 1.8s ease-in-out infinite;
+    }
+    .unlock-meter {
+      margin: 20px auto 12px;
+      width: min(430px, 88%);
+      height: 9px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.28);
+      overflow: hidden;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+    }
+    .unlock-meter-fill {
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #22d3ee 0%, #6366f1 45%, #f43f5e 100%);
+      box-shadow: 0 0 18px rgba(99, 102, 241, 0.6);
+      transition: width 0.1s linear;
+    }
+    .unlock-percent {
+      color: #93c5fd;
+      font-family: 'Orbitron', sans-serif;
+      letter-spacing: 1px;
+      font-size: 0.95rem;
+    }
+    .unlock-rewards {
+      margin-top: 16px;
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .reward-chip {
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      color: #cbd5e1;
+      font-size: 0.76rem;
+      letter-spacing: 0.4px;
+      font-family: 'Orbitron', sans-serif;
+      text-transform: uppercase;
+      border-radius: 999px;
+      padding: 6px 11px;
+      background: rgba(30, 41, 59, 0.65);
+      opacity: 0.35;
+      transform: translateY(6px) scale(0.98);
+      transition: all 0.22s ease;
+    }
+    .reward-chip.active {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      color: #f8fafc;
+      border-color: rgba(34, 211, 238, 0.58);
+      box-shadow: 0 0 18px rgba(99, 102, 241, 0.35);
+      background: linear-gradient(140deg, rgba(14, 116, 144, 0.55), rgba(79, 70, 229, 0.55));
+    }
+
+    .cert-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.82);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+      z-index: 1600;
+      padding: 18px 14px 26px;
+      overflow-y: auto;
+    }
+    .cert-modal-overlay.active { opacity: 1; pointer-events: auto; }
+    .cert-modal {
+      width: min(1040px, 96vw);
+      position: relative;
+      transform: translateY(16px) scale(0.985);
+      transition: transform 0.28s ease;
+    }
+    .cert-modal-overlay.active .cert-modal { transform: translateY(0) scale(1); }
+    .btn-close-cert {
+      position: absolute;
+      right: 8px;
+      top: 8px;
+      border: none;
+      background: rgba(15, 23, 42, 0.78);
+      color: #e2e8f0;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      font-size: 1rem;
+      cursor: pointer;
+      z-index: 6;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+    }
+    .cert-shell {
+      position: relative;
+      border-radius: 20px;
+      background:
+        linear-gradient(160deg, rgba(251, 248, 237, 0.98), rgba(245, 236, 215, 0.97)),
+        repeating-linear-gradient(0deg, rgba(15, 23, 42, 0.03) 0px, rgba(15, 23, 42, 0.03) 1px, transparent 1px, transparent 4px);
+      padding: clamp(24px, 2.6vw, 36px) clamp(18px, 2.6vw, 44px) clamp(20px, 2.2vw, 30px);
+      border: 2px solid rgba(181, 140, 57, 0.8);
+      box-shadow:
+        inset 0 0 0 2px rgba(241, 213, 141, 0.8),
+        inset 0 0 0 7px rgba(68, 51, 17, 0.12),
+        0 26px 62px rgba(2, 6, 23, 0.56);
+      overflow: hidden;
+      color: #1f2937;
+    }
+    .cert-shell::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 50% 45%, rgba(180, 140, 60, 0.08), transparent 50%),
+        radial-gradient(circle at 12% 15%, rgba(180, 140, 60, 0.05), transparent 36%);
+      pointer-events: none;
+    }
+    .cert-shell::after {
+      content: "";
+      position: absolute;
+      inset: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(154, 117, 43, 0.35);
+      pointer-events: none;
+    }
+    .cert-brand {
+      text-align: center;
+      font-family: 'Cinzel', serif;
+      letter-spacing: clamp(3px, 0.8vw, 8px);
+      color: #0f2f57;
+      font-size: clamp(1.35rem, 4vw, 3rem);
+      font-weight: 800;
+      position: relative;
+      z-index: 1;
+    }
+    .cert-brand-sub {
+      text-align: center;
+      margin-top: 3px;
+      color: #6b7280;
+      letter-spacing: clamp(2px, 0.45vw, 5px);
+      text-transform: uppercase;
+      font-size: clamp(0.56rem, 1.1vw, 0.9rem);
+      position: relative;
+      z-index: 1;
+    }
+    .cert-divider {
+      width: 74%;
+      margin: 10px auto 0;
+      border: none;
+      border-top: 2px solid rgba(154, 117, 43, 0.5);
+      position: relative;
+      z-index: 1;
+    }
+    .cert-title {
+      text-align: center;
+      margin-top: clamp(14px, 2vh, 26px);
+      color: #7a4a09;
+      font-size: clamp(1.08rem, 3vw, 2.5rem);
+      letter-spacing: 2px;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-family: 'Cinzel', serif;
+      position: relative;
+      z-index: 1;
+    }
+    .cert-sub {
+      text-align: center;
+      color: #334155;
+      font-size: clamp(0.88rem, 1.7vw, 1.46rem);
+      margin-top: clamp(10px, 1.7vh, 16px);
+      font-family: 'Source Serif 4', serif;
+      position: relative;
+      z-index: 1;
+    }
+    .cert-name {
+      text-align: center;
+      font-size: clamp(1.9rem, 5.2vw, 4.6rem);
+      color: #0f172a;
+      line-height: 1.05;
+      margin-top: 8px;
+      font-weight: 700;
+      font-family: 'Cinzel', serif;
+      position: relative;
+      z-index: 1;
+      text-transform: capitalize;
+    }
+    .cert-name-line {
+      width: min(580px, 64%);
+      margin: 10px auto 0;
+      border: none;
+      border-top: 1.8px solid rgba(148, 110, 39, 0.58);
+      position: relative;
+      z-index: 1;
+    }
+    .cert-body-copy {
+      text-align: center;
+      color: #475569;
+      margin-top: 12px;
+      font-size: clamp(0.82rem, 1.4vw, 1.24rem);
+      font-family: 'Source Serif 4', serif;
+      position: relative;
+      z-index: 1;
+    }
+    .cert-course {
+      text-align: center;
+      color: #1e3a8a;
+      margin-top: 8px;
+      font-size: clamp(0.95rem, 2vw, 1.9rem);
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 1px;
+      font-family: 'Cinzel', serif;
+      position: relative;
+      z-index: 1;
+    }
+    .cert-footer {
+      margin-top: clamp(14px, 2vh, 26px);
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: end;
+      gap: 12px;
+      position: relative;
+      z-index: 1;
+    }
+    .cert-sign {
+      text-align: left;
+    }
+    .cert-sign-label {
+      color: #0f2f57;
+      font-size: clamp(0.96rem, 1.7vw, 1.44rem);
+      font-family: 'Cinzel', serif;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .cert-sign-role {
+      color: #64748b;
+      font-size: clamp(0.68rem, 1.16vw, 0.95rem);
+      font-family: 'Source Serif 4', serif;
+    }
+    .cert-seal {
+      width: clamp(92px, 11vw, 136px);
+      height: clamp(92px, 11vw, 136px);
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #fde68a, #ca8a04 65%);
+      padding: 8px;
+      box-shadow: 0 8px 24px rgba(120, 82, 15, 0.36);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .cert-seal::before {
+      content: "";
+      position: absolute;
+      inset: -7px;
+      border-radius: 50%;
+      background: repeating-conic-gradient(
+        from 0deg,
+        rgba(202, 138, 4, 0.75) 0deg 12deg,
+        rgba(245, 158, 11, 0.6) 12deg 24deg
+      );
+      z-index: -1;
+      filter: drop-shadow(0 3px 7px rgba(120, 82, 15, 0.4));
+    }
+    .cert-seal-core {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 2px solid rgba(120, 82, 15, 0.6);
+      background: radial-gradient(circle, #fff7d6 0%, #fef3c7 60%, #fde68a 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #7c2d12;
+      font-family: 'Cinzel', serif;
+      text-align: center;
+      line-height: 1.05;
+      padding: 7px 4px;
+    }
+    .cert-seal-core i {
+      font-size: clamp(0.8rem, 1vw, 1.06rem);
+      margin-bottom: 2px;
+    }
+    .cert-seal-main {
+      font-size: clamp(0.56rem, 0.72vw, 0.7rem);
+      font-weight: 800;
+      letter-spacing: 0.4px;
+    }
+    .cert-seal-sub {
+      font-size: clamp(0.5rem, 0.62vw, 0.62rem);
+      letter-spacing: 0.2px;
+      opacity: 0.9;
+    }
+    .cert-date-wrap {
+      text-align: right;
+    }
+    .cert-date-main {
+      color: #0f172a;
+      font-size: clamp(0.95rem, 1.9vw, 1.55rem);
+      font-weight: 700;
+      margin-bottom: 4px;
+      display: inline-block;
+      border-bottom: 1.8px solid rgba(71, 85, 105, 0.5);
+      padding-bottom: 2px;
+      font-family: 'Cinzel', serif;
+    }
+    .cert-date-label {
+      color: #64748b;
+      font-size: clamp(0.64rem, 1.03vw, 0.9rem);
+      margin-bottom: 4px;
+      font-family: 'Source Serif 4', serif;
+    }
+    .cert-id-note {
+      color: #1d4ed8;
+      font-size: clamp(0.58rem, 0.9vw, 0.8rem);
+      font-family: 'Source Serif 4', serif;
+    }
+    .cert-actions {
+      display: flex;
+      justify-content: center;
+      margin-top: 14px;
+    }
+    .cert-download-btn {
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(240, 244, 249, 0.55));
+      color: #0f172a;
+      border-radius: 999px;
+      padding: 10px 20px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      transition: transform 0.22s ease, box-shadow 0.22s ease;
+    }
+    .cert-download-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px rgba(2, 6, 23, 0.26);
+    }
+
+    @media (max-height: 820px) {
+      .cert-shell { padding: 16px 15px 16px; }
+      .cert-title { margin-top: 10px; }
+      .cert-sub { margin-top: 7px; }
+      .cert-footer { margin-top: 10px; }
+    }
+
+    @keyframes claimPulse {
+      0% { box-shadow: 0 10px 20px rgba(236, 72, 153, 0.24); }
+      50% { box-shadow: 0 16px 34px rgba(236, 72, 153, 0.44); }
+      100% { box-shadow: 0 10px 20px rgba(236, 72, 153, 0.24); }
+    }
+    @keyframes cinematicPulse {
+      from { box-shadow: 0 30px 120px rgba(2, 6, 23, 0.9), inset 0 0 40px rgba(56, 189, 248, 0.06); }
+      to { box-shadow: 0 30px 120px rgba(2, 6, 23, 0.9), inset 0 0 54px rgba(99, 102, 241, 0.14); }
+    }
+    @keyframes cinematicScan {
+      from { transform: translateY(-40%); }
+      to { transform: translateY(40%); }
+    }
+    @keyframes rewardSweep {
+      0% { transform: translateX(-120%) rotate(18deg); }
+      55% { transform: translateX(260%) rotate(18deg); }
+      100% { transform: translateX(260%) rotate(18deg); }
+    }
+    @keyframes emblemPulse {
+      0% { transform: scale(1); box-shadow: 0 0 16px rgba(245, 158, 11, 0.42); }
+      50% { transform: scale(1.08); box-shadow: 0 0 28px rgba(245, 158, 11, 0.62); }
+      100% { transform: scale(1); box-shadow: 0 0 16px rgba(245, 158, 11, 0.42); }
+    }
+
     footer {
       text-align: center; padding: 40px; border-top: 1px solid var(--glass-border);
       color: var(--text-muted); font-size: 0.9rem; margin-top: 50px;
@@ -192,6 +708,10 @@
       nav { padding: 15px 20px; }
       .nav-link { display: none; }
       .hero h1 { font-size: 2.2rem; }
+      .cert-shell { padding: 24px 16px 18px; }
+      .cert-footer { grid-template-columns: 1fr; gap: 12px; text-align: center; }
+      .cert-date-wrap { text-align: center; }
+      .cert-sign { text-align: center; }
     }
   </style>
 </head>
@@ -207,8 +727,9 @@
     </div>
     
     <div class="nav-items">
-      <a href="#" class="nav-link active">Dashboard</a>
-      <a href="#" class="nav-link">Guides</a>
+      <a href="MainPage.html" class="nav-link active">Dashboard</a>
+      <a href="guides.html" class="nav-link">Guides</a>
+      <a href="About.html" class="nav-link">About</a>
       <a href="#" class="nav-link">Community</a>
     </div>
 
@@ -235,6 +756,12 @@
       <div class="bar-track">
         <div class="bar-fill" id="totalBar"></div>
       </div>
+      <div id="certificateSection" class="certificate-section">
+        <button onclick="openCertificate()" id="claimTopCertificateBtn" class="claim-certificate-btn">
+          &#127891; Claim Your Certificate
+        </button>
+        <p id="certificateTopNote" class="cert-top-note">Complete all courses to unlock your certificate.</p>
+      </div>
     </div>
   </section>
 
@@ -257,9 +784,72 @@
     </div>
   </div>
 
+  <div id="premiumCongrats" class="premium-congrats-overlay">
+    <div class="premium-cinematic">
+      <div class="premium-rank"><i class="fas fa-crown"></i> Legendary Unlock</div>
+      <div class="victory-emblem"><i class="fas fa-trophy"></i></div>
+      <h2 id="unlockTitle">Certificate Release</h2>
+      <p id="unlockSubtitle">Synchronizing final milestones...</p>
+      <div class="unlock-meter">
+        <div class="unlock-meter-fill" id="unlockMeterFill"></div>
+      </div>
+      <div class="unlock-percent" id="unlockPercent">0%</div>
+      <div class="unlock-rewards">
+        <div class="reward-chip" id="rewardRank">Rank S+</div>
+        <div class="reward-chip" id="rewardXp">XP +1000</div>
+        <div class="reward-chip" id="rewardTitle">Title Unlocked</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cert-modal-overlay" id="certificateModal">
+    <div class="cert-modal">
+      <button class="btn-close-cert" onclick="closeCertificateModal()"><i class="fas fa-times"></i></button>
+      <div class="cert-shell">
+        <hr class="cert-divider" />
+        <div class="cert-brand">MINDSTEP</div>
+        <div class="cert-brand-sub">QUANTUM IDE</div>
+        <div class="cert-title">CERTIFICATE OF COMPLETION</div>
+        <div class="cert-sub">This is proudly presented to</div>
+        <div class="cert-name" id="certUserName">Learner</div>
+        <hr class="cert-name-line" />
+        <div class="cert-body-copy">for successfully completing the rigorous curriculum of</div>
+        <div class="cert-course" id="certCourseName">FULL STACK WEB DEVELOPMENT</div>
+        <div class="cert-footer">
+          <div class="cert-sign">
+            <div class="cert-sign-label">MindStep Admin</div>
+            <div class="cert-sign-role">Lead Instructor</div>
+          </div>
+          <div class="cert-seal" aria-label="MindStep official seal">
+            <div class="cert-seal-core">
+              <i class="fas fa-award"></i>
+              <div class="cert-seal-main">MINDSTEP</div>
+              <div class="cert-seal-sub">OFFICIAL SEAL</div>
+            </div>
+          </div>
+          <div class="cert-date-wrap">
+            <div class="cert-date-main" id="certDate">-</div>
+            <div class="cert-date-label">Issue Date</div>
+            <div class="cert-id-note">Certificate ID: <span id="certId">-</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="cert-actions">
+        <button id="certDownloadBtn" class="cert-download-btn" onclick="downloadCertificate()">
+          <i class="fas fa-file-pdf"></i> Download PDF Certificate
+        </button>
+      </div>
+    </div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 <script>
 // --- CORE LOGIC ---
 const API_BASE = window.location.origin;
+let activeUser = null;
+let masterCertificate = null;
+let allCoursesComplete = false;
+let certificateAnimationRunning = false;
 
 document.addEventListener("DOMContentLoaded", () => {
   
@@ -270,6 +860,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
   const user = JSON.parse(saved);
+  activeUser = user;
   
   // 2. Populate UI
   document.getElementById("userName").textContent = user.username;
@@ -299,6 +890,7 @@ async function loadCourses(userId) {
     grid.innerHTML = ""; // Clear loader
     let totalProg = 0;
     let count = 0;
+    let completedCourses = 0;
 
     for (const entry of data.results) {
       const { course, lessonCount } = entry;
@@ -314,6 +906,7 @@ async function loadCourses(userId) {
 
       totalProg += progress;
       count++;
+      if (progress >= 100) completedCourses++;
 
       // 🔥 FIX 1: Description Safety Check (Prevents Crash)
       const description = (course.description || "No description available.").substring(0, 80) + "...";
@@ -339,7 +932,6 @@ async function loadCourses(userId) {
           <div class="bar-track" style="height:6px; margin-bottom:20px;">
             <div class="bar-fill" style="width:${progress}%"></div>
           </div>
-          
           <button class="btn-start" onclick="openCourse('${course.slug}')">
             ${progress > 0 ? 'Continue' : 'Start Course'} <i class="fas fa-arrow-right"></i>
           </button>
@@ -352,6 +944,8 @@ async function loadCourses(userId) {
     const avg = count ? Math.round(totalProg / count) : 0;
     document.getElementById("totalPercent").textContent = avg + "%";
     document.getElementById("totalBar").style.width = avg + "%";
+    allCoursesComplete = count > 0 && completedCourses === count;
+    setupCertificateSection(userId, allCoursesComplete);
 
   } catch (err) {
     console.error(err);
@@ -360,6 +954,190 @@ async function loadCourses(userId) {
 
 function openCourse(slug) {
   window.location.href = `course.html?course=${slug}`;
+}
+
+function generateMasterCertificateId() {
+  return "MS-" + Math.random().toString(36).substring(2, 10).toUpperCase();
+}
+
+function getStoredCertificateKey(userId) {
+  return `mindstep_master_certificate_${userId}`;
+}
+
+function setupCertificateSection(userId, canClaim) {
+  const section = document.getElementById("certificateSection");
+  const btn = document.getElementById("claimTopCertificateBtn");
+  const note = document.getElementById("certificateTopNote");
+  if (!section || !btn || !note) return;
+
+  masterCertificate = null;
+  try {
+    const raw = localStorage.getItem(getStoredCertificateKey(userId));
+    if (raw) masterCertificate = JSON.parse(raw);
+  } catch (_) {
+    masterCertificate = null;
+  }
+
+  if (!canClaim) {
+    section.style.display = "none";
+    return;
+  }
+
+  section.style.display = "block";
+  if (masterCertificate && masterCertificate.id) {
+    btn.innerHTML = "&#127891; View Your Certificate";
+    note.textContent = `Certificate ID: ${masterCertificate.id}`;
+  } else {
+    btn.innerHTML = "&#127891; Claim Your Certificate";
+    note.textContent = "All courses completed. Claim your certificate now.";
+  }
+}
+
+function launchConfetti(intensity = 1) {
+  if (typeof window.confetti !== "function") return;
+  const baseParticles = Math.max(30, Math.round(100 * intensity));
+  const common = {
+    spread: 78,
+    gravity: 0.9,
+    ticks: 160,
+    startVelocity: 45,
+    colors: ["#f59e0b", "#fde68a", "#38bdf8", "#a78bfa", "#f43f5e"]
+  };
+  window.confetti({ ...common, particleCount: Math.round(baseParticles * 0.42), origin: { x: 0.2, y: 0.72 } });
+  window.confetti({ ...common, particleCount: Math.round(baseParticles * 0.36), origin: { x: 0.8, y: 0.72 } });
+  window.confetti({ ...common, particleCount: Math.round(baseParticles * 0.22), origin: { x: 0.5, y: 0.32 } });
+}
+
+function runPremiumClaimAnimation(isFirstClaim = false) {
+  const overlay = document.getElementById("premiumCongrats");
+  const meterFill = document.getElementById("unlockMeterFill");
+  const percent = document.getElementById("unlockPercent");
+  const title = document.getElementById("unlockTitle");
+  const subtitle = document.getElementById("unlockSubtitle");
+  const rewardRank = document.getElementById("rewardRank");
+  const rewardXp = document.getElementById("rewardXp");
+  const rewardTitle = document.getElementById("rewardTitle");
+
+  if (!overlay) {
+    launchConfetti(1.2);
+    return Promise.resolve();
+  }
+
+  [rewardRank, rewardXp, rewardTitle].forEach((chip) => chip && chip.classList.remove("active"));
+  if (meterFill) meterFill.style.width = "0%";
+  if (percent) percent.textContent = "0%";
+  if (title) title.textContent = isFirstClaim ? "Certificate Release" : "Certificate Revalidation";
+  if (subtitle) subtitle.textContent = isFirstClaim
+    ? "Synchronizing final milestones..."
+    : "Refreshing seal integrity and authenticity...";
+
+  overlay.classList.add("active");
+
+  const phases = [
+    { at: 0, subtitle: isFirstClaim ? "Synchronizing final milestones..." : "Refreshing seal integrity and authenticity..." },
+    { at: 800, subtitle: "Applying MindStep official seal..." },
+    { at: 1600, subtitle: "Finalizing premium certificate delivery..." }
+  ];
+
+  return new Promise((resolve) => {
+    const start = performance.now();
+    const duration = isFirstClaim ? 3200 : 2500;
+    let phaseIndex = 0;
+
+    launchConfetti(0.65);
+
+    function frame(now) {
+      const elapsed = now - start;
+      const progress = Math.min(1, elapsed / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const pct = Math.round(eased * 100);
+
+      if (meterFill) meterFill.style.width = `${pct}%`;
+      if (percent) percent.textContent = `${pct}%`;
+
+      if (phaseIndex + 1 < phases.length && elapsed >= phases[phaseIndex + 1].at) {
+        phaseIndex += 1;
+        if (subtitle) subtitle.textContent = phases[phaseIndex].subtitle;
+        if (phaseIndex === 1) {
+          launchConfetti(0.45);
+          if (rewardRank) rewardRank.classList.add("active");
+        }
+      }
+
+      if (elapsed > 1450 && rewardXp && !rewardXp.classList.contains("active")) rewardXp.classList.add("active");
+      if (elapsed > 2100 && rewardTitle && !rewardTitle.classList.contains("active")) rewardTitle.classList.add("active");
+
+      if (progress < 1) {
+        requestAnimationFrame(frame);
+        return;
+      }
+
+      if (title) title.textContent = "MISSION COMPLETE";
+      if (subtitle) subtitle.textContent = "Premium certificate unlocked. Download your official signed copy.";
+      launchConfetti(1.15);
+
+      setTimeout(() => {
+        overlay.classList.remove("active");
+        resolve();
+      }, 520);
+    }
+
+    requestAnimationFrame(frame);
+  });
+}
+
+async function openCertificate() {
+  if (!allCoursesComplete) return;
+  if (!activeUser || !activeUser._id) return;
+  if (certificateAnimationRunning) return;
+
+  let isNewClaim = false;
+  if (!masterCertificate || !masterCertificate.id) {
+    const today = new Date();
+    masterCertificate = {
+      id: generateMasterCertificateId(),
+      userName: activeUser.username || "Learner",
+      dateIso: today.toISOString()
+    };
+    localStorage.setItem(getStoredCertificateKey(activeUser._id), JSON.stringify(masterCertificate));
+    isNewClaim = true;
+  }
+
+  const dateText = new Date(masterCertificate.dateIso || Date.now()).toLocaleDateString("en-US", {
+    day: "numeric",
+    month: "long",
+    year: "numeric"
+  });
+
+  document.getElementById("certUserName").innerText = masterCertificate.userName || activeUser.username || "Learner";
+  document.getElementById("certCourseName").innerText = "FULL STACK WEB DEVELOPMENT";
+  document.getElementById("certDate").innerText = dateText;
+  document.getElementById("certId").innerText = masterCertificate.id;
+
+  certificateAnimationRunning = true;
+  try {
+    await runPremiumClaimAnimation(isNewClaim);
+  } finally {
+    certificateAnimationRunning = false;
+  }
+
+  document.getElementById("certificateModal").classList.add("active");
+  launchConfetti(0.75);
+  setupCertificateSection(activeUser._id, true);
+}
+
+function downloadCertificate() {
+  if (!masterCertificate || !masterCertificate.id) return;
+  if (!activeUser || !activeUser.username) return;
+  const username = encodeURIComponent(activeUser.username);
+  const certId = encodeURIComponent(masterCertificate.id);
+  const url = `${API_BASE}/generate-certificate/${username}?certificateId=${certId}`;
+  window.open(url, "_blank");
+}
+
+function closeCertificateModal() {
+  const modal = document.getElementById("certificateModal");
+  modal.classList.remove("active");
 }
 
 // --- MODAL LOGIC ---
@@ -376,3 +1154,6 @@ function logout() {
 
 </body>
 </html>
+
+
+

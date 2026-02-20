@@ -19,6 +19,8 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
 const { v4: uuidv4 } = require("uuid");
+const crypto = require("crypto");
+const PDFDocument = require("pdfkit");
 const cloudinary = require("cloudinary").v2;
 const rateLimit = require("express-rate-limit");
 
@@ -87,6 +89,17 @@ app.use(cors());
 app.disable("x-powered-by");
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
+
+// Always serve latest HTML (avoids stale UI cache during active development)
+app.use((req, res, next) => {
+    if (req.path && req.path.endsWith(".html")) {
+        res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+    }
+    next();
+});
+
 app.use(express.static(PUBLIC_DIR));
 
 // ✅ CACHE MIDDLEWARE
@@ -129,14 +142,17 @@ const uploadProject = multer({
     limits: { fileSize: 50 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
         const allowedMimes = [
-            'application/zip', 'application/x-zip-compressed', 'application/x-tar', 'application/gzip',
-            'application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            "application/zip",
+            "application/x-zip-compressed",
+            "application/pdf",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "text/plain"
         ];
         if (allowedMimes.includes(file.mimetype)) cb(null, true);
         else {
             const ext = path.extname(file.originalname).toLowerCase();
-            if (['.zip', '.rar', '.7z', '.tar', '.gz', '.pdf', '.docx'].includes(ext)) cb(null, true);
-            else cb(new Error('Invalid file type. Only ZIP, PDF, or DOCX allowed.'));
+            if ([".zip", ".pdf", ".docx", ".txt"].includes(ext)) cb(null, true);
+            else cb(new Error("Invalid file type. Allowed: .zip, .docx, .pdf, .txt"));
         }
     }
 });
@@ -189,7 +205,10 @@ const projectSchema = new mongoose.Schema({
     filePath: String,
     fileSize: Number,
     status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
+    adminFeedback: { type: String, default: "" },
     reviewComment: String,
+    reviewedAt: Date,
+    reviewedBy: String,
     createdAt: { type: Date, default: Date.now }
 });
 projectSchema.index({ status: 1 });
@@ -226,6 +245,20 @@ const completionSchema = new mongoose.Schema({
 completionSchema.index({ user_id: 1, lesson_id: 1 }, { unique: true });
 completionSchema.index({ user_id: 1 });
 const Completion = mongoose.models.Completion || mongoose.model("Completion", completionSchema);
+
+const certificateSchema = new mongoose.Schema({
+    userId: { type: String, required: true, index: true },
+    courseId: { type: String, required: true, index: true },
+    certificateId: { type: String, required: true, unique: true, index: true },
+    userName: { type: String, default: "" },
+    courseName: { type: String, default: "" },
+    completionDate: { type: Date, default: Date.now },
+    qrVerificationLink: { type: String, default: "" },
+    finalProjectId: { type: mongoose.Schema.Types.ObjectId, ref: "Project" },
+    issuedAt: { type: Date, default: Date.now }
+}, { timestamps: true });
+certificateSchema.index({ userId: 1, courseId: 1 }, { unique: true });
+const Certificate = mongoose.models.Certificate || mongoose.model("Certificate", certificateSchema);
 
 // Progress model for simple completed flag tracking (used by some frontends)
 const progressSchema = new mongoose.Schema({
@@ -264,6 +297,205 @@ function requireAdminMiddleware(req, res, next) {
     if (!header || !header.startsWith("Bearer ")) return res.status(401).json({ success: false, message: "Unauthorized" });
     if (header.split(" ")[1] !== ADMIN_SECRET) return res.status(403).json({ success: false, message: "Forbidden" });
     next();
+}
+
+function normalizeCourseId(courseId) {
+    return String(courseId || "").trim();
+}
+
+function buildCourseCode(courseLike, fallbackCourseId) {
+    const raw = String(
+        courseLike?.slug ||
+        courseLike?.title ||
+        fallbackCourseId ||
+        "course"
+    ).trim().toUpperCase();
+    const code = raw
+        .replace(/[^A-Z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .split("-")
+        .filter(Boolean)
+        .slice(0, 2)
+        .join("")
+        .slice(0, 8);
+    return code || "COURSE";
+}
+
+function createCertificateId({ courseCode }) {
+    let random = "";
+    while (random.length < 8) {
+        random += crypto.randomBytes(6).toString("base64").replace(/[^A-Z0-9]/gi, "").toUpperCase();
+    }
+    random = random.slice(0, 8);
+    return `MS-${String(courseCode || "COURSE").toUpperCase()}-${random}`;
+}
+
+function buildCertificateQrLink(req, certificateId) {
+    return `${req.protocol}://${req.get("host")}/api/certificate-verify/${encodeURIComponent(certificateId)}`;
+}
+
+async function getCourseLessons(courseId) {
+    return Lesson.find({ course_id: normalizeCourseId(courseId) }, "_id title order type").sort({ order: 1 }).lean();
+}
+
+async function evaluateCourseCertificateEligibility({ userId, courseId }) {
+    const normalizedCourseId = normalizeCourseId(courseId);
+    const lessons = await getCourseLessons(normalizedCourseId);
+    const lessonIds = lessons.map(l => l._id);
+    const lessonIdStrings = lessonIds.map(id => id.toString());
+
+    if (lessonIds.length === 0) {
+        return {
+            eligible: false,
+            allLessonsCompleted: false,
+            finalProjectRequired: false,
+            finalProjectStatus: "not_required",
+            finalLessonId: null,
+            finalProject: null,
+            allProjectsApproved: false,
+            projectApprovals: [],
+            completedLessonIds: []
+        };
+    }
+
+    const completionRows = await Completion.find(
+        { user_id: userId, lesson_id: { $in: lessonIds } },
+        "lesson_id"
+    ).lean();
+    const completedSet = new Set(completionRows.map(row => row.lesson_id && row.lesson_id.toString()).filter(Boolean));
+    const allLessonsCompleted = lessonIdStrings.every(id => completedSet.has(id));
+
+    const projectLessons = lessons.filter((row) => String(row?.type || "").toLowerCase() === "project");
+    const finalLesson = lessons.reduce((acc, row) => {
+        if (!acc) return row;
+        const orderA = Number(acc.order) || 0;
+        const orderB = Number(row.order) || 0;
+        return orderB >= orderA ? row : acc;
+    }, null);
+    const finalProjectLesson = projectLessons.reduce((acc, row) => {
+        if (!acc) return row;
+        const orderA = Number(acc.order) || 0;
+        const orderB = Number(row.order) || 0;
+        return orderB >= orderA ? row : acc;
+    }, null);
+
+    const finalLessonId = finalLesson ? finalLesson._id.toString() : null;
+    const finalProjectRequired = projectLessons.length > 0;
+
+    const projectApprovals = await Promise.all(projectLessons.map(async (projectLesson) => {
+        const lessonId = projectLesson._id.toString();
+        const latestSubmission = await Project.findOne({
+            userId,
+            lessonId
+        }).sort({ createdAt: -1, updatedAt: -1 }).lean();
+        const status = latestSubmission
+            ? String(latestSubmission.status || "not_submitted").toLowerCase()
+            : "not_submitted";
+        return {
+            lessonId,
+            lessonTitle: String(projectLesson.title || ""),
+            status,
+            submissionId: latestSubmission?._id ? latestSubmission._id.toString() : null,
+            reviewedAt: latestSubmission?.reviewedAt || null,
+            adminFeedback: latestSubmission?.adminFeedback || latestSubmission?.reviewComment || "",
+            submission: latestSubmission || null
+        };
+    }));
+
+    const allProjectsApproved = finalProjectRequired
+        ? projectApprovals.every(item => item.status === "approved")
+        : true;
+
+    let finalProject = null;
+    let finalProjectStatus = finalProjectRequired ? "not_submitted" : "not_required";
+    if (finalProjectLesson) {
+        const matched = projectApprovals.find(item => item.lessonId === finalProjectLesson._id.toString()) || null;
+        finalProject = matched?.submission || null;
+        finalProjectStatus = matched?.status || "not_submitted";
+    }
+
+    const eligible = Boolean(allLessonsCompleted && allProjectsApproved);
+
+    return {
+        eligible,
+        allLessonsCompleted,
+        finalProjectRequired,
+        finalProjectStatus,
+        finalLessonId,
+        finalProject,
+        allProjectsApproved,
+        projectApprovals,
+        completedLessonIds: Array.from(completedSet)
+    };
+}
+
+async function ensureCertificateState({ req, userId, courseId, issueIfEligible = false }) {
+    const normalizedCourseId = normalizeCourseId(courseId);
+    const eligibility = await evaluateCourseCertificateEligibility({ userId, courseId: normalizedCourseId });
+    const existing = await Certificate.findOne({ userId, courseId: normalizedCourseId }).lean();
+    const claimable = Boolean(eligibility.eligible && !existing);
+
+    if (!eligibility.eligible) {
+        if (existing) {
+            await Certificate.deleteOne({ _id: existing._id });
+        }
+        return {
+            certificate: null,
+            issued: false,
+            revoked: Boolean(existing),
+            claimable: false,
+            ...eligibility
+        };
+    }
+
+    if (existing) {
+        return {
+            certificate: existing,
+            issued: false,
+            revoked: false,
+            claimable: false,
+            ...eligibility
+        };
+    }
+
+    if (!issueIfEligible) {
+        return {
+            certificate: null,
+            issued: false,
+            revoked: false,
+            claimable,
+            ...eligibility
+        };
+    }
+
+    const [user, course] = await Promise.all([
+        UserModel.findById(userId, "username").lean(),
+        Course.findById(normalizedCourseId, "title slug").lean()
+    ]);
+    const issuedAt = new Date();
+    const courseCode = buildCourseCode(course, normalizedCourseId);
+    const certificateId = createCertificateId({ courseCode });
+    const qrVerificationLink = buildCertificateQrLink(req, certificateId);
+
+    const created = await Certificate.create({
+        userId,
+        courseId: normalizedCourseId,
+        certificateId,
+        userName: String(user?.username || ""),
+        courseName: String(course?.title || ""),
+        completionDate: issuedAt,
+        qrVerificationLink,
+        finalProjectId: eligibility.finalProject?._id || undefined,
+        issuedAt
+    });
+
+    return {
+        certificate: created.toObject(),
+        issued: true,
+        revoked: false,
+        claimable: false,
+        ...eligibility
+    };
 }
 
 async function updateTaskProgressRecord({ userId, lessonObjectId, taskObjectId, passed, output }) {
@@ -352,17 +584,17 @@ app.get("/api/progress/:userId/:lessonId", async (req, res) => {
     try {
         const { userId, lessonId } = req.params;
         const lessonObjectId = new mongoose.Types.ObjectId(lessonId);
-        const [lessonCompletedByCompletion, lessonSubmittedForReview] = await Promise.all([
+        const [lessonCompletedByCompletion, latestProjectSubmission] = await Promise.all([
             Completion.exists({
                 user_id: userId,
                 lesson_id: lessonObjectId
             }),
-            Project.exists({
+            Project.findOne({
                 userId,
-                lessonId: lessonId.toString(),
-                status: { $in: ["pending", "approved"] }
-            })
+                lessonId: lessonId.toString()
+            }).sort({ createdAt: -1, updatedAt: -1 }).lean()
         ]);
+        const lessonApprovedByProject = Boolean(latestProjectSubmission && latestProjectSubmission.status === "approved");
 
         const progressRows = await TaskProgress.find(
             {
@@ -389,9 +621,9 @@ app.get("/api/progress/:userId/:lessonId", async (req, res) => {
             };
         });
 
-        // Include project submissions (pending/approved) as passed for project tasks in this lesson.
+        // Include approved project submissions as passed for project tasks in this lesson.
         const submittedProjects = await Project.find(
-            { userId, lessonId: lessonId.toString(), status: { $in: ["pending", "approved"] } },
+            { userId, lessonId: lessonId.toString(), status: "approved" },
             "taskId"
         ).lean();
 
@@ -415,7 +647,16 @@ app.get("/api/progress/:userId/:lessonId", async (req, res) => {
             success: true,
             passedTaskIds: Array.from(passedTaskIds),
             taskProgress,
-            lessonCompleted: Boolean(lessonCompletedByCompletion || lessonSubmittedForReview)
+            lessonCompleted: Boolean(lessonCompletedByCompletion || lessonApprovedByProject),
+            projectSubmission: latestProjectSubmission
+                ? {
+                    status: String(latestProjectSubmission.status || "").toLowerCase(),
+                    adminFeedback: latestProjectSubmission.adminFeedback || latestProjectSubmission.reviewComment || "",
+                    reviewedAt: latestProjectSubmission.reviewedAt || null,
+                    createdAt: latestProjectSubmission.createdAt || null,
+                    originalName: latestProjectSubmission.originalName || ""
+                }
+                : null
         });
     } catch {
         res.status(500).json({ success: false });
@@ -435,7 +676,7 @@ app.get("/api/course-progress/:userId/:courseId", async (req, res) => {
 
         // Count completed lessons by user in course:
         // 1) Completion records
-        // 2) Submitted project lessons that are pending/approved (review in progress or accepted)
+        // 2) Approved project lessons (fallback in case completion record is missing)
         const [completionRows, submittedProjectRows] = await Promise.all([
             Completion.find(
                 {
@@ -451,7 +692,7 @@ app.get("/api/course-progress/:userId/:courseId", async (req, res) => {
                 {
                     userId,
                     lessonId: { $in: lessonIdStrings },
-                    status: { $in: ["pending", "approved"] }
+                    status: "approved"
                 },
                 "lessonId"
             ).lean()
@@ -507,7 +748,7 @@ app.get("/api/course/:slug/progress/:userId", async (req, res) => {
                 {
                     userId: req.params.userId,
                     lessonId: { $in: lessonIdStrings },
-                    status: { $in: ["pending", "approved"] }
+                    status: "approved"
                 },
                 "lessonId"
             ).lean()
@@ -550,6 +791,7 @@ app.post('/api/project/upload', uploadProject.single('projectFile'), async (req,
             if (lower.endsWith(".rar")) return "rar";
             if (lower.endsWith(".docx")) return "docx";
             if (lower.endsWith(".pdf")) return "pdf";
+            if (lower.endsWith(".txt")) return "txt";
             if (lower.endsWith(".zip")) return "zip";
             return normalizeFormat(path.extname(lower));
         };
@@ -580,8 +822,11 @@ app.post('/api/project/upload', uploadProject.single('projectFile'), async (req,
             : (planningByTitle ? "planning" : "code");
 
         if (resolvedProjectType === "planning") {
-            // Planning tasks must accept only planning documents.
-            allowedFormats = ["docx", "pdf"];
+            // Planning submissions can be document-based or archived project proof.
+            allowedFormats = ["zip", "docx", "pdf", "txt"];
+        } else if (allowedFormats.length === 0) {
+            // Deployment/code submissions default to ZIP only.
+            allowedFormats = ["zip"];
         }
 
         const uploadedFormat = getFileFormat(req.file.originalname);
@@ -593,19 +838,50 @@ app.post('/api/project/upload', uploadProject.single('projectFile'), async (req,
             });
         }
 
+        const lessonCourseId = String(lessonDoc?.course_id || "").trim();
+        let resolvedCourseId = lessonCourseId;
+        if (!resolvedCourseId) {
+            const requestedCourse = normalizeCourseId(courseId);
+            if (requestedCourse) {
+                if (mongoose.Types.ObjectId.isValid(requestedCourse)) {
+                    resolvedCourseId = requestedCourse;
+                } else {
+                    const courseBySlug = await Course.findOne({ slug: requestedCourse }, "_id").lean();
+                    if (courseBySlug?._id) {
+                        resolvedCourseId = courseBySlug._id.toString();
+                    }
+                }
+            }
+        }
+        if (!resolvedCourseId) resolvedCourseId = "unknown";
         const newProject = new Project({
-            userId, courseId: courseId || "unknown", lessonId,
+            userId, courseId: resolvedCourseId, lessonId,
             taskId: (taskId || "").toString(),
             projectType: resolvedProjectType,
             originalName: req.file.originalname, storedName: req.file.filename,
-            filePath: `/uploads/projects/${req.file.filename}`, fileSize: req.file.size, status: "pending"
+            filePath: `/uploads/projects/${req.file.filename}`,
+            fileSize: req.file.size,
+            status: "pending",
+            adminFeedback: "",
+            reviewedAt: null
         });
         await newProject.save();
 
         if (!user.submitted_lessons) user.submitted_lessons = [];
         if (!user.submitted_lessons.includes(lessonId)) { user.submitted_lessons.push(lessonId); await user.save(); }
 
-        res.json({ success: true, message: "Project submitted for review!", lessonCompleted: false });
+        res.json({
+            success: true,
+            message: "Project submitted for review!",
+            lessonCompleted: false,
+            project: {
+                status: newProject.status,
+                adminFeedback: "",
+                reviewedAt: null,
+                createdAt: newProject.createdAt,
+                originalName: newProject.originalName
+            }
+        });
     } catch (err) {
         if (req.file && fs.existsSync(req.file.path)) fs.unlink(req.file.path, () => { });
         res.status(500).json({ success: false, message: err.message });
@@ -786,6 +1062,258 @@ app.get("/api/public/courses", cacheMiddleware("public_courses"), async (req, re
     } catch (err) { res.status(500).json({ success: false, message: "Failed to load courses" }); }
 });
 
+function lessonContentScore(lessonDoc) {
+    if (!lessonDoc || typeof lessonDoc !== "object") return 0;
+    const content = lessonDoc.lesson && typeof lessonDoc.lesson === "object" ? lessonDoc.lesson : {};
+    const listSize = (value) => Array.isArray(value) ? value.filter(Boolean).length : 0;
+
+    let score = 0;
+    if (typeof content.intro === "string" && content.intro.trim()) score += 2;
+    score += Math.min(5, listSize(content.learningOutcomes));
+    score += Math.min(5, listSize(content.deepExplanation));
+    score += Math.min(4, listSize(content.conceptBreakdown));
+    score += Math.min(5, listSize(content.stepByStepImplementation || content.implementationSteps));
+    if (content.requiredFolderStructure && (
+        (Array.isArray(content.requiredFolderStructure.structure) && content.requiredFolderStructure.structure.length > 0) ||
+        (typeof content.requiredFolderStructure === "string" && content.requiredFolderStructure.trim())
+    )) {
+        score += 5;
+    }
+    score += Math.min(5, listSize(content.adminEvaluationCriteria));
+    score += Math.min(5, listSize(content.whyImportant));
+    score += Math.min(5, listSize(content.commonMistakes));
+    if (typeof content.summary === "string" && content.summary.trim()) score += 2;
+    if (typeof lessonDoc.description === "string" && lessonDoc.description.trim()) score += 1;
+    return score;
+}
+
+function normalizeObjectIdLike(value) {
+    if (!value) return "";
+    if (typeof value === "string") return value.trim();
+    if (typeof value === "object") {
+        if (typeof value.$oid === "string") return value.$oid.trim();
+        if (typeof value.toString === "function") {
+            const text = String(value.toString()).trim();
+            if (text && text !== "[object Object]") return text;
+        }
+    }
+    return "";
+}
+
+function normalizeDateLike(value) {
+    if (!value) return 0;
+    if (typeof value === "object" && value.$date) {
+        const ts = new Date(value.$date).getTime();
+        return Number.isFinite(ts) ? ts : 0;
+    }
+    const ts = new Date(value).getTime();
+    return Number.isFinite(ts) ? ts : 0;
+}
+
+function lessonRecencyTs(lessonDoc) {
+    const value = lessonDoc?.updatedAt || lessonDoc?.createdAt || lessonDoc?.created_at || 0;
+    return normalizeDateLike(value);
+}
+
+function normalizeLessonTitle(value) {
+    return String(value || "").trim().toLowerCase();
+}
+
+function chooseBetterLesson(first, second) {
+    const firstScore = lessonContentScore(first);
+    const secondScore = lessonContentScore(second);
+    if (secondScore > firstScore) return second;
+    if (secondScore < firstScore) return first;
+    return lessonRecencyTs(second) > lessonRecencyTs(first) ? second : first;
+}
+
+function dedupeLessonsForCourse(lessons) {
+    const byKey = new Map();
+    for (const lesson of lessons || []) {
+        const order = Number.isFinite(Number(lesson?.order)) ? Number(lesson.order) : -1;
+        const title = String(lesson?.title || "").trim().toLowerCase();
+        const key = `${order}::${title || String(lesson?._id || "")}`;
+        const existing = byKey.get(key);
+        byKey.set(key, existing ? chooseBetterLesson(existing, lesson) : lesson);
+    }
+    return [...byKey.values()].sort((a, b) => {
+        const orderA = Number.isFinite(Number(a?.order)) ? Number(a.order) : 0;
+        const orderB = Number.isFinite(Number(b?.order)) ? Number(b.order) : 0;
+        if (orderA !== orderB) return orderA - orderB;
+        return String(a?.title || "").localeCompare(String(b?.title || ""));
+    });
+}
+
+const localLessonFileCache = {
+    path: "",
+    mtimeMs: 0,
+    docs: []
+};
+
+function getLocalLessonSourceCandidates() {
+    const envPath = String(process.env.LESSON_SOURCE_PATH || "").trim();
+    const candidates = [];
+    if (envPath) {
+        candidates.push(path.resolve(envPath));
+    }
+    candidates.push(
+        path.join(process.cwd(), "mindstep.lessons.json"),
+        path.resolve(process.cwd(), "..", "mindstep.lessons.json")
+    );
+
+    const seen = new Set();
+    const existing = [];
+    for (const candidate of candidates) {
+        const resolved = path.resolve(candidate);
+        if (seen.has(resolved)) continue;
+        seen.add(resolved);
+        try {
+            if (!fs.existsSync(resolved)) continue;
+            const stat = fs.statSync(resolved);
+            existing.push({ path: resolved, mtimeMs: stat.mtimeMs || 0 });
+        } catch (_) { }
+    }
+    return existing.sort((a, b) => {
+        if (b.mtimeMs !== a.mtimeMs) return b.mtimeMs - a.mtimeMs;
+        return b.path.length - a.path.length;
+    });
+}
+
+function normalizeParsedLessonDocs(parsed) {
+    if (Array.isArray(parsed)) return parsed.filter(doc => doc && typeof doc === "object");
+    if (!parsed || typeof parsed !== "object") return [];
+
+    const nested = parsed.docs || parsed.lessons || parsed.documents || parsed.items || parsed.data;
+    if (Array.isArray(nested)) return nested.filter(doc => doc && typeof doc === "object");
+
+    if (parsed.lesson || parsed.title || parsed.course_id || parsed._id) {
+        return [parsed];
+    }
+    return [];
+}
+
+function parseLessonDocs(rawText) {
+    const raw = String(rawText || "").replace(/^\uFEFF/, "");
+    const attempts = [raw];
+
+    // Support files copied from MongoDB Compass that include block comments.
+    const noBlockComments = raw.replace(/\/\*[\s\S]*?\*\//g, "").trim();
+    if (noBlockComments && noBlockComments !== raw) attempts.push(noBlockComments);
+
+    for (const candidate of attempts) {
+        try {
+            const parsed = JSON.parse(candidate);
+            const docs = normalizeParsedLessonDocs(parsed);
+            if (docs.length > 0) return docs;
+        } catch (_) { }
+    }
+    return [];
+}
+
+function readLocalLessonDocs() {
+    const sources = getLocalLessonSourceCandidates();
+    if (sources.length === 0) return [];
+
+    for (const source of sources) {
+        try {
+            if (
+                localLessonFileCache.path === source.path &&
+                localLessonFileCache.mtimeMs === source.mtimeMs &&
+                Array.isArray(localLessonFileCache.docs)
+            ) {
+                return localLessonFileCache.docs;
+            }
+
+            const raw = fs.readFileSync(source.path, "utf8");
+            const docs = parseLessonDocs(raw);
+            if (docs.length > 0) {
+                localLessonFileCache.path = source.path;
+                localLessonFileCache.mtimeMs = source.mtimeMs;
+                localLessonFileCache.docs = docs;
+                return docs;
+            }
+        } catch (_) { }
+    }
+
+    return [];
+}
+
+function findLocalLessonCandidates(requestedLessonId, baseLesson) {
+    const docs = readLocalLessonDocs();
+    if (!Array.isArray(docs) || docs.length === 0) return [];
+
+    const requestedId = normalizeObjectIdLike(requestedLessonId);
+    const baseId = normalizeObjectIdLike(baseLesson?._id);
+    const baseTitle = normalizeLessonTitle(baseLesson?.title);
+    const baseCourseId = String(baseLesson?.course_id || "").trim();
+    const baseOrder = Number(baseLesson?.order);
+
+    return docs.filter((doc) => {
+        const docId = normalizeObjectIdLike(doc?._id);
+        if (requestedId && docId === requestedId) return true;
+        if (baseId && docId === baseId) return true;
+
+        const sameCourse = String(doc?.course_id || "").trim() === baseCourseId;
+        const sameOrder = Number(doc?.order) === baseOrder;
+        const sameTitle = normalizeLessonTitle(doc?.title) === baseTitle;
+        return Boolean(sameCourse && sameOrder && sameTitle);
+    });
+}
+
+function mergeLessonWithLocalSource(baseLesson, requestedLessonId) {
+    if (!baseLesson || typeof baseLesson !== "object") return baseLesson;
+
+    const localCandidates = findLocalLessonCandidates(requestedLessonId, baseLesson);
+    if (!Array.isArray(localCandidates) || localCandidates.length === 0) return baseLesson;
+    const requestedId = normalizeObjectIdLike(requestedLessonId);
+    const exactMatch = localCandidates.find(candidate => {
+        return requestedId && normalizeObjectIdLike(candidate?._id) === requestedId;
+    }) || null;
+
+    let bestLocal = exactMatch || localCandidates[0];
+    for (const candidate of localCandidates) {
+        if (candidate === bestLocal) continue;
+        bestLocal = chooseBetterLesson(bestLocal, candidate);
+    }
+
+    if (!exactMatch && lessonContentScore(bestLocal) < lessonContentScore(baseLesson)) return baseLesson;
+
+    const merged = { ...baseLesson, ...bestLocal };
+    merged._id = baseLesson._id;
+    merged.course_id = baseLesson.course_id;
+    merged.order = baseLesson.order;
+    if (baseLesson.lesson || bestLocal.lesson) {
+        merged.lesson = {
+            ...(baseLesson.lesson && typeof baseLesson.lesson === "object" ? baseLesson.lesson : {}),
+            ...(bestLocal.lesson && typeof bestLocal.lesson === "object" ? bestLocal.lesson : {})
+        };
+    }
+    return merged;
+}
+
+async function resolveBestLessonVariant(lessonDoc) {
+    if (!lessonDoc || !lessonDoc.course_id) return lessonDoc;
+
+    const sameOrderCandidates = await Lesson.find({
+        course_id: lessonDoc.course_id,
+        order: lessonDoc.order
+    }).lean();
+    if (!Array.isArray(sameOrderCandidates) || sameOrderCandidates.length === 0) return lessonDoc;
+
+    const baseTitle = normalizeLessonTitle(lessonDoc.title);
+    const candidates = sameOrderCandidates.filter(candidate => {
+        // Never replace a lesson with a different title.
+        return normalizeLessonTitle(candidate?.title) === baseTitle;
+    });
+    if (candidates.length === 0) return lessonDoc;
+
+    let best = lessonDoc;
+    for (const candidate of candidates) {
+        best = chooseBetterLesson(best, candidate);
+    }
+    return best;
+}
+
 app.get("/api/course/:slug", async (req, res) => {
     try {
         const course = await Course.findOne({ slug: req.params.slug }).lean();
@@ -798,15 +1326,21 @@ app.get("/api/course/:slug/lessons", async (req, res) => {
     try {
         const course = await Course.findOne({ slug: req.params.slug }).lean();
         if (!course) return res.status(404).json({ success: false });
-        const lessons = await Lesson.find({ course_id: course._id.toString() }).sort({ order: 1 }).lean();
+        const rawLessons = await Lesson.find({ course_id: course._id.toString() }).sort({ order: 1, updatedAt: -1, createdAt: -1 }).lean();
+        const lessons = dedupeLessonsForCourse(rawLessons);
         res.json({ success: true, lessons });
     } catch { res.status(500).json({ success: false }); }
 });
 
 app.get("/api/lesson/:lessonId/details", async (req, res) => {
     try {
-        const lesson = await Lesson.findById(req.params.lessonId).lean();
-        const tasks = await Task.find({ lesson_id: new mongoose.Types.ObjectId(req.params.lessonId) }).sort({ order: 1 }).lean();
+        const requestedLesson = await Lesson.findById(req.params.lessonId).lean();
+        if (!requestedLesson) return res.status(404).json({ success: false, message: "Lesson not found" });
+
+        const resolvedLesson = await resolveBestLessonVariant(requestedLesson);
+        const lesson = mergeLessonWithLocalSource(resolvedLesson, req.params.lessonId);
+        const lessonTaskId = new mongoose.Types.ObjectId(String(lesson._id));
+        const tasks = await Task.find({ lesson_id: lessonTaskId }).sort({ order: 1 }).lean();
         res.json({ success: true, lesson, tasks });
     } catch { res.status(500).json({ success: false }); }
 });
@@ -816,6 +1350,366 @@ app.get("/api/user/:userId/projects", async (req, res) => {
         const projects = await Project.find({ userId: req.params.userId }).sort({ createdAt: -1 }).lean();
         res.json({ success: true, projects });
     } catch { res.status(500).json({ success: false }); }
+});
+
+app.get("/api/certificate/:userId/:courseId", async (req, res) => {
+    try {
+        const { userId, courseId } = req.params;
+        const certResult = await ensureCertificateState({ req, userId, courseId, issueIfEligible: false });
+        const latestProject = certResult.finalProject || null;
+
+        return res.json({
+            success: true,
+            certificateAvailable: Boolean(certResult.certificate),
+            certificate: certResult.certificate
+                ? {
+                    certificateId: certResult.certificate.certificateId,
+                    userName: certResult.certificate.userName,
+                    courseName: certResult.certificate.courseName,
+                    completionDate: certResult.certificate.completionDate,
+                    qrVerificationLink: certResult.certificate.qrVerificationLink
+                }
+                : null,
+            claimable: Boolean(certResult.claimable),
+            allLessonsCompleted: Boolean(certResult.allLessonsCompleted),
+            allProjectsApproved: Boolean(certResult.allProjectsApproved),
+            finalProjectRequired: Boolean(certResult.finalProjectRequired),
+            finalProjectStatus: certResult.finalProjectStatus || "not_submitted",
+            projectApprovals: Array.isArray(certResult.projectApprovals)
+                ? certResult.projectApprovals.map((item) => ({
+                    lessonId: item.lessonId,
+                    lessonTitle: item.lessonTitle,
+                    status: item.status,
+                    reviewedAt: item.reviewedAt || null,
+                    adminFeedback: item.adminFeedback || ""
+                }))
+                : [],
+            adminFeedback: latestProject?.adminFeedback || latestProject?.reviewComment || "",
+            reviewedAt: latestProject?.reviewedAt || null,
+            issued: Boolean(certResult.issued),
+            revoked: Boolean(certResult.revoked)
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: "Failed to fetch certificate status" });
+    }
+});
+
+app.post("/api/certificate/claim", async (req, res) => {
+    try {
+        const { userId, courseId } = req.body || {};
+        if (!userId || !courseId) {
+            return res.status(400).json({ success: false, message: "userId and courseId are required" });
+        }
+
+        const certResult = await ensureCertificateState({
+            req,
+            userId: String(userId),
+            courseId: String(courseId),
+            issueIfEligible: true
+        });
+
+        if (!certResult.certificate) {
+            return res.status(409).json({
+                success: false,
+                message: "Certificate is locked. Complete all lessons and get all project submissions approved.",
+                claimable: Boolean(certResult.claimable),
+                allLessonsCompleted: Boolean(certResult.allLessonsCompleted),
+                allProjectsApproved: Boolean(certResult.allProjectsApproved),
+                projectApprovals: Array.isArray(certResult.projectApprovals)
+                    ? certResult.projectApprovals.map((item) => ({
+                        lessonId: item.lessonId,
+                        lessonTitle: item.lessonTitle,
+                        status: item.status,
+                        reviewedAt: item.reviewedAt || null,
+                        adminFeedback: item.adminFeedback || ""
+                    }))
+                    : []
+            });
+        }
+
+        return res.json({
+            success: true,
+            certificate: {
+                certificateId: certResult.certificate.certificateId,
+                userName: certResult.certificate.userName,
+                courseName: certResult.certificate.courseName,
+                completionDate: certResult.certificate.completionDate,
+                qrVerificationLink: certResult.certificate.qrVerificationLink
+            },
+            issued: Boolean(certResult.issued)
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: "Failed to claim certificate" });
+    }
+});
+
+app.get("/api/certificate/:userId/:courseId/download", async (req, res) => {
+    try {
+        const { userId, courseId } = req.params;
+        const certResult = await ensureCertificateState({ req, userId, courseId, issueIfEligible: false });
+        if (!certResult.certificate) {
+            return res.status(404).json({ success: false, message: "Certificate not available yet" });
+        }
+
+        const cert = certResult.certificate;
+        const completionDate = new Date(cert.completionDate || cert.issuedAt || Date.now());
+        const displayDate = completionDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+        const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MindStep Certificate</title>
+  <style>
+    body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0b1020; color: #e6edf3; }
+    .wrap { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+    .card {
+      width: min(980px, 96vw);
+      background: linear-gradient(145deg, rgba(20,28,52,0.94), rgba(9,14,30,0.96));
+      border: 1px solid rgba(97,140,255,0.35);
+      border-radius: 24px;
+      box-shadow: 0 20px 80px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.05);
+      padding: 42px;
+      position: relative;
+      overflow: hidden;
+    }
+    .card:before {
+      content: "";
+      position: absolute;
+      inset: -120px;
+      background: radial-gradient(circle at top right, rgba(56,189,248,0.2), transparent 45%),
+                  radial-gradient(circle at bottom left, rgba(250,204,21,0.18), transparent 40%);
+      pointer-events: none;
+    }
+    .brand { text-align: center; letter-spacing: 2px; font-size: 14px; color: #93c5fd; position: relative; }
+    h1 { text-align: center; margin: 14px 0 8px; font-size: 44px; letter-spacing: 2px; position: relative; }
+    h2 { text-align: center; margin: 0 0 26px; color: #cbd5e1; font-weight: 500; position: relative; }
+    .line { height: 1px; background: linear-gradient(90deg, transparent, rgba(148,163,184,0.5), transparent); margin: 22px 0; }
+    .text { text-align: center; font-size: 18px; color: #cbd5e1; position: relative; }
+    .name { text-align: center; margin: 18px 0 12px; font-size: 36px; font-weight: 700; color: #f8fafc; position: relative; }
+    .course { text-align: center; margin: 0 0 24px; font-size: 26px; color: #93c5fd; position: relative; }
+    .meta { display: grid; gap: 8px; margin-top: 20px; color: #e2e8f0; position: relative; }
+    .sig { margin-top: 28px; display: flex; justify-content: space-between; align-items: end; color: #94a3b8; position: relative; }
+    .sig .auth { border-top: 1px solid rgba(148,163,184,0.5); padding-top: 8px; width: 220px; text-align: center; }
+    .verify { font-size: 13px; color: #93c5fd; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="brand">MINDSTEP</div>
+      <h1>CERTIFICATE OF COMPLETION</h1>
+      <h2>This is to certify that</h2>
+      <div class="name">${String(cert.userName || userId)}</div>
+      <div class="text">has successfully completed the course</div>
+      <div class="course">${String(cert.courseName || courseId)}</div>
+      <div class="line"></div>
+      <div class="meta">
+        <div>Completion Date: ${displayDate}</div>
+        <div>Certificate ID: ${String(cert.certificateId || "")}</div>
+      </div>
+      <div class="sig">
+        <div class="auth">Authorized Signature</div>
+        <div class="verify">Verify: ${String(cert.qrVerificationLink || "")}</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+        const safeCourse = String(cert.courseName || "course").replace(/[^a-z0-9]+/gi, "-").replace(/(^-|-$)/g, "");
+        const fileName = `${safeCourse || "course"}-certificate-${cert.certificateId}.html`;
+
+        res.setHeader("Content-Type", "text/html; charset=utf-8");
+        res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+        return res.send(html);
+    } catch (err) {
+        res.status(500).json({ success: false, message: "Failed to download certificate" });
+    }
+});
+
+async function handleCertificateVerification(req, res) {
+    try {
+        const certificateId = String(req.params.certificateId || "").trim();
+        if (!certificateId) return res.status(400).json({ success: false, message: "Invalid certificate id" });
+
+        const cert = await Certificate.findOne({ certificateId }).lean();
+        if (!cert) return res.status(404).json({ success: false, message: "Certificate not found" });
+
+        return res.json({
+            success: true,
+            certificate: {
+                certificateId: cert.certificateId,
+                userId: cert.userId,
+                userName: cert.userName,
+                courseId: cert.courseId,
+                courseName: cert.courseName,
+                completionDate: cert.completionDate || cert.issuedAt,
+                issuedAt: cert.issuedAt
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: "Verification failed" });
+    }
+}
+
+app.get("/api/certificate-verify/:certificateId", handleCertificateVerification);
+app.get("/api/certificate/verify/:certificateId", handleCertificateVerification);
+
+app.get("/generate-certificate/:username", async (req, res) => {
+    try {
+        const username = String(req.params.username || "").trim();
+        if (!username) return res.status(400).send("Invalid username");
+
+        const user = await UserModel.findOne({ username }, "username").lean();
+        if (!user) return res.status(404).send("User not found");
+
+        const providedId = String(req.query.certificateId || "").trim().toUpperCase();
+        const certificateId = /^MS-[A-Z0-9-]{6,40}$/.test(providedId)
+            ? providedId
+            : `MS-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
+
+        const completionDate = new Date();
+        const displayDate = completionDate.toLocaleDateString("en-US", {
+            day: "numeric",
+            month: "long",
+            year: "numeric"
+        });
+        const verificationLink = `https://mindstep.com/certificate/${encodeURIComponent(certificateId)}`;
+        const learnerName = String(user.username || username);
+        const nameSize = learnerName.length > 22 ? 40 : learnerName.length > 15 ? 48 : 56;
+
+        const doc = new PDFDocument({
+            size: "A4",
+            layout: "landscape",
+            margin: 0
+        });
+
+        const fileName = `MindStep-Certificate-${String(username).replace(/[^a-z0-9_-]+/gi, "_")}.pdf`;
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+        doc.pipe(res);
+
+        const pageWidth = doc.page.width;
+        const pageHeight = doc.page.height;
+        const centerX = pageWidth / 2;
+
+        // Paper background
+        doc.rect(0, 0, pageWidth, pageHeight).fill("#f9f2e6");
+        for (let y = 0; y < pageHeight; y += 6) {
+            const alpha = y % 12 === 0 ? 0.06 : 0.03;
+            doc.save();
+            doc.strokeOpacity(alpha).lineWidth(0.4).strokeColor("#7c6b4a");
+            doc.moveTo(0, y).lineTo(pageWidth, y).stroke();
+            doc.restore();
+        }
+
+        // Luxury borders
+        doc.lineWidth(6).strokeColor("#8b6a2f").rect(16, 16, pageWidth - 32, pageHeight - 32).stroke();
+        doc.lineWidth(2).strokeColor("#d1b06b").rect(26, 26, pageWidth - 52, pageHeight - 52).stroke();
+        doc.lineWidth(1).strokeColor("#8b6a2f").rect(42, 42, pageWidth - 84, pageHeight - 84).stroke();
+
+        // Top heading
+        doc.fillColor("#0f2f57")
+            .font("Helvetica-Bold")
+            .fontSize(42)
+            .text("MINDSTEP", 0, 74, { align: "center", characterSpacing: 8 });
+        doc.fillColor("#64748b")
+            .font("Helvetica")
+            .fontSize(14)
+            .text("QUANTUM IDE", 0, 120, { align: "center", characterSpacing: 5 });
+        doc.lineWidth(1.6).strokeColor("#ad8642").moveTo(154, 136).lineTo(pageWidth - 154, 136).stroke();
+
+        // Certificate title
+        doc.fillColor("#7a4a09")
+            .font("Helvetica-Bold")
+            .fontSize(44)
+            .text("CERTIFICATE OF COMPLETION", 0, 164, { align: "center" });
+        doc.fillColor("#334155")
+            .font("Helvetica")
+            .fontSize(22)
+            .text("This is proudly presented to", 0, 230, { align: "center" });
+
+        // Learner name
+        doc.fillColor("#111827")
+            .font("Helvetica-Bold")
+            .fontSize(nameSize)
+            .text(learnerName, 0, 270, { align: "center" });
+        const underlineWidth = Math.min(430, 160 + learnerName.length * 12);
+        doc.lineWidth(1.8).strokeColor("#9a6f2f")
+            .moveTo(centerX - underlineWidth / 2, 350)
+            .lineTo(centerX + underlineWidth / 2, 350)
+            .stroke();
+
+        doc.fillColor("#475569")
+            .font("Helvetica")
+            .fontSize(18)
+            .text("for successfully completing the rigorous curriculum of", 0, 372, { align: "center" });
+        doc.fillColor("#1e3a8a")
+            .font("Helvetica-Bold")
+            .fontSize(30)
+            .text("FULL STACK WEB DEVELOPMENT", 0, 398, { align: "center" });
+
+        // Bottom left (sign block)
+        doc.fillColor("#0f2f57")
+            .font("Helvetica-Bold")
+            .fontSize(18)
+            .text("MindStep Admin", 74, 488);
+        doc.lineWidth(1.5).strokeColor("#8b6a2f").moveTo(74, 512).lineTo(230, 512).stroke();
+        doc.fillColor("#64748b")
+            .font("Helvetica")
+            .fontSize(11)
+            .text("Lead Instructor", 104, 518);
+
+        // Official seal (govt-style look, custom brand)
+        const sealX = centerX;
+        const sealY = 505;
+        for (let i = 0; i < 28; i++) {
+            const angle = (Math.PI * 2 * i) / 28;
+            const petalX = sealX + Math.cos(angle) * 42;
+            const petalY = sealY + Math.sin(angle) * 42;
+            doc.circle(petalX, petalY, 7).fill("#c98f1b");
+        }
+        doc.circle(sealX, sealY, 36).fill("#e0ad42");
+        doc.circle(sealX, sealY, 30).fill("#f8e4b8");
+        doc.lineWidth(1.2).strokeColor("#8b6a2f").circle(sealX, sealY, 30).stroke();
+        doc.fillColor("#7c2d12")
+            .font("Helvetica-Bold")
+            .fontSize(7.5)
+            .text("MINDSTEP", sealX - 26, sealY - 7, { width: 52, align: "center" });
+        doc.fillColor("#7c2d12")
+            .font("Helvetica")
+            .fontSize(6.6)
+            .text("OFFICIAL SEAL", sealX - 28, sealY + 4, { width: 56, align: "center" });
+
+        // Bottom right (date + certificate id)
+        const rightBlockX = pageWidth - 290;
+        doc.fillColor("#0f172a")
+            .font("Helvetica-Bold")
+            .fontSize(22)
+            .text(displayDate, rightBlockX, 486, { width: 228, align: "center" });
+        doc.lineWidth(1.5).strokeColor("#8b6a2f").moveTo(rightBlockX + 12, 512).lineTo(rightBlockX + 216, 512).stroke();
+        doc.fillColor("#64748b")
+            .font("Helvetica")
+            .fontSize(11)
+            .text("Issue Date", rightBlockX, 518, { width: 228, align: "center" });
+        doc.fillColor("#1d4ed8")
+            .font("Helvetica")
+            .fontSize(10)
+            .text(`Certificate ID: ${certificateId}`, rightBlockX, 534, { width: 228, align: "center" });
+
+        // Verification footer
+        doc.fillColor("#64748b")
+            .font("Helvetica")
+            .fontSize(8.5)
+            .text(verificationLink, 30, pageHeight - 16, { width: pageWidth - 60, align: "center" });
+
+        doc.end();
+    } catch (err) {
+        console.error("Certificate generation failed:", err);
+        if (!res.headersSent) {
+            res.status(500).send("Certificate generation failed");
+        }
+    }
 });
 
 app.get("/api/lesson/:lessonId/pdf", async (req, res) => {
@@ -875,14 +1769,33 @@ app.post("/api/complete", async (req, res) => {
         if (!userId || !lessonId) return res.status(400).json({ success: false });
         const lessonObjectId = new mongoose.Types.ObjectId(lessonId);
 
-        // Add to user's completed lessons array (id stored as string)
-        await UserModel.findByIdAndUpdate(userId, { $addToSet: { completed_lessons: lessonId } });
-
-        // Look up lesson to capture course_id for Completion record
         let lessonDoc = null;
         try {
             lessonDoc = await Lesson.findById(lessonObjectId).lean();
         } catch (e) { lessonDoc = null; }
+
+        const lessonType = String(lessonDoc?.type || "").toLowerCase();
+        const isProjectLesson = lessonType === "project";
+        if (isProjectLesson) {
+            const latestSubmission = await Project.findOne({
+                userId,
+                lessonId: lessonId.toString()
+            }).sort({ createdAt: -1, updatedAt: -1 }).lean();
+
+            const latestStatus = String(latestSubmission?.status || "not_submitted").toLowerCase();
+            if (latestStatus !== "approved") {
+                return res.status(409).json({
+                    success: false,
+                    pendingReview: true,
+                    message: "Lesson will be marked complete only after admin approval.",
+                    projectStatus: latestStatus,
+                    adminFeedback: latestSubmission?.adminFeedback || latestSubmission?.reviewComment || ""
+                });
+            }
+        }
+
+        // Add to user's completed lessons array (id stored as string)
+        await UserModel.findByIdAndUpdate(userId, { $addToSet: { completed_lessons: lessonId } });
 
         const courseId = lessonDoc ? lessonDoc.course_id : undefined;
 
@@ -909,7 +1822,27 @@ app.post("/api/complete", async (req, res) => {
         } catch (pErr) {
             console.warn('Progress upsert failed:', pErr && pErr.message);
         }
-        res.json({ success: true });
+
+        let certificate = null;
+        let certificateClaimable = false;
+        if (courseId) {
+            const certResult = await ensureCertificateState({ req, userId, courseId, issueIfEligible: false });
+            certificate = certResult.certificate || null;
+            certificateClaimable = Boolean(certResult.claimable);
+        }
+
+        res.json({
+            success: true,
+            certificateAvailable: Boolean(certificate),
+            certificateClaimable,
+            certificate: certificate
+                ? {
+                    certificateId: certificate.certificateId,
+                    completionDate: certificate.completionDate,
+                    qrVerificationLink: certificate.qrVerificationLink
+                }
+                : null
+        });
     } catch (err) { res.status(500).json({ success: false }); }
 });
 
@@ -963,6 +1896,7 @@ app.post("/api/admin/user/:id/purge", requireAdminMiddleware, async (req, res) =
         await Promise.all([
             Project.deleteMany({ userId }),
             Completion.deleteMany({ user_id: userId }),
+            Certificate.deleteMany({ userId }),
             TaskProgress.deleteMany({ user_id: userId }),
             PracticeUser.deleteMany({ _userId: userId }),
             UserModel.findByIdAndDelete(userId)
@@ -975,21 +1909,42 @@ app.get("/api/admin/projects", requireAdminMiddleware, async (req, res) => {
     try {
         const projects = await Project.find({}).sort({ createdAt: -1 }).lean();
 
-        const userIds = [...new Set(projects.map(p => p.userId).filter(Boolean))];
-        const lessonIds = [...new Set(projects.map(p => p.lessonId).filter(Boolean))];
+        const toUniqueStrings = (values) => {
+            return [...new Set((values || [])
+                .map(v => String(v || "").trim())
+                .filter(Boolean))];
+        };
+        const toObjectIds = (values) => {
+            return toUniqueStrings(values)
+                .filter(id => mongoose.Types.ObjectId.isValid(id))
+                .map(id => new mongoose.Types.ObjectId(id));
+        };
 
-        const [users, lessons] = await Promise.all([
-            UserModel.find({ _id: { $in: userIds } }, "username email").lean(),
-            Lesson.find({ _id: { $in: lessonIds } }, "title").lean()
+        const userIds = toUniqueStrings(projects.map(p => p.userId));
+        const lessonIds = toObjectIds(projects.map(p => normalizeObjectIdLike(p.lessonId)));
+        const courseIds = toObjectIds(projects.map(p => normalizeObjectIdLike(p.courseId)));
+
+        const [users, lessons, courses] = await Promise.all([
+            userIds.length > 0
+                ? UserModel.find({ _id: { $in: userIds } }, "username email").lean()
+                : Promise.resolve([]),
+            lessonIds.length > 0
+                ? Lesson.find({ _id: { $in: lessonIds } }, "title").lean()
+                : Promise.resolve([]),
+            courseIds.length > 0
+                ? Course.find({ _id: { $in: courseIds } }, "title slug").lean()
+                : Promise.resolve([])
         ]);
 
         const userMap = Object.fromEntries(users.map(u => [u._id.toString(), u]));
         const lessonMap = Object.fromEntries(lessons.map(l => [l._id.toString(), l]));
+        const courseMap = Object.fromEntries(courses.map(c => [c._id.toString(), c]));
 
         const results = projects.map(p => ({
             ...p,
             userId: userMap[p.userId] || null,
-            lessonId: lessonMap[p.lessonId] || null
+            lessonId: lessonMap[normalizeObjectIdLike(p.lessonId)] || p.lessonId || null,
+            courseId: courseMap[normalizeObjectIdLike(p.courseId)] || p.courseId || null
         }));
 
         res.json({ success: true, projects: results });
@@ -1008,15 +1963,41 @@ app.get("/api/admin/projects/:id/download", requireAdminMiddleware, async (req, 
 
 app.put("/api/admin/projects/:id/status", requireAdminMiddleware, async (req, res) => {
     try {
-        const { status } = req.body;
+        let { status, adminFeedback } = req.body || {};
+        status = String(status || "").toLowerCase().trim();
+        if (status === "request_changes") status = "rejected";
         if (!["pending", "approved", "rejected"].includes(status)) {
             return res.status(400).json({ success: false, message: "Invalid status" });
         }
 
         const project = await Project.findById(req.params.id);
         if (!project) return res.status(404).json({ success: false });
+        const previousStatus = String(project.status || "").toLowerCase();
+        const lessonForProject = mongoose.Types.ObjectId.isValid(project.lessonId)
+            ? await Lesson.findById(new mongoose.Types.ObjectId(project.lessonId), "course_id").lean()
+            : null;
+        const resolvedProjectCourseId = String(lessonForProject?.course_id || project.courseId || "").trim();
+        if (resolvedProjectCourseId && String(project.courseId || "").trim() !== resolvedProjectCourseId) {
+            project.courseId = resolvedProjectCourseId;
+        }
 
-        if (status === "approved" && project.status !== "approved") {
+        const feedbackText = String(adminFeedback || "").trim();
+        if ((status === "rejected") && !feedbackText) {
+            return res.status(400).json({ success: false, message: "Admin feedback is required for rejected/changes requests" });
+        }
+        if (feedbackText) {
+            project.adminFeedback = feedbackText;
+            project.reviewComment = feedbackText;
+        } else if (status === "approved") {
+            project.adminFeedback = "";
+            project.reviewComment = "";
+        }
+
+        project.status = status;
+        project.reviewedAt = new Date();
+        project.reviewedBy = "admin";
+
+        if (status === "approved" && previousStatus !== "approved") {
             const user = await UserModel.findById(project.userId);
             if (user) {
                 user.xp = (user.xp || 0) + (project.projectType === "planning" ? 50 : 100);
@@ -1027,14 +2008,61 @@ app.put("/api/admin/projects/:id/status", requireAdminMiddleware, async (req, re
                 const lessonObjectId = new mongoose.Types.ObjectId(project.lessonId);
                 await Completion.updateOne(
                     { user_id: project.userId, lesson_id: lessonObjectId },
-                    { $setOnInsert: { user_id: project.userId, course_id: project.courseId, lesson_id: lessonObjectId, completed_at: new Date() } },
+                    { $setOnInsert: { user_id: project.userId, course_id: resolvedProjectCourseId || project.courseId, lesson_id: lessonObjectId, completed_at: new Date() } },
                     { upsert: true }
                 );
             }
+        } else if (status !== "approved" && previousStatus === "approved") {
+            await Promise.all([
+                UserModel.updateOne(
+                    { _id: project.userId },
+                    { $pull: { completed_lessons: project.lessonId } }
+                ),
+                Completion.deleteOne({
+                    user_id: project.userId,
+                    lesson_id: new mongoose.Types.ObjectId(project.lessonId)
+                })
+            ]);
         }
-        project.status = status;
+
         await project.save();
-        res.json({ success: true });
+
+        let certificate = null;
+        let certificateIssued = false;
+        let certificateRevoked = false;
+        let certificateClaimable = false;
+        if (resolvedProjectCourseId || project.courseId) {
+            const certResult = await ensureCertificateState({
+                req,
+                userId: project.userId,
+                courseId: resolvedProjectCourseId || project.courseId,
+                issueIfEligible: false
+            });
+            certificate = certResult.certificate || null;
+            certificateIssued = Boolean(certResult.issued);
+            certificateRevoked = Boolean(certResult.revoked);
+            certificateClaimable = Boolean(certResult.claimable);
+        }
+
+        res.json({
+            success: true,
+            project: {
+                _id: project._id.toString(),
+                status: project.status,
+                adminFeedback: project.adminFeedback || "",
+                reviewedAt: project.reviewedAt || null
+            },
+            certificateIssued,
+            certificateRevoked,
+            certificateClaimable,
+            certificate: certificate
+                ? {
+                    certificateId: certificate.certificateId,
+                    completionDate: certificate.completionDate,
+                    qrVerificationLink: certificate.qrVerificationLink
+                }
+                : null
+        });
     } catch (err) { res.status(500).json({ success: false }); }
 });
 
@@ -1093,7 +2121,7 @@ app.delete("/api/admin/projects/:id", requireAdminMiddleware, async (req, res) =
 
 // ✅ FIX: NEW ROUTES FOR MONGODB TASKS ✅
 
-// 1. Insert Document Route (Mongoose Style with ELITE VALIDATION)
+// 1. Insert Document Route (Mongoose Style with ELITE VALIDATION)  
 app.post("/api/mongo/insert", async (req, res) => {
     try {
         const { data } = req.body;
@@ -1181,4 +2209,5 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => console.log(`🔥 MindStep running → http://localhost:${PORT}`));
 
-    
+
+// 

@@ -286,7 +286,7 @@ document.addEventListener("DOMContentLoaded", () => {
   async function loadCourse() {
     try {
       // 1. Fetch Course Info
-      const courseRes = await fetch(`${API_BASE}/api/course/${courseSlug}`);
+      const courseRes = await fetch(`${API_BASE}/api/course/${courseSlug}`, { cache: "no-store" });
       const courseData = await courseRes.json();
       if (!courseData.success) throw new Error("Course not found");
 
@@ -297,7 +297,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const courseId = courseData.course._id;
 
       // 2. Fetch Lessons
-      const lessonRes = await fetch(`${API_BASE}/api/course/${courseSlug}/lessons`);
+      const lessonRes = await fetch(`${API_BASE}/api/course/${courseSlug}/lessons`, { cache: "no-store" });
       const lessonData = await lessonRes.json();
       const lessons = lessonData.lessons || [];
       document.getElementById("lessonCount").textContent = `${lessons.length} Lessons`;
@@ -342,6 +342,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderUI(lessons, completedIds, percent, completedCount) {
     const listEl = document.getElementById("lessonContainer");
     const trackEl = document.getElementById("timelineTrack");
+    const completeBadge = document.getElementById("completeBadge");
     
     listEl.innerHTML = "";
     trackEl.innerHTML = `<div class="track-line"></div><div class="track-fill" id="trackFill"></div>`;
@@ -398,11 +399,10 @@ document.addEventListener("DOMContentLoaded", () => {
     // ✅ Small timeout ensures CSS transition triggers
     setTimeout(() => { ring.style.strokeDashoffset = offset; }, 100);
     
-    // If 100%, Green Mode
-    if (percent === 100) {
-      ring.classList.add("finished");
-      document.getElementById("completeBadge").style.display = "inline-block";
-    }
+    // Ring glow for high completion.
+    if (percent === 100) ring.classList.add("finished");
+    else ring.classList.remove("finished");
+    if (completeBadge) completeBadge.style.display = percent === 100 ? "inline-block" : "none";
 
     // Update Timeline Bar
     const barEl = document.getElementById("trackFill"); 

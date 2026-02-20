@@ -942,7 +942,7 @@
                     <h2 id="uploadTitle">Submit Project</h2>
                     <p id="uploadHint" style="color:var(--text-dim); margin-bottom:20px;"></p>
 
-                    <input type="file" id="projectFileInput" accept=".zip,.pdf,.docx" style="display:none;"
+                    <input type="file" id="projectFileInput" accept=".zip,.docx,.pdf,.txt" style="display:none;"
                         onchange="handleProjectUpload(this.files[0])">
 
                     <button class="btn btn-run" style="margin: 0 auto; pointer-events: none;">
@@ -1035,6 +1035,7 @@
                 userId: JSON.parse(localStorage.getItem("mindstep_user") || '{"_id":"guest"}')._id,
                 defaults: {}, mockMode: false, failCounts: {},
                 taskProgress: {},
+                projectSubmission: null,
                 completedFromServer: new Set(),
                 xp: parseInt(localStorage.getItem("mindstep_xp") || "0"),
                 editorInstance: null,
@@ -1086,14 +1087,15 @@
 
             function getAllowedProjectFormats(stepData) {
                 const inferredType = inferProjectType(stepData);
-                // Planning submissions are document-based (no zip).
+                // Planning submissions accept docs and optional archive proofs.
                 if (inferredType === "planning") {
-                    return ["docx", "pdf"];
+                    return ["zip", "docx", "pdf", "txt"];
                 }
                 const raw = stepData?.submission?.allowedFormats;
                 if (Array.isArray(raw) && raw.length > 0) {
                     return raw.map(f => String(f).toLowerCase().replace(/^\./, "")).filter(Boolean);
                 }
+                // Deployment/code submissions default to zip.
                 return ["zip"];
             }
 
@@ -1112,6 +1114,7 @@
                         (progressData.passedTaskIds || []).forEach(id => state.passed.add(id));
                     }
                     state.taskProgress = progressData.taskProgress || {};
+                    state.projectSubmission = progressData.projectSubmission || null;
                     return state.passed.size !== before;
                 } catch (e) {
                     console.warn("Failed to load progress");
@@ -1265,7 +1268,7 @@
                 setupTerminalInput();
 
                 try {
-                    const res = await fetch(`/api/lesson/${state.lessonId}/details`);
+                    const res = await fetch(`/api/lesson/${state.lessonId}/details`, { cache: "no-store" });
                     const data = await res.json();
                     if (!data.success) throw new Error("API Fail");
                     loadData(data);
@@ -1311,6 +1314,168 @@
                 state.steps = [];
                 const mainDoc = data.lesson || {};
                 const richContent = mainDoc.lesson || mainDoc || {};
+                const escapeHtml = (value) => String(value)
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#39;");
+                const toTextList = (value) => {
+                    if (Array.isArray(value)) {
+                        return value
+                            .filter(item => item !== null && item !== undefined)
+                            .map(String)
+                            .map(item => item.trim())
+                            .filter(Boolean);
+                    }
+                    if (typeof value === "string" && value.trim()) return [value.trim()];
+                    return [];
+                };
+                const getFolderStructureLines = (value) => {
+                    if (!value) return [];
+                    const dedupeLines = (lines) => {
+                        const seen = new Set();
+                        return lines.filter((line) => {
+                            const key = String(line || "").replace(/\s+/g, " ").trim().toLowerCase();
+                            if (!key) return false;
+                            if (seen.has(key)) return false;
+                            seen.add(key);
+                            return true;
+                        });
+                    };
+                    if (Array.isArray(value)) {
+                        return dedupeLines(value.map(String).map(line => line.trimEnd()).filter(Boolean));
+                    }
+                    if (typeof value === "string") {
+                        return dedupeLines(value.split(/\r?\n/).map(line => line.trimEnd()).filter(Boolean));
+                    }
+                    if (typeof value === "object") {
+                        const lines = [];
+                        const rootFolderName = String(value.rootFolderName || value.rootName || "").trim();
+                        if (rootFolderName) {
+                            lines.push(`${rootFolderName}/`);
+                        }
+                        const structure = value.structure || value.rootStructure || value.lines;
+                        if (Array.isArray(structure)) {
+                            structure.forEach(line => {
+                                const text = String(line || "").trimEnd();
+                                if (text) lines.push(text);
+                            });
+                        } else if (typeof structure === "string") {
+                            structure.split(/\r?\n/).forEach(line => {
+                                const text = line.trimEnd();
+                                if (text) lines.push(text);
+                            });
+                        }
+                        return dedupeLines(lines);
+                    }
+                    return [];
+                };
+                const toSectionTitle = (key) => String(key || "")
+                    .replace(/[_-]+/g, " ")
+                    .replace(/([a-z])([A-Z])/g, "$1 $2")
+                    .replace(/\s+/g, " ")
+                    .trim()
+                    .replace(/\b\w/g, (m) => m.toUpperCase());
+                const hasRenderableContent = (value) => {
+                    if (value === null || value === undefined) return false;
+                    if (typeof value === "string") return value.trim().length > 0;
+                    if (typeof value === "number" || typeof value === "boolean") return true;
+                    if (Array.isArray(value)) return value.some(item => hasRenderableContent(item));
+                    if (typeof value === "object") return Object.values(value).some(item => hasRenderableContent(item));
+                    return false;
+                };
+                const renderGenericValue = (value, depth = 0) => {
+                    if (!hasRenderableContent(value) || depth > 4) return "";
+
+                    if (typeof value === "string") {
+                        return `<p style="white-space:pre-wrap;">${escapeHtml(value.trim())}</p>`;
+                    }
+                    if (typeof value === "number" || typeof value === "boolean") {
+                        return `<p>${escapeHtml(String(value))}</p>`;
+                    }
+                    if (Array.isArray(value)) {
+                        const cleaned = value.filter(item => hasRenderableContent(item));
+                        if (cleaned.length === 0) return "";
+                        const allPrimitive = cleaned.every(item => ["string", "number", "boolean"].includes(typeof item));
+                        if (allPrimitive) {
+                            return `<ul>${cleaned.map(item => `<li>${escapeHtml(String(item))}</li>`).join("")}</ul>`;
+                        }
+                        return cleaned.map((item, idx) => {
+                            if (typeof item === "object" && item !== null) {
+                                return `<div class="concept-card" style="margin-bottom:10px;"><p style="font-weight:700; margin-bottom:8px;">Item ${idx + 1}</p>${renderGenericValue(item, depth + 1)}</div>`;
+                            }
+                            return `<p>${escapeHtml(String(item))}</p>`;
+                        }).join("");
+                    }
+                    if (typeof value === "object") {
+                        const entries = Object.entries(value).filter(([, v]) => hasRenderableContent(v));
+                        if (entries.length === 0) return "";
+
+                        let html = "";
+                        if (typeof value.description === "string" && value.description.trim()) {
+                            html += `<p>${escapeHtml(value.description.trim())}</p>`;
+                        }
+                        if (typeof value.code === "string" && value.code.trim()) {
+                            html += `<pre class="code-block"><code>${escapeHtml(value.code)}</code></pre>`;
+                        }
+
+                        entries.forEach(([subKey, subValue]) => {
+                            if (subKey === "description" || subKey === "code") return;
+                            const rendered = renderGenericValue(subValue, depth + 1);
+                            if (!rendered) return;
+                            html += `<div style="margin-top:10px;"><p style="font-weight:600; color:var(--accent); margin-bottom:6px;">${escapeHtml(toSectionTitle(subKey))}</p>${rendered}</div>`;
+                        });
+                        return html;
+                    }
+                    return "";
+                };
+                const knownRichKeys = new Set([
+                    "_id",
+                    "__v",
+                    "title",
+                    "description",
+                    "order",
+                    "course_id",
+                    "estimatedTime",
+                    "type",
+                    "projectType",
+                    "tasks",
+                    "submission",
+                    "video",
+                    "notes",
+                    "pdf",
+                    "lesson",
+                    "created_at",
+                    "createdAt",
+                    "updatedAt",
+                    "intro",
+                    "learningOutcomes",
+                    "deepExplanation",
+                    "conceptBreakdown",
+                    "realWorldAnalogy",
+                    "example",
+                    "commonMistakes",
+                    "summary",
+                    "stepByStepImplementation",
+                    "stepByStepGuide",
+                    "implementationSteps",
+                    "stepByStep",
+                    "steps",
+                    "backendFolderStructure",
+                    "requiredFolderStructure",
+                    "folderStructure",
+                    "projectStructure",
+                    "exampleComponentCode",
+                    "exampleCodeFlow",
+                    "exampleComponent",
+                    "importantRules",
+                    "adminEvaluationCriteria",
+                    "projectUploadSection",
+                    "whyImportant",
+                    "userTask",
+                    "nextLesson"
+                ]);
 
                 // VIDEO, NOTES, PDF INJECTION
                 let mediaHtml = "";
@@ -1384,6 +1549,84 @@
                 }
                 if (richContent.summary) {
                     theoryHtml += `<hr style="border-color:var(--border); margin: 20px 0;"><p style="font-style:italic; color:var(--accent);">💡 <strong>Summary:</strong> ${richContent.summary}</p>`;
+                }
+
+                const implementationSteps = toTextList(
+                    richContent.stepByStepImplementation ||
+                    richContent.stepByStepGuide ||
+                    richContent.implementationSteps ||
+                    richContent.stepByStep ||
+                    richContent.steps
+                );
+                if (implementationSteps.length > 0) {
+                    theoryHtml += `<div class="theory-section"><h3>Step-by-step Implementation</h3><ul>${implementationSteps.map(item => `<li>${item}</li>`).join('')}</ul></div>`;
+                }
+                const folderStructureLines = getFolderStructureLines(
+                    richContent.backendFolderStructure ||
+                    richContent.requiredFolderStructure ||
+                    richContent.folderStructure ||
+                    richContent.projectStructure
+                );
+                if (folderStructureLines.length > 0) {
+                    const folderHeading = richContent.backendFolderStructure ? "Backend Folder Structure" : "Required Folder Structure";
+                    theoryHtml += `<div class="theory-section"><h3>${folderHeading}</h3><pre class="code-block"><code>${escapeHtml(folderStructureLines.join("\n"))}</code></pre></div>`;
+                }
+                const componentExample = richContent.exampleComponentCode || richContent.exampleCodeFlow || richContent.exampleComponent || {};
+                if (componentExample && (componentExample.description || componentExample.code)) {
+                    const componentHeading = richContent.exampleCodeFlow ? "Example Code Flow" : "Reusable Component Example";
+                    theoryHtml += `<div class="theory-section"><h3>${componentHeading}</h3>${componentExample.description ? `<p>${componentExample.description}</p>` : ""}${componentExample.code ? `<pre class="code-block"><code>${escapeHtml(componentExample.code)}</code></pre>` : ""}</div>`;
+                }
+                const importantRules = toTextList(richContent.importantRules);
+                if (importantRules.length > 0) {
+                    theoryHtml += `<div class="theory-section"><h3>Important Rules</h3><div class="mistake-box"><ul style="margin:0; padding-left:20px; color:inherit;">${importantRules.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul></div></div>`;
+                }
+                const evaluationCriteria = toTextList(richContent.adminEvaluationCriteria);
+                if (evaluationCriteria.length > 0) {
+                    theoryHtml += `<div class="theory-section"><h3>Admin Evaluation Criteria</h3><ul>${evaluationCriteria.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul></div>`;
+                }
+                const uploadSection = (richContent.projectUploadSection && typeof richContent.projectUploadSection === "object") ? richContent.projectUploadSection : null;
+                if (uploadSection) {
+                    const uploadTitle = uploadSection.sectionTitle ? escapeHtml(uploadSection.sectionTitle) : "Project Upload Guide";
+                    const uploadSteps = toTextList(uploadSection.uploadSteps);
+                    const allowedFiles = toTextList(uploadSection.allowedFiles);
+                    const notAllowedFiles = toTextList(uploadSection.notAllowed);
+                    const reviewNote = typeof uploadSection.adminReviewNote === "string" ? uploadSection.adminReviewNote.trim() : "";
+                    let uploadHtml = `<div class="theory-section"><h3>${uploadTitle}</h3>`;
+                    if (uploadSteps.length > 0) uploadHtml += `<p style="font-weight:600; margin-bottom:8px;">Steps</p><ul>${uploadSteps.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`;
+                    if (allowedFiles.length > 0) uploadHtml += `<p style="font-weight:600; margin:10px 0 8px;">Allowed Files</p><ul>${allowedFiles.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`;
+                    if (notAllowedFiles.length > 0) uploadHtml += `<p style="font-weight:600; margin:10px 0 8px;">Not Allowed</p><ul>${notAllowedFiles.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`;
+                    if (reviewNote) uploadHtml += `<div class="analogy-box" style="margin-top:10px;">${escapeHtml(reviewNote)}</div>`;
+                    uploadHtml += `</div>`;
+                    theoryHtml += uploadHtml;
+                }
+                const importancePoints = toTextList(richContent.whyImportant);
+                if (importancePoints.length > 0) {
+                    theoryHtml += `<div class="theory-section"><h3>Why This Matters</h3><ul>${importancePoints.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul></div>`;
+                }
+                const userTask = (richContent.userTask && typeof richContent.userTask === "object") ? richContent.userTask : null;
+                if (userTask) {
+                    const taskTitle = userTask.taskTitle ? escapeHtml(userTask.taskTitle) : "Your Task";
+                    const taskInstructions = toTextList(userTask.instructions);
+                    const submissionNote = typeof userTask.submissionNote === "string" ? userTask.submissionNote.trim() : "";
+                    let userTaskHtml = `<div class="theory-section"><h3>${taskTitle}</h3>`;
+                    if (taskInstructions.length > 0) userTaskHtml += `<ul>${taskInstructions.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`;
+                    if (submissionNote) userTaskHtml += `<div class="mistake-box" style="margin-top:10px;">${escapeHtml(submissionNote)}</div>`;
+                    userTaskHtml += `</div>`;
+                    theoryHtml += userTaskHtml;
+                }
+                if (richContent.nextLesson) {
+                    theoryHtml += `<div class="theory-section"><h3>Next Lesson</h3><p>${escapeHtml(richContent.nextLesson)}</p></div>`;
+                }
+                const extraSectionsHtml = Object.entries(richContent || {})
+                    .filter(([key, value]) => !knownRichKeys.has(key) && hasRenderableContent(value))
+                    .map(([key, value]) => {
+                        const rendered = renderGenericValue(value);
+                        if (!rendered) return "";
+                        return `<div class="theory-section"><h3>${escapeHtml(toSectionTitle(key))}</h3>${rendered}</div>`;
+                    })
+                    .join("");
+                if (extraSectionsHtml) {
+                    theoryHtml += extraSectionsHtml;
                 }
 
                 // Combine Media + Theory
@@ -1495,6 +1738,11 @@
                     const formats = getAllowedProjectFormats(step.data);
                     const acceptList = formats.map(f => `.${f}`).join(",");
                     const formatListHtml = formats.map(f => `<b>.${f}</b>`).join(", ");
+                    const submission = state.projectSubmission && typeof state.projectSubmission === "object"
+                        ? state.projectSubmission
+                        : null;
+                    const submissionStatus = String(submission?.status || "").toLowerCase();
+                    const submissionFeedback = String(submission?.adminFeedback || "").trim();
 
                     titleEl.innerText = "Submit Final Project";
                     hintEl.innerHTML = `Upload your file in one of these formats: ${formatListHtml}.`;
@@ -1516,8 +1764,11 @@
                 2. Prepare the final file in: ${formats.map(f => "." + f).join(", ")}.<br>
                 3. Upload the file here.
             </div>
+            ${submissionStatus === "pending" ? `<div class="hint-box" style="display:block; border-color:var(--warning); background:rgba(245,158,11,0.14);"><i class="fas fa-hourglass-half"></i> Submission status: <b>Pending Review</b>. Lesson will complete only after admin approval.</div>` : ""}
+            ${submissionStatus === "rejected" ? `<div class="hint-box" style="display:block; border-color:var(--error); background:rgba(239,68,68,0.14);"><i class="fas fa-rotate-right"></i> Submission status: <b>Changes Requested</b>. ${submissionFeedback ? `<br><b>Admin Feedback:</b> ${submissionFeedback}` : "<br>Please fix and re-upload your file."}</div>` : ""}
+            ${submissionStatus === "approved" ? `<div class="hint-box" style="display:block; border-color:var(--success); background:rgba(34,197,94,0.14);"><i class="fas fa-check-circle"></i> Submission status: <b>Approved</b>. You can continue.</div>` : ""}
         `;
-                    const projectAlreadyApproved = state.completedFromServer.has(step.data._id) || state.passed.has(step.data._id);
+                    const projectAlreadyApproved = submissionStatus === "approved" || state.completedFromServer.has(step.data._id) || state.passed.has(step.data._id);
                     if (projectAlreadyApproved) {
                         els.runBtn.style.display = 'block';
                         els.runBtn.disabled = false;
@@ -1698,12 +1949,14 @@
 
                     if (data.success) {
                         statusText.innerHTML = `<span style="color:var(--success)"><i class="fas fa-check-circle"></i> Upload Complete!</span>`;
+                        const submissionStatus = String(data?.project?.status || "pending").toLowerCase();
+                        state.projectSubmission = data?.project || { status: submissionStatus };
 
                         const adminFb = document.getElementById("adminFeedback");
                         adminFb.style.display = "block";
 
                         const uploadedExt = (file.name.split(".").pop() || "").toLowerCase();
-                        const isDoc = ["pdf", "docx"].includes(uploadedExt);
+                        const isDoc = ["pdf", "docx", "txt"].includes(uploadedExt);
                         const fileIcon = isDoc ? "fa-file-alt" : "fa-file-archive";
                         const typeText = isDoc ? "Project Document" : "Project Submission";
 
@@ -1719,14 +1972,17 @@
                         confetti({ particleCount: 250, spread: 120, origin: { y: 0.6 } });
                         showToast("Project Submitted Successfully! 🎓", "success");
 
-                        state.passed.add(state.steps[state.idx].data._id);
+                        if (submissionStatus === "approved") {
+                            state.passed.add(state.steps[state.idx].data._id);
+                            updateXP(100, false);
+                        } else {
+                            state.passed.delete(state.steps[state.idx].data._id);
+                            showToast("Waiting for admin approval", "warning");
+                        }
                         await loadTaskProgress();
                         renderStep(state.idx);
-                        updateXP(100, false);
 
                         // ✅ FIX: REMOVED AUTO-COMPLETE
-                        showToast("Waiting for admin approval", "warning");
-
                     } else {
                         throw new Error(data.message);
                     }
@@ -2783,20 +3039,52 @@ button:hover { background: #4f46e5; }
                 els.lvlDisplay.innerText = `LVL ${lvl}`;
             }
 
-            function finishLesson() {
+            async function finishLesson() {
+                let completionResponse = { success: true };
+                if (!state.mockMode && !state.isReviewMode) {
+                    try {
+                        const completeRes = await fetch("/api/complete", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ userId: state.userId, lessonId: state.lessonId })
+                        });
+                        completionResponse = await completeRes.json().catch(() => ({ success: completeRes.ok }));
+                    } catch (e) {
+                        completionResponse = { success: false, message: "Failed to sync completion status." };
+                    }
+                }
                 document.querySelector(".footer").style.display = 'none';
                 els.terminalArea.style.display = 'none';
                 els.ws.style.gridTemplateColumns = "1fr";
+                if (!completionResponse.success) {
+                    if (completionResponse.pendingReview) {
+                        els.ws.innerHTML = `
+                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; text-align:center;">
+                        <i class="fas fa-hourglass-half" style="font-size:5rem; color:var(--warning); margin-bottom:20px;"></i>
+                        <h1 style="color:#fff;">Submission Received</h1>
+                        <p style="max-width:520px; color:var(--text-dim); margin:10px auto 20px;">
+                            ${completionResponse.message || "Waiting for admin approval. Lesson and course completion will be unlocked after approval."}
+                        </p>
+                        <button class="btn btn-run" onclick="window.history.back()">Return</button>
+                    </div>`;
+                        showToast("Waiting for admin approval", "warning");
+                    } else {
+                        const errorMessage = completionResponse.message || "Unable to complete lesson right now. Please try again.";
+                        els.ws.innerHTML = `
+                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; text-align:center;">
+                        <i class="fas fa-triangle-exclamation" style="font-size:5rem; color:var(--error); margin-bottom:20px;"></i>
+                        <h1 style="color:#fff;">Completion Not Synced</h1>
+                        <p style="max-width:520px; color:var(--text-dim); margin:10px auto 20px;">${errorMessage}</p>
+                        <button class="btn btn-run" onclick="window.location.reload()">Retry</button>
+                    </div>`;
+                        showToast(errorMessage, "error");
+                    }
+                    localStorage.removeItem(`lastStep_${state.lessonId}`);
+                    return;
+                }
                 els.ws.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; text-align:center;"><i class="fas fa-trophy" style="font-size:5rem; color:var(--warning); margin-bottom:20px;"></i><h1 style="color:#fff;">Module Completed</h1><button class="btn btn-run" onclick="window.history.back()">Return</button></div>`;
                 updateXP(50, false); // Visual only
                 confetti({ particleCount: 300, spread: 100, origin: { y: 0.6 } });
-                if (!state.mockMode && !state.isReviewMode) {
-                    fetch("/api/complete", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ userId: state.userId, lessonId: state.lessonId })
-                    });
-                }
 
                 // ✅ POLISH 2: Reset Resume Point
                 localStorage.removeItem(`lastStep_${state.lessonId}`);

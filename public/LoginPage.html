@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>MindStep — Login</title>
+<title>MindStep - Login</title>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@600;800&display=swap" rel="stylesheet">
@@ -13,10 +13,12 @@
         --primary: #33A1FD;
         --primary-dim: rgba(51, 161, 253, 0.3);
         --accent: #8A2BE2;
+        --gold-soft: #f6d37a;
         --bg-deep: #030305;
         --glass-surface: rgba(255, 255, 255, 0.04);
         --glass-border: rgba(255, 255, 255, 0.08);
         --glass-highlight: rgba(255, 255, 255, 0.15);
+        --glass-strong: rgba(255, 255, 255, 0.12);
         --text-main: #ffffff;
         --text-muted: #94a3b8;
         --danger: #ff4757;
@@ -30,7 +32,10 @@
     body {
         min-height: 100vh;
         font-family: 'Inter', sans-serif;
-        background-color: var(--bg-deep);
+        background:
+            radial-gradient(130% 100% at 10% 0%, rgba(21, 74, 132, 0.22), transparent 60%),
+            radial-gradient(130% 100% at 100% 100%, rgba(91, 32, 122, 0.16), transparent 62%),
+            var(--bg-deep);
         color: var(--text-main);
         display: flex; justify-content: center; align-items: center;
         overflow: hidden;
@@ -40,6 +45,15 @@
     .ambient-light {
         position: absolute; width: 100%; height: 100%; top: 0; left: 0; z-index: -1;
         overflow: hidden;
+    }
+    .ambient-light::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.06) 50%, transparent 70%);
+        transform: translateX(-100%);
+        animation: ambientSweep 10s linear infinite;
+        opacity: 0.25;
     }
     .blob {
         position: absolute; border-radius: 50%;
@@ -70,16 +84,55 @@
         border: 1px solid var(--glass-border);
         border-top: 1px solid var(--glass-highlight);
         border-radius: 24px;
-        /* Subtle "Breathing" Shadow */
         box-shadow: 0 40px 80px rgba(0,0,0,0.5);
-        animation: breathe 6s ease-in-out infinite alternate;
+        opacity: 0;
+        transform: translateY(24px) scale(0.985);
+        animation: cardReveal 0.9s var(--ease-spring) forwards, breathe 6s ease-in-out infinite alternate 0.9s;
         display: flex; position: relative; z-index: 10;
+        isolation: isolate;
         overflow: hidden;
+    }
+    .container::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        padding: 1px;
+        border-radius: inherit;
+        background: linear-gradient(125deg, rgba(113, 203, 255, 0.95), rgba(192, 120, 255, 0.85), rgba(246, 211, 122, 0.6));
+        -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        opacity: 0.75;
+        animation: borderShift 9s linear infinite;
+        pointer-events: none;
+        z-index: 4;
+    }
+    .container::after {
+        content: "";
+        position: absolute;
+        inset: 2px;
+        border-radius: 22px;
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    @keyframes cardReveal {
+        from { opacity: 0; transform: translateY(24px) scale(0.985); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
     }
 
     @keyframes breathe {
         0% { box-shadow: 0 40px 80px rgba(0,0,0,0.5); border-color: var(--glass-border); }
         100% { box-shadow: 0 45px 90px rgba(51, 161, 253, 0.15); border-color: rgba(255,255,255,0.15); }
+    }
+    @keyframes borderShift {
+        0% { filter: hue-rotate(0deg); }
+        100% { filter: hue-rotate(360deg); }
+    }
+    @keyframes ambientSweep {
+        0% { transform: translateX(-120%); }
+        100% { transform: translateX(120%); }
     }
 
     /* --- Left Side: Forms --- */
@@ -119,22 +172,42 @@
 
     /* Apple-Style Inputs */
     .input-group { position: relative; margin-bottom: 18px; }
+    .input-group::after {
+        content: "";
+        position: absolute;
+        inset: -1px;
+        border-radius: 15px;
+        background: linear-gradient(135deg, rgba(51, 161, 253, 0.22), rgba(246, 211, 122, 0.08));
+        opacity: 0;
+        transition: opacity 0.3s var(--ease-spring);
+        pointer-events: none;
+    }
+    .input-group:focus-within::after {
+        opacity: 1;
+    }
     
     .input-group input {
         width: 100%; padding: 16px 16px 16px 45px;
         background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border);
         border-radius: 14px; color: #fff; font-size: 0.95rem; font-family: 'Inter', sans-serif;
+        position: relative;
+        z-index: 2;
         transition: all 0.3s var(--ease-spring);
+    }
+    .input-group input::placeholder {
+        color: #8ea2c2;
     }
     
     .input-group i.icon-left {
         position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
         color: var(--text-muted); font-size: 1rem; transition: 0.3s; pointer-events: none;
+        z-index: 3;
     }
 
     .toggle-pass {
         position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
         color: var(--text-muted); cursor: pointer; transition: 0.3s; font-size: 0.9rem;
+        z-index: 3;
     }
     .toggle-pass:hover { color: var(--primary); transform: translateY(-50%) scale(1.1); }
 
@@ -143,7 +216,7 @@
         border-color: var(--primary); background: rgba(255,255,255,0.06);
         box-shadow: 0 0 0 4px var(--primary-dim); transform: translateY(-2px);
     }
-    .input-group input:focus + i.icon-left { color: var(--primary); }
+    .input-group:focus-within i.icon-left { color: var(--primary); }
 
     /* Error Shake */
     .input-group.error input { border-color: var(--danger); animation: shake 0.4s ease-in-out; }
@@ -153,11 +226,25 @@
     /* Button Micro-interaction */
     .btn-main {
         width: 100%; padding: 16px; border-radius: 14px; border: none;
-        background: linear-gradient(135deg, var(--primary), #0066cc);
+        background: linear-gradient(130deg, #44b6ff 0%, #1f80dd 55%, #0a58bc 100%);
         color: #fff; font-size: 1rem; font-weight: 700; cursor: pointer;
-        box-shadow: 0 10px 30px rgba(51, 161, 253, 0.2); margin-top: 10px;
+        box-shadow: 0 10px 30px rgba(51, 161, 253, 0.28); margin-top: 10px;
         position: relative; overflow: hidden; 
         transition: all 0.3s var(--ease-spring);
+    }
+    .btn-main::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -120%;
+        width: 60%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+        transform: skewX(-20deg);
+        transition: left 0.6s ease;
+    }
+    .btn-main:hover::before {
+        left: 140%;
     }
     .btn-main:hover { transform: translateY(-3px); box-shadow: 0 20px 40px rgba(51, 161, 253, 0.4); }
     .btn-main:active { transform: scale(0.96); box-shadow: 0 5px 15px rgba(51, 161, 253, 0.2); }
@@ -226,9 +313,129 @@
 
     /* Mobile */
     @media (max-width: 900px) {
-        .container { width: 100%; height: 100vh; border-radius: 0; border: none; box-shadow: none; animation: none; }
-        .form-side { width: 100%; padding: 40px 30px; background: transparent; border: none; }
-        .visual-side { display: none; }
+        body {
+            align-items: flex-start;
+            overflow-y: auto;
+            padding: 14px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 430px;
+            min-height: calc(100dvh - 28px);
+            height: auto;
+            max-height: none;
+            margin: 0 auto;
+            border-radius: 28px;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            background:
+                radial-gradient(130% 80% at 0% 0%, rgba(51, 161, 253, 0.2), transparent 60%),
+                radial-gradient(120% 80% at 100% 100%, rgba(138, 43, 226, 0.22), transparent 65%),
+                rgba(10, 12, 18, 0.82);
+            box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6);
+            animation: cardReveal 0.7s var(--ease-spring) forwards;
+        }
+        .container::before { opacity: 0.55; }
+
+        .form-side {
+            width: 100%;
+            padding: 28px 24px 30px;
+            border-right: none;
+            background: linear-gradient(180deg, rgba(20, 36, 66, 0.55), rgba(33, 19, 58, 0.4));
+        }
+
+        .brand {
+            margin-bottom: 28px;
+        }
+
+        .form-wrapper {
+            height: auto;
+            min-height: 520px;
+        }
+
+        .form-panel {
+            transition-duration: 0.45s;
+        }
+
+        h2 {
+            font-size: 2.2rem;
+            line-height: 1.15;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            margin-bottom: 22px;
+            color: #a9b8d1;
+        }
+
+        .input-group {
+            margin-bottom: 16px;
+        }
+
+        .input-group input {
+            min-height: 54px;
+            font-size: 16px;
+            border-radius: 15px;
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .btn-main {
+            min-height: 54px;
+            font-size: 1.03rem;
+            letter-spacing: 0.2px;
+            margin-top: 8px;
+        }
+
+        .switch-text {
+            margin-top: 18px;
+            font-size: 1rem;
+        }
+
+        .admin-link {
+            margin-top: 14px;
+            font-size: 0.9rem;
+        }
+
+        .visual-side {
+            display: none;
+        }
+    }
+
+    @media (max-width: 420px) {
+        body {
+            padding: 10px;
+        }
+
+        .container {
+            min-height: calc(100dvh - 20px);
+            border-radius: 24px;
+        }
+
+        .form-side {
+            padding: 24px 18px 26px;
+        }
+
+        .brand span {
+            font-size: 1.3rem;
+        }
+
+        h2 {
+            font-size: 1.95rem;
+        }
+
+        .subtitle {
+            font-size: 0.95rem;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        * {
+            animation-duration: 0.001ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.001ms !important;
+            scroll-behavior: auto !important;
+        }
     }
 </style>
 </head>
@@ -257,12 +464,12 @@
 
                     <div class="input-group stagger-2">
                         <i class="fas fa-envelope icon-left"></i>
-                        <input type="text" id="login-user" placeholder="Username or Email">
+                        <input type="text" id="login-user" placeholder="Username or Email" autocomplete="username" autocapitalize="none" enterkeyhint="next">
                     </div>
                     
                     <div class="input-group stagger-2">
                         <i class="fas fa-lock icon-left"></i>
-                        <input type="password" id="login-pass" placeholder="Password">
+                        <input type="password" id="login-pass" placeholder="Password" autocomplete="current-password" enterkeyhint="go">
                         <i class="fas fa-eye toggle-pass" onclick="togglePassword('login-pass', this)"></i>
                     </div>
 
@@ -271,7 +478,7 @@
                     <div class="switch-text stagger-3">
                         New here? <a href="#" class="switch-link" onclick="switchForm('signup')">Create Account</a>
                     </div>
-                    <a href="AdminLogin.html" class="admin-link stagger-3">Admin Access →</a>
+                    <a href="AdminLogin.html" class="admin-link stagger-3">Admin Access -></a>
                 </div>
 
                 <div class="form-panel" id="signupPanel">
@@ -378,7 +585,13 @@
 
         inactive.classList.remove('active');
         // Small delay for smooth fade
-        setTimeout(() => active.classList.add('active'), 200);
+        setTimeout(() => {
+            active.classList.add('active');
+            const focusInput = active.querySelector('input:not([type="file"])');
+            if (focusInput) {
+                focusInput.focus();
+            }
+        }, 200);
     }
 
     // --- 5. API LOGIC (Optimistic UI) ---
@@ -453,6 +666,26 @@
 
     document.getElementById('btnLogin').onclick = () => handleAuth('login');
     document.getElementById('btnSignup').onclick = () => handleAuth('signup');
+
+    const loginUserInput = document.getElementById('login-user');
+    const loginPassInput = document.getElementById('login-pass');
+
+    window.addEventListener('load', () => {
+        loginUserInput.focus();
+    });
+
+    loginUserInput.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter') return;
+        event.preventDefault();
+        loginPassInput.focus();
+        loginPassInput.select();
+    });
+
+    loginPassInput.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter') return;
+        event.preventDefault();
+        handleAuth('login');
+    });
 
 </script>
 </body>
