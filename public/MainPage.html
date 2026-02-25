@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
-  <title>MindStep — Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>MindStep - Dashboard</title>
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;800&family=Source+Serif+4:wght@400;600;700&display=swap" rel="stylesheet">
@@ -13,9 +13,13 @@
       --primary: #33A1FD;
       --primary-glow: rgba(51, 161, 253, 0.4);
       --accent: #8A2BE2;
+      --accent-soft: #c084fc;
       --bg-dark: #030305;
+      --bg-deeper: #02030a;
+      --safe-top: env(safe-area-inset-top, 0px);
       --glass-surface: rgba(255, 255, 255, 0.03);
       --glass-border: rgba(255, 255, 255, 0.08);
+      --glass-strong: rgba(255, 255, 255, 0.14);
       --text-main: #ffffff;
       --text-muted: #94a3b8;
       
@@ -28,132 +32,410 @@
 
     body {
       min-height: 100vh;
+      width: 100%;
       font-family: 'Inter', sans-serif;
       background-color: var(--bg-dark);
       background-image: 
-        radial-gradient(circle at 10% 20%, rgba(51, 161, 253, 0.1) 0%, transparent 50%),
-        radial-gradient(circle at 90% 80%, rgba(138, 43, 226, 0.08) 0%, transparent 50%);
+        radial-gradient(circle at 12% 18%, rgba(51, 161, 253, 0.16) 0%, transparent 48%),
+        radial-gradient(circle at 90% 82%, rgba(138, 43, 226, 0.14) 0%, transparent 54%),
+        linear-gradient(160deg, #05070f 0%, #060815 56%, #070614 100%);
       background-attachment: fixed;
       color: var(--text-main);
       overflow-x: hidden;
+      position: relative;
+      padding-top: var(--safe-top);
     }
 
     .noise {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
       pointer-events: none; z-index: 0;
+      opacity: 0.65;
+    }
+
+    .particle-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .particle-layer::before,
+    .particle-layer::after {
+      content: "";
+      position: absolute;
+      inset: -30%;
+      background-repeat: repeat;
+      opacity: 0.26;
+      mix-blend-mode: screen;
+      transform: translate3d(0, 0, 0);
+    }
+    .particle-layer::before {
+      background-image:
+        radial-gradient(circle at 20% 30%, rgba(125, 211, 252, 0.52) 0px, rgba(125, 211, 252, 0.52) 1.2px, transparent 1.2px),
+        radial-gradient(circle at 60% 75%, rgba(196, 181, 253, 0.55) 0px, rgba(196, 181, 253, 0.55) 1.1px, transparent 1.1px);
+      background-size: 180px 180px, 220px 220px;
+      animation: floatParticles 26s linear infinite;
+    }
+    .particle-layer::after {
+      background-image:
+        radial-gradient(circle at 70% 22%, rgba(244, 114, 182, 0.45) 0px, rgba(244, 114, 182, 0.45) 1px, transparent 1px),
+        radial-gradient(circle at 25% 80%, rgba(56, 189, 248, 0.4) 0px, rgba(56, 189, 248, 0.4) 1px, transparent 1px);
+      background-size: 240px 240px, 200px 200px;
+      animation: floatParticlesReverse 34s linear infinite;
+    }
+
+    @keyframes floatParticles {
+      from { transform: translate3d(-4%, -3%, 0) scale(1); }
+      to { transform: translate3d(6%, 7%, 0) scale(1.04); }
+    }
+    @keyframes floatParticlesReverse {
+      from { transform: translate3d(5%, -2%, 0) scale(1.03); }
+      to { transform: translate3d(-6%, 6%, 0) scale(1); }
     }
 
     /* --- Navigation --- */
     nav {
-      position: sticky; top: 0; z-index: 100;
-      padding: 15px 40px;
-      background: rgba(10, 10, 15, 0.85);
-      backdrop-filter: blur(20px); border-bottom: 1px solid var(--glass-border);
-      display: flex; justify-content: space-between; align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 120;
+      margin: 12px auto 0;
+      width: min(1280px, calc(100% - 28px));
+      padding: 12px 20px;
+      background: rgba(7, 9, 18, 0.72);
+      backdrop-filter: blur(22px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      transition: all 0.35s ease;
+      box-shadow: 0 18px 42px rgba(2, 6, 23, 0.45);
+    }
+    nav.nav-scrolled {
+      margin-top: 8px;
+      width: min(1180px, calc(100% - 18px));
+      padding: 10px 16px;
+      background: rgba(7, 10, 20, 0.84);
+      box-shadow: 0 22px 55px rgba(2, 6, 23, 0.55);
     }
 
     .brand { display: flex; align-items: center; gap: 10px; }
-    .brand i { font-size: 1.5rem; color: var(--primary); filter: drop-shadow(0 0 10px var(--primary-glow)); }
-    .brand span { font-family: 'Orbitron'; font-size: 1.2rem; font-weight: 800; letter-spacing: 1px; }
+    .brand i {
+      font-size: 1.45rem;
+      color: var(--primary);
+      filter: drop-shadow(0 0 14px var(--primary-glow));
+    }
+    .brand span {
+      font-family: 'Orbitron';
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: 0.9px;
+      color: #f8fafc;
+    }
 
-    .nav-items { display: flex; gap: 25px; }
+    .nav-items {
+      display: flex;
+      gap: 6px;
+      padding: 5px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(15, 23, 42, 0.35);
+      backdrop-filter: blur(10px);
+    }
     .nav-link { 
-      color: var(--text-muted); text-decoration: none; font-size: 0.9rem; font-weight: 500; 
-      transition: 0.3s; position: relative;
+      color: #a7b4cc;
+      text-decoration: none;
+      font-size: 0.88rem;
+      font-weight: 600;
+      transition: 0.28s;
+      position: relative;
+      padding: 8px 14px;
+      border-radius: 999px;
+      letter-spacing: 0.15px;
     }
-    .nav-link:hover, .nav-link.active { color: #fff; text-shadow: 0 0 10px var(--primary-glow); }
+    .nav-link:hover,
+    .nav-link.active {
+      color: #fff;
+      background: linear-gradient(120deg, rgba(51, 161, 253, 0.22), rgba(138, 43, 226, 0.24));
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+    }
     
-    .user-chip {
-      display: flex; align-items: center; gap: 12px;
-      padding: 6px 12px 6px 6px;
-      background: var(--glass-surface); border: 1px solid var(--glass-border);
-      border-radius: 50px; transition: 0.3s; cursor: pointer;
+    .nav-right {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-shrink: 0;
     }
-    .user-chip:hover { border-color: var(--primary); background: rgba(51, 161, 253, 0.1); }
-    .user-chip img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary); }
-    .user-chip span { font-size: 0.9rem; font-weight: 600; padding-right: 5px; }
+
+    .user-chip {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 5px 10px 5px 5px;
+      background: rgba(12, 20, 36, 0.72);
+      border: 1px solid var(--glass-border);
+      border-radius: 50px;
+      transition: 0.28s;
+      cursor: pointer;
+    }
+    .user-chip:hover {
+      border-color: rgba(56, 189, 248, 0.55);
+      background: rgba(19, 37, 64, 0.84);
+      transform: translateY(-1px);
+    }
+    .user-chip img {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1px solid rgba(56, 189, 248, 0.8);
+    }
+    .user-chip span {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #e2e8f0;
+      max-width: 130px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .btn-logout {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      font-size: 0.86rem;
+      border-color: rgba(255, 255, 255, 0.2);
+      background: rgba(15, 23, 42, 0.75);
+    }
+    .btn-logout:hover {
+      border-color: rgba(251, 113, 133, 0.55);
+      background: rgba(127, 29, 29, 0.26);
+    }
 
     /* --- Hero Section --- */
     .hero {
-      text-align: center; padding: 80px 20px 60px;
-      position: relative; z-index: 1;
+      text-align: center;
+      padding: 76px 20px 44px;
+      position: relative;
+      z-index: 1;
+      max-width: 1180px;
+      margin: 0 auto;
     }
     .hero h1 {
-      font-family: 'Orbitron'; font-size: 3rem; margin-bottom: 15px;
-      background: linear-gradient(135deg, #fff 0%, var(--primary) 100%);
+      font-family: 'Orbitron';
+      font-size: clamp(2rem, 4.8vw, 3.6rem);
+      margin-bottom: 14px;
+      letter-spacing: 0.5px;
+      background: linear-gradient(135deg, #f8fafc 0%, #7dd3fc 55%, #a78bfa 100%);
       background-clip: text;
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      filter: drop-shadow(0 0 20px rgba(51, 161, 253, 0.2));
+      filter: drop-shadow(0 0 22px rgba(51, 161, 253, 0.26));
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
-    .hero p { font-size: 1.1rem; color: var(--text-muted); margin-bottom: 30px; }
+    .hero h1 span { overflow-wrap: anywhere; }
+    .hero p {
+      font-size: clamp(0.98rem, 1.8vw, 1.14rem);
+      color: #aab7ce;
+      margin-bottom: 30px;
+    }
 
     /* Progress Overview */
     .main-progress {
-      max-width: 800px; margin: 0 auto;
-      background: var(--card-bg); border: 1px solid var(--glass-border);
-      border-radius: 20px; padding: 30px;
-      backdrop-filter: blur(10px);
-      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+      max-width: 860px;
+      margin: 0 auto;
+      background:
+        linear-gradient(145deg, rgba(8, 14, 28, 0.86), rgba(12, 20, 36, 0.76));
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 24px;
+      padding: clamp(20px, 3vw, 30px);
+      backdrop-filter: blur(16px);
+      box-shadow: 0 26px 55px rgba(2, 6, 23, 0.5);
+      position: relative;
+      overflow: hidden;
     }
-    .progress-header { display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 0.9rem; color: var(--text-muted); }
+    .main-progress::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(95deg, rgba(56, 189, 248, 0.1), transparent 45%, rgba(167, 139, 250, 0.12));
+      pointer-events: none;
+    }
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      font-size: 0.9rem;
+      color: #b9c6dc;
+      position: relative;
+      z-index: 1;
+    }
     
     .bar-track {
-      width: 100%; height: 10px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden;
+      width: 100%;
+      height: 11px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      position: relative;
+      z-index: 1;
     }
     .bar-fill {
-      height: 100%; width: 0%; background: linear-gradient(90deg, var(--primary), var(--accent));
-      border-radius: 10px; box-shadow: 0 0 15px var(--primary);
-      transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #38bdf8 0%, #6366f1 50%, #c084fc 100%);
+      border-radius: inherit;
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.45);
+      transition: width 1s cubic-bezier(0.2, 0.9, 0.2, 1);
     }
 
     /* --- Course Grid --- */
     .grid-container {
-      max-width: 1200px; margin: 50px auto; padding: 0 20px;
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 25px; z-index: 1; position: relative;
+      max-width: 1240px;
+      margin: 36px auto 20px;
+      padding: 0 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(295px, 1fr));
+      gap: 22px;
+      z-index: 1;
+      position: relative;
     }
 
 
     .course-card {
-      background: var(--card-bg); border: 1px solid var(--glass-border);
-      border-radius: 20px; padding: 25px;
-      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-      position: relative; overflow: hidden;
-      display: flex; flex-direction: column; justify-content: space-between;
+      background: linear-gradient(160deg, rgba(11, 17, 30, 0.92), rgba(16, 25, 43, 0.84));
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 22px;
+      padding: 22px;
+      transition: transform 0.28s ease, box-shadow 0.28s ease, border-color 0.28s ease;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
       min-height: 280px;
+      transform-style: preserve-3d;
+      will-change: transform;
+      backdrop-filter: blur(12px);
     }
     
     .course-card::before {
-      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
-      background: linear-gradient(90deg, transparent, var(--primary), transparent);
-      opacity: 0; transition: 0.3s;
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      padding: 1px;
+      background: linear-gradient(120deg, rgba(125, 211, 252, 0.75), rgba(192, 132, 252, 0.72), rgba(56, 189, 248, 0.2));
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      opacity: 0.2;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+    .course-card::after {
+      content: '';
+      position: absolute;
+      inset: auto -45% -65% -45%;
+      height: 180px;
+      background: radial-gradient(circle at center, rgba(56, 189, 248, 0.2), transparent 70%);
+      opacity: 0;
+      transition: opacity 0.28s ease;
+      pointer-events: none;
     }
     .course-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 15px 30px rgba(0,0,0,0.4);
-      border-color: rgba(51, 161, 253, 0.3);
+      transform: translateY(-6px);
+      box-shadow: 0 18px 40px rgba(2, 6, 23, 0.55);
+      border-color: rgba(125, 211, 252, 0.45);
     }
-    .course-card:hover::before { opacity: 1; }
+    .course-card:hover::before { opacity: 0.95; }
+    .course-card:hover::after { opacity: 1; }
+    .course-card.is-tilting { transition-duration: 0.09s; }
 
-    .course-card h3 { font-size: 1.4rem; font-weight: 700; margin-bottom: 10px; }
-    .course-card p { font-size: 0.95rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 20px; flex-grow: 1; }
+    .course-card h3 {
+      font-size: 1.42rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      letter-spacing: 0.2px;
+      color: #eef4ff;
+      overflow-wrap: anywhere;
+    }
+    .course-card p {
+      font-size: 0.95rem;
+      color: #aebcd3;
+      line-height: 1.62;
+      margin-bottom: 18px;
+      flex-grow: 1;
+      overflow-wrap: anywhere;
+    }
 
     .card-meta {
-      display: flex; justify-content: space-between; align-items: center; margin-top: auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: auto;
+      gap: 10px;
     }
     .badge {
-      font-size: 0.75rem; padding: 4px 10px; border-radius: 20px;
-      background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid var(--glass-border);
+      font-size: 0.75rem;
+      padding: 5px 10px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.05);
+      color: #b7c5db;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      white-space: nowrap;
     }
 
     /* Start Button */
     .btn-start {
-      padding: 10px 24px; border-radius: 50px; border: none;
-      background: var(--primary); color: #fff; font-weight: 600; cursor: pointer;
-      box-shadow: 0 5px 15px rgba(51, 161, 253, 0.25); transition: 0.2s;
+      width: 100%;
+      min-height: 44px;
+      padding: 10px 18px;
+      border-radius: 999px;
+      border: 1px solid rgba(125, 211, 252, 0.35);
+      background: linear-gradient(125deg, #2ea7ff 0%, #1d7de8 55%, #2463d5 100%);
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 8px 18px rgba(37, 99, 235, 0.34);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
-    .btn-start:hover { transform: scale(1.05); box-shadow: 0 10px 25px rgba(51, 161, 253, 0.4); }
+    .btn-start:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 26px rgba(37, 99, 235, 0.45);
+    }
+    .btn-start.completed {
+      border-color: rgba(34, 197, 94, 0.45);
+      background: linear-gradient(125deg, #22c55e 0%, #16a34a 55%, #15803d 100%);
+      box-shadow: 0 8px 18px rgba(22, 163, 74, 0.34);
+    }
+    .btn-start.completed:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 24px rgba(22, 163, 74, 0.42);
+    }
+
+    .course-progress-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.79rem;
+      margin-bottom: 8px;
+      color: #9fb0ca;
+    }
+    .course-progress-track {
+      height: 7px;
+      margin-bottom: 18px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+    }
     .certificate-section {
       display: none;
       margin-top: 22px;
@@ -213,7 +495,7 @@
     .modal-box h3 { font-family: 'Orbitron'; font-size: 1.5rem; margin-bottom: 10px; }
     .modal-box p { color: var(--text-muted); margin-bottom: 25px; }
 
-    .modal-actions { display: flex; gap: 15px; justify-content: center; }
+    .modal-actions { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
     .btn-cancel {
       padding: 10px 20px; background: transparent; border: 1px solid var(--glass-border);
       color: #fff; border-radius: 12px; cursor: pointer; transition: 0.2s;
@@ -700,18 +982,204 @@
     }
 
     footer {
-      text-align: center; padding: 40px; border-top: 1px solid var(--glass-border);
-      color: var(--text-muted); font-size: 0.9rem; margin-top: 50px;
+      text-align: center;
+      padding: 36px 18px 44px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      color: #96a7c3;
+      font-size: 0.88rem;
+      margin-top: 46px;
+      position: relative;
+      z-index: 1;
     }
 
     @media (max-width: 768px) {
-      nav { padding: 15px 20px; }
-      .nav-link { display: none; }
-      .hero h1 { font-size: 2.2rem; }
+      body { background-attachment: scroll; }
+
+      nav,
+      nav.nav-scrolled {
+        position: relative;
+        top: 0;
+        width: calc(100% - 12px);
+        margin: 8px auto 0;
+        border-radius: 14px;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 8px 10px;
+      }
+      .brand {
+        order: 1;
+        min-width: 0;
+        flex: 1 1 auto;
+      }
+      .nav-right {
+        order: 2;
+        margin-left: auto;
+        min-width: 0;
+      }
+      .user-chip {
+        gap: 8px;
+        padding: 4px 8px 4px 4px;
+      }
+      .user-chip span { max-width: 96px; }
+      .nav-items {
+        order: 3;
+        width: 100%;
+        padding: 3px;
+        justify-content: flex-start;
+        overflow-x: auto;
+        scrollbar-width: none;
+        gap: 4px;
+        border-radius: 12px;
+      }
+      .nav-items::-webkit-scrollbar { display: none; }
+      .nav-items .nav-link:last-child {
+        margin-right: 1px;
+      }
+      .nav-link {
+        font-size: 0.76rem;
+        padding: 7px 10px;
+        flex: 0 0 auto;
+        text-align: center;
+        min-width: 76px;
+      }
+
+      .hero {
+        padding: 24px 10px 22px;
+      }
+      .hero h1 {
+        line-height: 1.2;
+        font-size: clamp(1.58rem, 7.3vw, 2.1rem);
+      }
+      .hero p {
+        margin-bottom: 18px;
+        padding-inline: 4px;
+        font-size: 0.97rem;
+      }
+      .main-progress {
+        border-radius: 18px;
+        padding: 14px;
+      }
+      .grid-container {
+        grid-template-columns: 1fr;
+        gap: 14px;
+        padding: 0 10px;
+        margin-top: 18px;
+      }
+      .course-card {
+        min-height: auto;
+        padding: 16px;
+      }
+      .card-meta { gap: 8px; }
+      .badge {
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
+      .modal-box {
+        padding: 28px 22px;
+        border-radius: 20px;
+      }
+      .premium-cinematic {
+        width: min(620px, 96vw);
+        border-radius: 20px;
+        padding: 26px 18px;
+      }
+      .cert-modal { width: min(1040px, 98vw); }
       .cert-shell { padding: 24px 16px 18px; }
       .cert-footer { grid-template-columns: 1fr; gap: 12px; text-align: center; }
       .cert-date-wrap { text-align: center; }
       .cert-sign { text-align: center; }
+      .cert-download-btn { width: 100%; }
+    }
+
+    @media (max-width: 480px) {
+      .brand span {
+        font-size: 0.98rem;
+      }
+      .brand i { font-size: 1.25rem; }
+      .nav-right { gap: 8px; }
+      .nav-items {
+        display: flex;
+      }
+      .nav-link {
+        width: auto;
+        min-width: 70px;
+      }
+      .user-chip {
+        padding: 3px;
+        min-width: auto;
+      }
+      .user-chip span {
+        display: none;
+      }
+      .btn-logout {
+        width: 32px;
+        height: 32px;
+      }
+      .modal-box {
+        width: 94%;
+        padding: 22px 16px;
+        border-radius: 18px;
+      }
+      .modal-actions {
+        width: 100%;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .btn-cancel,
+      .btn-confirm {
+        width: 100%;
+      }
+      .main-progress {
+        padding: 13px;
+      }
+      .progress-header {
+        font-size: 0.83rem;
+      }
+      .claim-certificate-btn {
+        width: 100%;
+        padding: 12px 16px;
+      }
+      .course-card h3 {
+        font-size: 1.14rem;
+      }
+      .course-card p {
+        font-size: 0.9rem;
+      }
+      .badge {
+        font-size: 0.68rem;
+        padding: 4px 8px;
+      }
+      .premium-cinematic h2 {
+        font-size: clamp(1.24rem, 7vw, 1.7rem);
+      }
+      .cert-name {
+        font-size: clamp(1.55rem, 9.4vw, 2.1rem);
+      }
+      .cert-course {
+        letter-spacing: 0.5px;
+      }
+    }
+
+    @media (max-width: 380px) {
+      .brand span { font-size: 0.96rem; }
+      .nav-link {
+        font-size: 0.72rem;
+        padding: 6px 8px;
+      }
+      .hero { padding-top: 20px; }
+      .progress-header { font-size: 0.78rem; }
+      .btn-start { font-size: 0.86rem; }
+      .cert-id-note { overflow-wrap: anywhere; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+      }
     }
   </style>
 </head>
@@ -719,6 +1187,7 @@
 <body>
 
   <div class="noise"></div>
+  <div class="particle-layer"></div>
 
   <nav>
     <div class="brand">
@@ -730,15 +1199,14 @@
       <a href="MainPage.html" class="nav-link active">Dashboard</a>
       <a href="guides.html" class="nav-link">Guides</a>
       <a href="About.html" class="nav-link">About</a>
-      <a href="#" class="nav-link">Community</a>
     </div>
 
-    <div style="display:flex; gap:15px; align-items:center;">
+    <div class="nav-right">
       <div class="user-chip" id="userProfile">
         <img id="userImg" src="" alt="U">
         <span id="userName">User</span>
       </div>
-      <button class="btn-cancel" style="padding:6px 12px; font-size:0.85rem;" onclick="openExit()">
+      <button class="btn-cancel btn-logout" onclick="openExit()" aria-label="Log out">
         <i class="fas fa-sign-out-alt"></i>
       </button>
     </div>
@@ -851,30 +1319,168 @@ let masterCertificate = null;
 let allCoursesComplete = false;
 let certificateAnimationRunning = false;
 
+function readStoredUser() {
+  try {
+    const saved = localStorage.getItem("mindstep_user");
+    return saved ? JSON.parse(saved) : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function writeStoredUser(user) {
+  const payload = JSON.stringify(user || {});
+  localStorage.setItem("mindstep_user", payload);
+  localStorage.setItem("user", payload);
+}
+
+function buildFallbackAvatar(name) {
+  const safeName = encodeURIComponent(String(name || "User").trim() || "User");
+  return `https://ui-avatars.com/api/?name=${safeName}&background=33A1FD&color=fff&bold=true`;
+}
+
+function normalizeGoogleAvatar(url) {
+  let raw = String(url || "").trim();
+  if (!raw || raw === "null" || raw === "undefined") return "";
+  if (/lh3\.googleusercontent\.com/i.test(raw)) {
+    raw = raw.replace(/=s\d+(?:-c)?$/i, "=s256-c");
+  }
+  return raw;
+}
+
+function resolveUserAvatar(user) {
+  const preferred = normalizeGoogleAvatar(user?.image);
+  if (preferred) return preferred;
+  return buildFallbackAvatar(user?.username);
+}
+
+function applyActiveUserToUi(user) {
+  const safeName = String(user?.username || "Learner").trim() || "Learner";
+  const userNameEl = document.getElementById("userName");
+  const heroNameEl = document.getElementById("heroName");
+  const userImgEl = document.getElementById("userImg");
+
+  if (userNameEl) userNameEl.textContent = safeName;
+  if (heroNameEl) heroNameEl.textContent = safeName;
+  if (!userImgEl) return;
+
+  const fallbackUrl = buildFallbackAvatar(safeName);
+  const avatarUrl = resolveUserAvatar(user);
+  userImgEl.referrerPolicy = "no-referrer";
+  userImgEl.onerror = () => {
+    userImgEl.onerror = null;
+    userImgEl.src = fallbackUrl;
+  };
+  userImgEl.src = avatarUrl;
+}
+
+async function syncLatestUserProfile(userId) {
+  const id = String(userId || "").trim();
+  if (!id) return;
+  try {
+    const res = await fetch(`${API_BASE}/api/user/${encodeURIComponent(id)}/profile`);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success || !data.user) return;
+
+    activeUser = { ...(activeUser || {}), ...data.user };
+    writeStoredUser(activeUser);
+    applyActiveUserToUi(activeUser);
+  } catch (_) {
+    // Ignore silent sync failure.
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   
   // 1. Auth Check
-  const saved = localStorage.getItem("mindstep_user");
-  if (!saved) {
+  const user = readStoredUser();
+  if (!user || !user._id) {
     window.location.href = "LoginPage.html";
     return;
   }
-  const user = JSON.parse(saved);
   activeUser = user;
   
   // 2. Populate UI
-  document.getElementById("userName").textContent = user.username;
-  document.getElementById("heroName").textContent = user.username;
+  applyActiveUserToUi(activeUser);
   
   // 🔥 FIX 3: Safe Image Fallback
-  document.getElementById("userImg").src = 
-    (user.image && user.image.trim() !== "") 
-      ? user.image 
-      : "https://ui-avatars.com/api/?name=" + user.username + "&background=33A1FD&color=fff";
+  setupNavScroll();
+  syncLatestUserProfile(activeUser._id);
 
   // 3. Load Data
-  loadCourses(user._id);
+  loadCourses(activeUser._id);
 });
+
+function setupNavScroll() {
+  const nav = document.querySelector("nav");
+  if (!nav) return;
+
+  const sync = () => {
+    if (window.scrollY > 18) {
+      nav.classList.add("nav-scrolled");
+    } else {
+      nav.classList.remove("nav-scrolled");
+    }
+  };
+
+  sync();
+  window.addEventListener("scroll", sync, { passive: true });
+}
+
+function animateElementProgress(el, targetPercent) {
+  if (!el) return;
+  const safeTarget = Math.max(0, Math.min(100, Number(targetPercent) || 0));
+  requestAnimationFrame(() => {
+    el.style.width = `${safeTarget}%`;
+  });
+}
+
+function animateTotalProgress(targetPercent) {
+  const percentEl = document.getElementById("totalPercent");
+  const barEl = document.getElementById("totalBar");
+  const safeTarget = Math.max(0, Math.min(100, Number(targetPercent) || 0));
+  const duration = 980;
+  const start = performance.now();
+
+  function frame(now) {
+    const progress = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const value = Math.round(safeTarget * eased);
+    if (percentEl) percentEl.textContent = `${value}%`;
+    if (barEl) barEl.style.width = `${value}%`;
+    if (progress < 1) requestAnimationFrame(frame);
+  }
+
+  requestAnimationFrame(frame);
+}
+
+function activateCardTilt(card) {
+  if (!card || window.matchMedia("(pointer: coarse)").matches) return;
+
+  let rafId = null;
+
+  const updateTilt = (event) => {
+    const bounds = card.getBoundingClientRect();
+    const x = (event.clientX - bounds.left) / bounds.width;
+    const y = (event.clientY - bounds.top) / bounds.height;
+    const rotateY = (x - 0.5) * 8;
+    const rotateX = (0.5 - y) * 6;
+
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(() => {
+      card.classList.add("is-tilting");
+      card.style.transform = `perspective(900px) rotateX(${rotateX.toFixed(2)}deg) rotateY(${rotateY.toFixed(2)}deg) translateY(-4px)`;
+    });
+  };
+
+  const resetTilt = () => {
+    card.classList.remove("is-tilting");
+    card.style.transform = "";
+  };
+
+  card.addEventListener("mousemove", updateTilt);
+  card.addEventListener("mouseleave", resetTilt);
+}
 
 async function loadCourses(userId) {
   try {
@@ -904,12 +1510,16 @@ async function loadCourses(userId) {
         progress = pData.success ? (pData.percent || 0) : 0;
       } catch(e) {}
 
-      totalProg += progress;
+      const normalizedProgress = Math.max(0, Math.min(100, Number(progress) || 0));
+      totalProg += normalizedProgress;
       count++;
-      if (progress >= 100) completedCourses++;
+      if (normalizedProgress >= 100) completedCourses++;
 
       // 🔥 FIX 1: Description Safety Check (Prevents Crash)
       const description = (course.description || "No description available.").substring(0, 80) + "...";
+      const isCompleted = normalizedProgress >= 100;
+      const actionLabel = isCompleted ? "Completed" : (normalizedProgress > 0 ? "Continue" : "Start Course");
+      const actionIcon = isCompleted ? "fa-check" : "fa-arrow-right";
 
       // Create Card
       const card = document.createElement("div");
@@ -917,7 +1527,7 @@ async function loadCourses(userId) {
       card.innerHTML = `
         <div>
           <div class="card-meta" style="margin-bottom:15px;">
-            <span class="badge" style="background:rgba(51,161,253,0.1); color:#33A1FD;">${course.category || 'Development'}</span>
+            <span class="badge" style="background:rgba(51,161,253,0.12); color:#67cbff; border-color:rgba(103,203,255,0.34);">${course.category || 'Development'}</span>
             <span class="badge"><i class="fas fa-book-open"></i> ${lessonCount} Lessons</span>
           </div>
           <h3>${course.title}</h3>
@@ -925,25 +1535,26 @@ async function loadCourses(userId) {
         </div>
         
         <div>
-          <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:8px; opacity:0.7;">
+          <div class="course-progress-row">
             <span>Progress</span>
-            <span>${progress}%</span>
+            <span>${normalizedProgress}%</span>
           </div>
-          <div class="bar-track" style="height:6px; margin-bottom:20px;">
-            <div class="bar-fill" style="width:${progress}%"></div>
+          <div class="bar-track course-progress-track">
+            <div class="bar-fill js-course-progress" data-target="${normalizedProgress}" style="width:0%"></div>
           </div>
-          <button class="btn-start" onclick="openCourse('${course.slug}')">
-            ${progress > 0 ? 'Continue' : 'Start Course'} <i class="fas fa-arrow-right"></i>
+          <button class="btn-start${isCompleted ? " completed" : ""}" onclick="openCourse('${course.slug}')">
+            ${actionLabel} <i class="fas ${actionIcon}"></i>
           </button>
         </div>
       `;
       grid.appendChild(card);
+      activateCardTilt(card);
+      animateElementProgress(card.querySelector(".js-course-progress"), normalizedProgress);
     }
 
     // Update Global Progress
     const avg = count ? Math.round(totalProg / count) : 0;
-    document.getElementById("totalPercent").textContent = avg + "%";
-    document.getElementById("totalBar").style.width = avg + "%";
+    animateTotalProgress(avg);
     allCoursesComplete = count > 0 && completedCourses === count;
     setupCertificateSection(userId, allCoursesComplete);
 

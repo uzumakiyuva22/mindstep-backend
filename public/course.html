@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
-  <title>MindStep — Course Center</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>MindStep - Course Center</title>
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@600;800&display=swap" rel="stylesheet">
@@ -40,7 +40,7 @@
     }
 
     /* Navbar */
-    nav {
+    .top-nav {
       padding: 18px 40px;
       display: flex; justify-content: space-between; align-items: center;
       background: rgba(10, 10, 15, 0.9);
@@ -94,7 +94,13 @@
       display: flex; justify-content: center; align-items: center;
       margin-bottom: 25px;
     }
-    svg { transform: rotate(-90deg); width: 100%; height: 100%; filter: drop-shadow(0 0 15px var(--sky-glow)); }
+    svg {
+      transform: rotate(-90deg);
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 0 15px var(--sky-glow));
+      overflow: visible;
+    }
     circle { fill: none; stroke-width: 12; stroke-linecap: round; transition: stroke-dashoffset 1s cubic-bezier(0.22, 1, 0.36, 1); }
     .ring-track { stroke: rgba(255,255,255,0.05); }
     .ring-progress { 
@@ -214,13 +220,279 @@
 
     .node-label { font-size: 0.85rem; font-weight: 500; color: rgba(255,255,255,0.8); }
 
+    /* Mobile App-Style Redesign (Desktop remains unchanged) */
+    .mobile-tabbar {
+      display: none;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        background-attachment: scroll;
+        background-image:
+          radial-gradient(circle at 0% 0%, rgba(51, 161, 253, 0.25) 0%, transparent 52%),
+          radial-gradient(circle at 100% 100%, rgba(138, 43, 226, 0.2) 0%, transparent 55%),
+          linear-gradient(170deg, #050913 0%, #070f20 54%, #0b1021 100%);
+      }
+
+      .top-nav {
+        top: 8px;
+        margin: 0 auto;
+        width: calc(100% - 14px);
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.13);
+        background: rgba(4, 10, 22, 0.95);
+        padding: 12px 14px;
+        box-shadow: 0 18px 40px rgba(2, 8, 23, 0.45);
+        backdrop-filter: blur(22px);
+        z-index: 220;
+      }
+
+      .brand span {
+        font-size: 1.05rem;
+        letter-spacing: 0.6px;
+      }
+      .brand i {
+        font-size: 1.2rem;
+      }
+
+      .user-pill {
+        font-size: 0.76rem;
+        padding: 6px 11px;
+        max-width: 120px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        background: rgba(30, 64, 175, 0.22);
+        border-color: rgba(125, 211, 252, 0.26);
+        color: #b7e4ff;
+      }
+
+      .container {
+        padding: 20px 10px calc(96px + env(safe-area-inset-bottom));
+      }
+
+      .back-btn {
+        margin: 4px 0 18px;
+        font-size: 0.83rem;
+        padding: 9px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(10, 18, 34, 0.7);
+      }
+
+      .dashboard-grid {
+        gap: 14px;
+        margin-bottom: 16px;
+      }
+
+      .glass-panel {
+        border-radius: 24px;
+        padding: 18px;
+        border-color: rgba(255, 255, 255, 0.13);
+        background: linear-gradient(155deg, rgba(12, 18, 35, 0.9), rgba(16, 24, 42, 0.78));
+        box-shadow: 0 16px 34px rgba(2, 8, 23, 0.38);
+      }
+
+      .progress-section {
+        min-height: auto;
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 16px;
+        text-align: left;
+      }
+
+      .progress-ring-container {
+        width: 132px;
+        height: 132px;
+        margin-bottom: 0;
+        flex-shrink: 0;
+      }
+      .percentage-label {
+        font-size: 1.7rem;
+      }
+      .course-meta h1 {
+        font-size: 1.12rem;
+        margin-bottom: 6px;
+        overflow-wrap: anywhere;
+      }
+      .course-meta p {
+        font-size: 0.84rem;
+        line-height: 1.45;
+      }
+
+      #completeBadge {
+        margin-top: 10px !important;
+        font-size: 0.76rem;
+        padding: 6px 10px !important;
+      }
+
+      .syllabus-header {
+        margin-bottom: 14px;
+        padding-bottom: 12px;
+      }
+      .syllabus-header h2 {
+        font-size: 1.08rem;
+      }
+      .syllabus-header span {
+        font-size: 0.75rem;
+        padding: 4px 8px;
+      }
+
+      .lesson-list {
+        max-height: none;
+        gap: 10px;
+        padding-right: 0;
+      }
+      .lesson-item {
+        padding: 13px 14px;
+        border-radius: 16px;
+        min-height: 68px;
+        gap: 10px;
+      }
+      .lesson-left {
+        gap: 10px;
+        min-width: 0;
+      }
+      .status-dot {
+        width: 32px;
+        height: 32px;
+        font-size: 0.8rem;
+        flex-shrink: 0;
+      }
+      .lesson-name {
+        font-size: 0.88rem;
+        line-height: 1.35;
+        overflow-wrap: anywhere;
+      }
+      .play-btn {
+        padding: 8px 13px;
+        font-size: 0.76rem;
+        border-radius: 999px;
+        min-width: 92px;
+        flex-shrink: 0;
+      }
+
+      .timeline-container {
+        margin-top: 0;
+        padding-top: 14px;
+        padding-bottom: 14px;
+        overflow-x: auto;
+      }
+      .timeline-track {
+        gap: 28px;
+        padding: 0 8px;
+      }
+      .step-node {
+        width: 92px;
+      }
+      .node-circle {
+        width: 34px;
+        height: 34px;
+        font-size: 0.8rem;
+      }
+      .node-label {
+        font-size: 0.75rem;
+      }
+
+      .mobile-tabbar {
+        position: fixed;
+        top: auto;
+        width: auto;
+        margin: 0;
+        left: 10px;
+        right: 10px;
+        bottom: calc(10px + env(safe-area-inset-bottom));
+        z-index: 160;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 6px;
+        padding: 8px;
+        border-radius: 18px;
+        background: rgba(5, 10, 20, 0.78);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        box-shadow: 0 20px 50px rgba(2, 8, 23, 0.55);
+        backdrop-filter: blur(22px);
+      }
+      .mobile-tab {
+        text-decoration: none;
+        color: #8ea4c7;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        border-radius: 12px;
+        min-height: 52px;
+        font-size: 0.68rem;
+        font-weight: 600;
+        letter-spacing: 0.2px;
+        transition: all 0.24s ease;
+      }
+      .mobile-tab i {
+        font-size: 0.96rem;
+      }
+      .mobile-tab.active {
+        color: #ffffff;
+        background: linear-gradient(125deg, rgba(51, 161, 253, 0.3), rgba(138, 43, 226, 0.32));
+        border: 1px solid rgba(125, 211, 252, 0.32);
+      }
+      .mobile-tab:active {
+        transform: scale(0.98);
+      }
+    }
+
+    @media (max-width: 420px) {
+      .glass-panel {
+        padding: 15px;
+      }
+      .progress-ring-container {
+        width: 118px;
+        height: 118px;
+      }
+      .percentage-label {
+        font-size: 1.5rem;
+      }
+      .course-meta h1 {
+        font-size: 1.02rem;
+      }
+      .course-meta p {
+        font-size: 0.8rem;
+      }
+      .lesson-item {
+        padding: 12px;
+      }
+      .play-btn {
+        min-width: 84px;
+        padding: 7px 10px;
+      }
+      .timeline-track {
+        gap: 22px;
+      }
+      .step-node {
+        width: 80px;
+      }
+      .node-label {
+        font-size: 0.7rem;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+
     @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
   </style>
 </head>
 
 <body>
 
-  <nav>
+  <nav class="top-nav">
     <div class="brand">
       <i class="fas fa-brain"></i>
       <span>MindStep</span>
@@ -235,7 +507,7 @@
       
       <div class="glass-panel progress-section">
         <div class="progress-ring-container">
-          <svg>
+          <svg viewBox="0 0 180 180" aria-hidden="true">
             <circle cx="90" cy="90" r="80" class="ring-track"></circle>
             <circle cx="90" cy="90" r="80" class="ring-progress" id="ringProgress"></circle>
           </svg>
@@ -269,6 +541,25 @@
     </div>
 
   </div>
+
+  <nav class="mobile-tabbar" aria-label="Mobile Navigation">
+    <a class="mobile-tab" href="MainPage.html">
+      <i class="fas fa-house"></i>
+      <span>Home</span>
+    </a>
+    <a class="mobile-tab active" href="#">
+      <i class="fas fa-layer-group"></i>
+      <span>Course</span>
+    </a>
+    <a class="mobile-tab" href="guides.html">
+      <i class="fas fa-book-open"></i>
+      <span>Guides</span>
+    </a>
+    <a class="mobile-tab" href="About.html">
+      <i class="fas fa-circle-info"></i>
+      <span>About</span>
+    </a>
+  </nav>
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {

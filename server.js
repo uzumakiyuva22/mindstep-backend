@@ -21,8 +21,17 @@ const mongoose = require("mongoose");
 const { v4: uuidv4 } = require("uuid");
 const crypto = require("crypto");
 const PDFDocument = require("pdfkit");
+const nodemailer = require("nodemailer");
 const cloudinary = require("cloudinary").v2;
 const rateLimit = require("express-rate-limit");
+let fetchClient = global.fetch;
+if (typeof fetchClient !== "function") {
+    try {
+        fetchClient = require("node-fetch");
+    } catch (err) {
+        fetchClient = null;
+    }
+}
 
 // ✅ SAFE IMPORT: Compression
 let compression;
@@ -56,6 +65,28 @@ const PDF_DIR = path.join(UPLOADS_DIR, "lesson-pdfs");
 if (!process.env.MONGO_URI) { console.error("❌ MONGO_URI missing"); process.exit(1); }
 if (!process.env.ADMIN_SECRET) { console.error("❌ ADMIN_SECRET missing"); process.exit(1); }
 const ADMIN_SECRET = process.env.ADMIN_SECRET;
+const SMTP_HOST = String(process.env.SMTP_HOST || "").trim();
+const SMTP_PORT = Number.parseInt(String(process.env.SMTP_PORT || "").trim(), 10);
+const SMTP_SECURE_ENV = String(process.env.SMTP_SECURE || "").trim().toLowerCase();
+const EMAIL_USER = String(process.env.SMTP_USER || process.env.EMAIL_USER || "").trim();
+const APP_BASE_URL = String(process.env.APP_BASE_URL || "").trim().replace(/\/+$/, "");
+const rawEmailPass = String(
+    process.env.SMTP_PASS ||
+    process.env.EMAIL_PASS ||
+    process.env.GMAIL_APP_PASSWORD ||
+    ""
+).trim();
+// Gmail app passwords are often copied with spaces (e.g. "abcd efgh ijkl mnop").
+const EMAIL_PASS = !SMTP_HOST && /@gmail\.com$/i.test(EMAIL_USER)
+    ? rawEmailPass.replace(/\s+/g, "")
+    : rawEmailPass;
+const EMAIL_FROM = String(process.env.EMAIL_FROM || EMAIL_USER).trim();
+const EMAIL_AUDIT_BCC = String(process.env.EMAIL_AUDIT_BCC || "").trim().toLowerCase();
+const EMAIL_SERVICE_READY = Boolean(EMAIL_USER && EMAIL_PASS);
+const GMAIL_APP_PASSWORD_REGEX = /^[a-z0-9]{16}$/i;
+const EMAIL_REGEX = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i;
+const GMAIL_REGEX = /^[a-z0-9._%+-]+@gmail\.com$/i;
+const GOOGLE_CLIENT_ID = String(process.env.GOOGLE_CLIENT_ID || "").trim();
 
 /* ---------------- DB CONNECTION ---------------- */
 mongoose.set("strictQuery", false);
@@ -179,6 +210,8 @@ const userSchema = new mongoose.Schema({
     email: { type: String, unique: true, required: true, lowercase: true, trim: true },
     password: { type: String, required: true },
     image: String,
+    googleId: { type: String, default: "" },
+    authProvider: { type: String, enum: ["local", "google"], default: "local" },
     created_at: { type: Date, default: Date.now },
     xp: { type: Number, default: 0 },
     submitted_lessons: { type: [String], default: [] },
@@ -255,7 +288,14 @@ const certificateSchema = new mongoose.Schema({
     completionDate: { type: Date, default: Date.now },
     qrVerificationLink: { type: String, default: "" },
     finalProjectId: { type: mongoose.Schema.Types.ObjectId, ref: "Project" },
-    issuedAt: { type: Date, default: Date.now }
+    issuedAt: { type: Date, default: Date.now },
+    emailSentAt: Date,
+    emailSentTo: { type: String, default: "" },
+    emailDeliveryStatus: { type: String, enum: ["pending", "sent", "failed"], default: "pending" },
+    emailDeliveryError: { type: String, default: "" },
+    emailProviderMessageId: { type: String, default: "" },
+    emailAccepted: { type: [String], default: [] },
+    emailRejected: { type: [String], default: [] }
 }, { timestamps: true });
 certificateSchema.index({ userId: 1, courseId: 1 }, { unique: true });
 const Certificate = mongoose.models.Certificate || mongoose.model("Certificate", certificateSchema);
@@ -303,6 +343,19 @@ function normalizeCourseId(courseId) {
     return String(courseId || "").trim();
 }
 
+function isFinalMernProjectSubmissionFile(projectLike) {
+    const isTargetName = (value) => {
+        const baseName = path.basename(String(value || "").trim())
+            .toLowerCase()
+            .replace(/\s+/g, "_");
+        return /(?:^|[_-])final_mern_project_submission(?:\.[a-z0-9]+)?$/.test(baseName);
+    };
+
+    return isTargetName(projectLike?.originalName)
+        || isTargetName(projectLike?.storedName)
+        || isTargetName(projectLike?.filePath);
+}
+
 function buildCourseCode(courseLike, fallbackCourseId) {
     const raw = String(
         courseLike?.slug ||
@@ -331,7 +384,502 @@ function createCertificateId({ courseCode }) {
 }
 
 function buildCertificateQrLink(req, certificateId) {
-    return `${req.protocol}://${req.get("host")}/api/certificate-verify/${encodeURIComponent(certificateId)}`;
+    const requestBase = `${req.protocol}://${req.get("host")}`;
+    const baseUrl = APP_BASE_URL || requestBase;
+    return `${baseUrl}/api/certificate-verify/${encodeURIComponent(certificateId)}`;
+}
+
+function normalizeEmail(value) {
+    return String(value || "").trim().toLowerCase();
+}
+
+function validateMindStepEmail(value, { requireGmail = true } = {}) {
+    const normalized = normalizeEmail(value);
+    if (!normalized) {
+        return { valid: false, normalized, message: "Email is required" };
+    }
+    if (!EMAIL_REGEX.test(normalized)) {
+        return { valid: false, normalized, message: "Enter a valid email format" };
+    }
+    if (requireGmail && !GMAIL_REGEX.test(normalized)) {
+        return { valid: false, normalized, message: "Only Gmail addresses are allowed" };
+    }
+    return { valid: true, normalized, message: "" };
+}
+
+function decodeJwtPayload(token) {
+    const rawToken = String(token || "").trim();
+    if (!rawToken) return null;
+    const parts = rawToken.split(".");
+    if (parts.length < 2) return null;
+    try {
+        const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+        const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
+        const json = Buffer.from(padded, "base64").toString("utf8");
+        const parsed = JSON.parse(json);
+        return parsed && typeof parsed === "object" ? parsed : null;
+    } catch (_) {
+        return null;
+    }
+}
+
+async function verifyGoogleIdToken(credential) {
+    if (!GOOGLE_CLIENT_ID) {
+        throw new Error("Google Sign-In is not configured on the server");
+    }
+    if (typeof fetchClient !== "function") {
+        throw new Error("Server fetch client is unavailable for Google verification");
+    }
+    const token = String(credential || "").trim();
+    if (!token) {
+        throw new Error("Missing Google credential");
+    }
+
+    const verifyUrl = `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(token)}`;
+    const verifyRes = await fetchClient(verifyUrl);
+    if (!verifyRes.ok) {
+        throw new Error("Unable to verify Google credential");
+    }
+    const payload = await verifyRes.json();
+    const audience = String(payload?.aud || "");
+    const issuer = String(payload?.iss || "");
+    const emailVerified = String(payload?.email_verified || "").toLowerCase() === "true";
+    const exp = Number(payload?.exp || 0);
+
+    if (audience !== GOOGLE_CLIENT_ID) {
+        throw new Error("Google credential audience mismatch");
+    }
+    if (!["accounts.google.com", "https://accounts.google.com"].includes(issuer)) {
+        throw new Error("Invalid Google credential issuer");
+    }
+    if (!emailVerified) {
+        throw new Error("Google email is not verified");
+    }
+    if (!exp || exp * 1000 < Date.now()) {
+        throw new Error("Google credential expired");
+    }
+
+    // tokeninfo sometimes omits optional profile fields; fallback to JWT payload claims
+    const tokenClaims = decodeJwtPayload(token) || {};
+    const mergedPayload = { ...payload };
+    if (!mergedPayload.picture && tokenClaims.picture) mergedPayload.picture = tokenClaims.picture;
+    if (!mergedPayload.name && tokenClaims.name) mergedPayload.name = tokenClaims.name;
+    if (!mergedPayload.email && tokenClaims.email) mergedPayload.email = tokenClaims.email;
+    if (!mergedPayload.sub && tokenClaims.sub) mergedPayload.sub = tokenClaims.sub;
+
+    return mergedPayload;
+}
+
+async function buildAuthResult(userDoc) {
+    const total = await Lesson.countDocuments();
+    const done = await Completion.countDocuments({ user_id: userDoc._id });
+    const token = jwt.sign(
+        { id: userDoc._id },
+        process.env.JWT_SECRET,
+        { expiresIn: "1d" }
+    );
+    return {
+        token,
+        user: { ...userDoc.toObject(), percentage: total ? Math.round((done / total) * 100) : 0 }
+    };
+}
+
+function buildMailTransportOptions() {
+    if (SMTP_HOST) {
+        const resolvedPort = Number.isFinite(SMTP_PORT) ? SMTP_PORT : 587;
+        const secure = SMTP_SECURE_ENV
+            ? SMTP_SECURE_ENV === "true"
+            : resolvedPort === 465;
+        return {
+            host: SMTP_HOST,
+            port: resolvedPort,
+            secure,
+            auth: {
+                user: EMAIL_USER,
+                pass: EMAIL_PASS
+            }
+        };
+    }
+    return {
+        service: "gmail",
+        auth: {
+            user: EMAIL_USER,
+            pass: EMAIL_PASS
+        }
+    };
+}
+
+function buildSenderFromAddress() {
+    const raw = String(EMAIL_FROM || "").trim();
+    const fallbackEmail = String(EMAIL_USER || "").trim();
+    const defaultLabel = "MindStep Certificates";
+
+    if (raw) {
+        // Already formatted display-name address
+        if (raw.includes("<") && raw.includes(">")) {
+            return raw;
+        }
+        // Plain email only
+        if (EMAIL_REGEX.test(raw)) {
+            return `"${defaultLabel}" <${raw}>`;
+        }
+    }
+
+    if (fallbackEmail && EMAIL_REGEX.test(fallbackEmail)) {
+        return `"${defaultLabel}" <${fallbackEmail}>`;
+    }
+    return raw || fallbackEmail || defaultLabel;
+}
+
+function normalizeEmailSendError(err) {
+    const code = String(err?.code || "").toUpperCase();
+    const responseCode = Number(err?.responseCode || 0);
+    const rawMessage = String(err?.message || "").trim();
+    const compactMessage = rawMessage.replace(/\s+/g, " ");
+
+    const isAuthFailure = code === "EAUTH"
+        || responseCode === 535
+        || /badcredentials|username and password not accepted|5\.7\.8/i.test(compactMessage);
+    if (isAuthFailure) {
+        return {
+            reason: "auth_failed",
+            message: "Email login failed. Set valid sender credentials in .env: EMAIL_USER + Gmail App Password (16 chars), or SMTP_HOST/SMTP_USER/SMTP_PASS."
+        };
+    }
+
+    const isConnectionFailure = ["ECONNECTION", "ESOCKET", "ETIMEDOUT", "ECONNREFUSED", "ENOTFOUND"].includes(code)
+        || /timeout|connection|econnrefused|enotfound/i.test(compactMessage);
+    if (isConnectionFailure) {
+        return {
+            reason: "connection_failed",
+            message: "Could not connect to email server. Check SMTP host, port, and internet access."
+        };
+    }
+
+    return {
+        reason: "send_failed",
+        message: compactMessage || "Email sending failed"
+    };
+}
+
+const mailTransporter = EMAIL_SERVICE_READY
+    ? nodemailer.createTransport(buildMailTransportOptions())
+    : null;
+
+function drawMindStepCertificatePdf(doc, { learnerName, certificateId, completionDate, verificationLink }) {
+    const normalizedName = String(learnerName || "Learner").trim() || "Learner";
+    const normalizedCertificateId = String(certificateId || "").trim().toUpperCase();
+    const issuedDate = completionDate ? new Date(completionDate) : new Date();
+    const safeIssuedDate = Number.isNaN(issuedDate.getTime()) ? new Date() : issuedDate;
+    const displayDate = safeIssuedDate.toLocaleDateString("en-US", {
+        day: "numeric",
+        month: "long",
+        year: "numeric"
+    });
+
+    const pageWidth = doc.page.width;
+    const pageHeight = doc.page.height;
+    const centerX = pageWidth / 2;
+    const nameSize = normalizedName.length > 22 ? 40 : normalizedName.length > 15 ? 48 : 56;
+
+    // Paper background
+    doc.rect(0, 0, pageWidth, pageHeight).fill("#f9f2e6");
+    for (let y = 0; y < pageHeight; y += 6) {
+        const alpha = y % 12 === 0 ? 0.06 : 0.03;
+        doc.save();
+        doc.strokeOpacity(alpha).lineWidth(0.4).strokeColor("#7c6b4a");
+        doc.moveTo(0, y).lineTo(pageWidth, y).stroke();
+        doc.restore();
+    }
+
+    // Luxury borders
+    doc.lineWidth(6).strokeColor("#8b6a2f").rect(16, 16, pageWidth - 32, pageHeight - 32).stroke();
+    doc.lineWidth(2).strokeColor("#d1b06b").rect(26, 26, pageWidth - 52, pageHeight - 52).stroke();
+    doc.lineWidth(1).strokeColor("#8b6a2f").rect(42, 42, pageWidth - 84, pageHeight - 84).stroke();
+
+    // Top heading
+    doc.fillColor("#0f2f57")
+        .font("Helvetica-Bold")
+        .fontSize(42)
+        .text("MINDSTEP", 0, 74, { align: "center", characterSpacing: 8 });
+    doc.fillColor("#64748b")
+        .font("Helvetica")
+        .fontSize(14)
+        .text("QUANTUM IDE", 0, 120, { align: "center", characterSpacing: 5 });
+    doc.lineWidth(1.6).strokeColor("#ad8642").moveTo(154, 136).lineTo(pageWidth - 154, 136).stroke();
+
+    // Certificate title
+    doc.fillColor("#7a4a09")
+        .font("Helvetica-Bold")
+        .fontSize(44)
+        .text("CERTIFICATE OF COMPLETION", 0, 164, { align: "center" });
+    doc.fillColor("#334155")
+        .font("Helvetica")
+        .fontSize(22)
+        .text("This is proudly presented to", 0, 230, { align: "center" });
+
+    // Learner name
+    doc.fillColor("#111827")
+        .font("Helvetica-Bold")
+        .fontSize(nameSize)
+        .text(normalizedName, 0, 270, { align: "center" });
+    const underlineWidth = Math.min(430, 160 + normalizedName.length * 12);
+    doc.lineWidth(1.8).strokeColor("#9a6f2f")
+        .moveTo(centerX - underlineWidth / 2, 350)
+        .lineTo(centerX + underlineWidth / 2, 350)
+        .stroke();
+
+    doc.fillColor("#475569")
+        .font("Helvetica")
+        .fontSize(18)
+        .text("for successfully completing the rigorous curriculum of", 0, 372, { align: "center" });
+    doc.fillColor("#1e3a8a")
+        .font("Helvetica-Bold")
+        .fontSize(30)
+        .text("FULL STACK WEB DEVELOPMENT", 0, 398, { align: "center" });
+
+    // Bottom left (sign block)
+    doc.fillColor("#0f2f57")
+        .font("Helvetica-Bold")
+        .fontSize(18)
+        .text("MindStep Admin", 74, 488);
+    doc.lineWidth(1.5).strokeColor("#8b6a2f").moveTo(74, 512).lineTo(230, 512).stroke();
+    doc.fillColor("#64748b")
+        .font("Helvetica")
+        .fontSize(11)
+        .text("Lead Instructor", 104, 518);
+
+    // Official seal
+    const sealX = centerX;
+    const sealY = 505;
+    for (let i = 0; i < 28; i++) {
+        const angle = (Math.PI * 2 * i) / 28;
+        const petalX = sealX + Math.cos(angle) * 42;
+        const petalY = sealY + Math.sin(angle) * 42;
+        doc.circle(petalX, petalY, 7).fill("#c98f1b");
+    }
+    doc.circle(sealX, sealY, 36).fill("#e0ad42");
+    doc.circle(sealX, sealY, 30).fill("#f8e4b8");
+    doc.lineWidth(1.2).strokeColor("#8b6a2f").circle(sealX, sealY, 30).stroke();
+    doc.fillColor("#7c2d12")
+        .font("Helvetica-Bold")
+        .fontSize(7.5)
+        .text("MINDSTEP", sealX - 26, sealY - 7, { width: 52, align: "center" });
+    doc.fillColor("#7c2d12")
+        .font("Helvetica")
+        .fontSize(6.6)
+        .text("OFFICIAL SEAL", sealX - 28, sealY + 4, { width: 56, align: "center" });
+
+    // Bottom right (date + certificate id)
+    const rightBlockX = pageWidth - 290;
+    doc.fillColor("#0f172a")
+        .font("Helvetica-Bold")
+        .fontSize(22)
+        .text(displayDate, rightBlockX, 486, { width: 228, align: "center" });
+    doc.lineWidth(1.5).strokeColor("#8b6a2f").moveTo(rightBlockX + 12, 512).lineTo(rightBlockX + 216, 512).stroke();
+    doc.fillColor("#64748b")
+        .font("Helvetica")
+        .fontSize(11)
+        .text("Issue Date", rightBlockX, 518, { width: 228, align: "center" });
+    doc.fillColor("#1d4ed8")
+        .font("Helvetica")
+        .fontSize(10)
+        .text(`Certificate ID: ${normalizedCertificateId}`, rightBlockX, 534, { width: 228, align: "center" });
+
+    // Verification footer
+    doc.fillColor("#64748b")
+        .font("Helvetica")
+        .fontSize(8.5)
+        .text(String(verificationLink || ""), 30, pageHeight - 16, { width: pageWidth - 60, align: "center" });
+}
+
+async function generateMindStepCertificateBuffer({ learnerName, certificateId, completionDate, verificationLink }) {
+    return new Promise((resolve, reject) => {
+        const doc = new PDFDocument({
+            size: "A4",
+            layout: "landscape",
+            margin: 0
+        });
+        const chunks = [];
+        doc.on("data", (chunk) => chunks.push(chunk));
+        doc.on("end", () => resolve(Buffer.concat(chunks)));
+        doc.on("error", reject);
+
+        drawMindStepCertificatePdf(doc, { learnerName, certificateId, completionDate, verificationLink });
+        doc.end();
+    });
+}
+
+async function sendCertificateEmail({ req, user, certificate, force = false }) {
+    if (!EMAIL_SERVICE_READY || !mailTransporter) {
+        return {
+            success: false,
+            reason: "email_service_not_configured",
+            message: "Email service is not configured. Add EMAIL_USER + EMAIL_PASS (or SMTP_HOST/SMTP_USER/SMTP_PASS) in .env."
+        };
+    }
+    if (!user || !certificate) {
+        return {
+            success: false,
+            reason: "missing_user_or_certificate",
+            message: "User or certificate data is missing."
+        };
+    }
+    if (!SMTP_HOST && /@gmail\.com$/i.test(EMAIL_USER) && !GMAIL_APP_PASSWORD_REGEX.test(EMAIL_PASS)) {
+        const message = "Sender EMAIL_PASS is invalid. Use a Gmail App Password (16 characters, no spaces).";
+        await Certificate.updateOne(
+            { _id: certificate._id },
+            {
+                $set: {
+                    emailDeliveryStatus: "failed",
+                    emailDeliveryError: message
+                }
+            }
+        );
+        return { success: false, reason: "invalid_sender_password_format", message };
+    }
+
+    const emailCheck = validateMindStepEmail(user.email, { requireGmail: false });
+    if (!emailCheck.valid) {
+        const message = `Certificate email skipped: ${emailCheck.message}`;
+        await Certificate.updateOne(
+            { _id: certificate._id },
+            {
+                $set: {
+                    emailDeliveryStatus: "failed",
+                    emailDeliveryError: message,
+                    emailSentTo: emailCheck.normalized || ""
+                }
+            }
+        );
+        return { success: false, reason: "invalid_user_email", message };
+    }
+
+    if (certificate.emailSentAt && !force) {
+        return {
+            success: true,
+            alreadySent: true,
+            emailSentAt: certificate.emailSentAt,
+            emailSentTo: certificate.emailSentTo || emailCheck.normalized
+        };
+    }
+
+    const certificateId = String(certificate.certificateId || "").trim().toUpperCase();
+    const completionDate = certificate.completionDate || certificate.issuedAt || new Date();
+    const verificationLink = String(certificate.qrVerificationLink || "").trim() || buildCertificateQrLink(req, certificateId);
+    const learnerName = String(certificate.userName || user.username || "Learner");
+    const courseName = String(certificate.courseName || "Full Stack Web Development");
+    const pdfBuffer = await generateMindStepCertificateBuffer({
+        learnerName,
+        certificateId,
+        completionDate,
+        verificationLink
+    });
+
+    const safeName = String(user.username || learnerName).replace(/[^a-z0-9_-]+/gi, "_");
+    const sentAt = new Date();
+    const displayDate = sentAt.toLocaleDateString("en-US", {
+        day: "numeric",
+        month: "long",
+        year: "numeric"
+    });
+
+    try {
+        const mailInfo = await mailTransporter.sendMail({
+            from: buildSenderFromAddress(),
+            to: emailCheck.normalized,
+            replyTo: EMAIL_USER || undefined,
+            bcc: EMAIL_AUDIT_BCC || undefined,
+            subject: `Your MindStep Certificate - ${courseName}`,
+            html: `
+                <div style="font-family:Arial,sans-serif;line-height:1.6;color:#111827;">
+                    <h2 style="margin:0 0 10px;">Congratulations ${learnerName}</h2>
+                    <p>Your certificate for <b>${courseName}</b> is ready.</p>
+                    <p>MindStep certifies your progress through guided lessons, practical tasks, and reviewed project submissions.</p>
+                    <p><b>Certificate ID:</b> ${certificateId}<br/>
+                    <b>Issued Date:</b> ${displayDate}</p>
+                    <p>You can verify this certificate here:<br/>
+                    <a href="${verificationLink}">${verificationLink}</a></p>
+                    <p>The PDF certificate is attached with this email.</p>
+                    <p>Team MindStep</p>
+                </div>
+            `,
+            text: `Congratulations ${learnerName}
+
+Your MindStep certificate for ${courseName} is ready.
+Certificate ID: ${certificateId}
+Issued Date: ${displayDate}
+Verification Link: ${verificationLink}
+
+MindStep certifies your progress through guided lessons, practical tasks, and reviewed project submissions.
+
+The certificate PDF is attached with this email.
+
+Team MindStep`,
+            attachments: [
+                {
+                    filename: `MindStep-Certificate-${safeName}.pdf`,
+                    content: pdfBuffer,
+                    contentType: "application/pdf"
+                }
+            ]
+        });
+        const acceptedRecipients = Array.isArray(mailInfo?.accepted)
+            ? mailInfo.accepted.map(item => normalizeEmail(item)).filter(Boolean)
+            : [];
+        const rejectedRecipients = Array.isArray(mailInfo?.rejected)
+            ? mailInfo.rejected.map(item => normalizeEmail(item)).filter(Boolean)
+            : [];
+        const providerMessageId = String(mailInfo?.messageId || "").trim();
+
+        await Certificate.updateOne(
+            { _id: certificate._id },
+            {
+                $set: {
+                    emailSentAt: sentAt,
+                    emailSentTo: emailCheck.normalized,
+                    emailDeliveryStatus: "sent",
+                    emailDeliveryError: "",
+                    emailProviderMessageId: providerMessageId,
+                    emailAccepted: acceptedRecipients,
+                    emailRejected: rejectedRecipients,
+                    qrVerificationLink: verificationLink
+                }
+            }
+        );
+
+        return {
+            success: true,
+            alreadySent: false,
+            emailSentAt: sentAt,
+            emailSentTo: emailCheck.normalized,
+            messageId: providerMessageId,
+            accepted: acceptedRecipients,
+            rejected: rejectedRecipients
+        };
+    } catch (err) {
+        const normalizedError = normalizeEmailSendError(err);
+        const rejectedRecipients = Array.isArray(err?.rejected)
+            ? err.rejected.map(item => normalizeEmail(item)).filter(Boolean)
+            : [];
+        console.error("[MAIL] Certificate email failed", {
+            code: err?.code || "",
+            responseCode: err?.responseCode || "",
+            message: err?.message || ""
+        });
+        await Certificate.updateOne(
+            { _id: certificate._id },
+            {
+                $set: {
+                    emailDeliveryStatus: "failed",
+                    emailDeliveryError: normalizedError.message,
+                    emailSentTo: emailCheck.normalized,
+                    emailRejected: rejectedRecipients
+                }
+            }
+        );
+        return { success: false, reason: normalizedError.reason, message: normalizedError.message };
+    }
 }
 
 async function getCourseLessons(courseId) {
@@ -1352,6 +1900,22 @@ app.get("/api/user/:userId/projects", async (req, res) => {
     } catch { res.status(500).json({ success: false }); }
 });
 
+app.get("/api/user/:userId/profile", async (req, res) => {
+    try {
+        const userId = String(req.params.userId || "").trim();
+        if (!userId) {
+            return res.status(400).json({ success: false, message: "Invalid user id" });
+        }
+        const user = await UserModel.findById(userId, "_id username email image authProvider googleId").lean();
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+        return res.json({ success: true, user });
+    } catch {
+        return res.status(500).json({ success: false, message: "Failed to fetch user profile" });
+    }
+});
+
 app.get("/api/certificate/:userId/:courseId", async (req, res) => {
     try {
         const { userId, courseId } = req.params;
@@ -1367,7 +1931,11 @@ app.get("/api/certificate/:userId/:courseId", async (req, res) => {
                     userName: certResult.certificate.userName,
                     courseName: certResult.certificate.courseName,
                     completionDate: certResult.certificate.completionDate,
-                    qrVerificationLink: certResult.certificate.qrVerificationLink
+                    qrVerificationLink: certResult.certificate.qrVerificationLink,
+                    emailSentAt: certResult.certificate.emailSentAt || null,
+                    emailSentTo: certResult.certificate.emailSentTo || "",
+                    emailDeliveryStatus: certResult.certificate.emailDeliveryStatus || "pending",
+                    emailDeliveryError: certResult.certificate.emailDeliveryError || ""
                 }
                 : null,
             claimable: Boolean(certResult.claimable),
@@ -1427,6 +1995,14 @@ app.post("/api/certificate/claim", async (req, res) => {
             });
         }
 
+        const userDoc = await UserModel.findById(String(userId), "username email").lean();
+        const certificateEmail = await sendCertificateEmail({
+            req,
+            user: userDoc,
+            certificate: certResult.certificate,
+            force: false
+        });
+
         return res.json({
             success: true,
             certificate: {
@@ -1436,7 +2012,8 @@ app.post("/api/certificate/claim", async (req, res) => {
                 completionDate: certResult.certificate.completionDate,
                 qrVerificationLink: certResult.certificate.qrVerificationLink
             },
-            issued: Boolean(certResult.issued)
+            issued: Boolean(certResult.issued),
+            certificateEmail
         });
     } catch (err) {
         res.status(500).json({ success: false, message: "Failed to claim certificate" });
@@ -1723,6 +2300,14 @@ app.get("/api/lesson/:lessonId/pdf", async (req, res) => {
 app.post("/api/signup", upload.single("image"), async (req, res) => {
     try {
         const { username, email, password } = req.body;
+        const normalizedEmail = normalizeEmail(email);
+        const emailCheck = validateMindStepEmail(normalizedEmail, { requireGmail: false });
+        if (!emailCheck.valid) {
+            return res.status(400).json({ success: false, message: emailCheck.message });
+        }
+        if (!username || String(username).trim().length < 3) {
+            return res.status(400).json({ success: false, message: "Username must be at least 3 characters" });
+        }
         if (!password || password.length < 6) return res.status(400).json({ success: false, message: "Password too short" });
         let image = null;
         if (req.file) {
@@ -1736,29 +2321,112 @@ app.post("/api/signup", upload.single("image"), async (req, res) => {
             }
             if (fs.existsSync(req.file.path)) fs.unlink(req.file.path, () => { });
         }
-        const user = await UserModel.create({ username, email, password: bcrypt.hashSync(password, 12), image });
+        const existingEmail = await UserModel.findOne({ email: normalizedEmail }, "_id").lean();
+        if (existingEmail) {
+            return res.status(409).json({ success: false, message: "Email already registered. Please login." });
+        }
+
+        const user = await UserModel.create({
+            username: String(username).trim(),
+            email: normalizedEmail,
+            password: bcrypt.hashSync(password, 12),
+            image,
+            authProvider: "local"
+        });
         res.json({ success: true, user });
-    } catch (err) { res.status(500).json({ success: false, message: "Server Error" }); }
+    } catch (err) {
+        if (err && err.code === 11000) {
+            return res.status(409).json({ success: false, message: "Email already registered. Please login." });
+        }
+        res.status(500).json({ success: false, message: "Server Error" });
+    }
+});
+
+app.get("/api/auth/google/config", (req, res) => {
+    if (!GOOGLE_CLIENT_ID) {
+        return res.status(503).json({
+            success: false,
+            message: "Google Sign-In is not configured. Add GOOGLE_CLIENT_ID in .env"
+        });
+    }
+    return res.json({ success: true, clientId: GOOGLE_CLIENT_ID });
+});
+
+app.post("/api/auth/google", async (req, res) => {
+    try {
+        const { credential, pictureHint } = req.body || {};
+        const googlePayload = await verifyGoogleIdToken(credential);
+
+        const email = normalizeEmail(googlePayload?.email || "");
+        const emailCheck = validateMindStepEmail(email, { requireGmail: false });
+        if (!emailCheck.valid) {
+            return res.status(400).json({ success: false, message: emailCheck.message });
+        }
+
+        const googleName = String(googlePayload?.name || "").trim();
+        const googleSub = String(googlePayload?.sub || "").trim();
+        const hintedPicture = String(pictureHint || "").trim();
+        const rawGooglePicture = String(googlePayload?.picture || hintedPicture || "").trim();
+        const googlePicture = /^https?:\/\//i.test(rawGooglePicture) ? rawGooglePicture : "";
+        const fallbackName = email.split("@")[0] || "MindStep User";
+        const resolvedGoogleName = (googleName || fallbackName).slice(0, 80);
+
+        let user = await UserModel.findOne({ email: emailCheck.normalized });
+        if (!user) {
+            user = await UserModel.create({
+                username: resolvedGoogleName,
+                email: emailCheck.normalized,
+                password: bcrypt.hashSync(crypto.randomBytes(24).toString("hex"), 12),
+                image: googlePicture || null,
+                googleId: googleSub,
+                authProvider: "google"
+            });
+        } else {
+            const update = {};
+            if (googleSub && user.googleId !== googleSub) update.googleId = googleSub;
+            if (googlePicture && user.image !== googlePicture) update.image = googlePicture;
+            if ((user.authProvider === "google" || !user.authProvider) && user.username !== resolvedGoogleName) {
+                update.username = resolvedGoogleName;
+            }
+            if (!user.authProvider) update.authProvider = "google";
+            if (Object.keys(update).length > 0) {
+                user = await UserModel.findByIdAndUpdate(user._id, { $set: update }, { new: true });
+            }
+        }
+
+        const authResult = await buildAuthResult(user);
+        return res.json({
+            success: true,
+            token: authResult.token,
+            user: authResult.user
+        });
+    } catch (err) {
+        return res.status(401).json({
+            success: false,
+            message: err?.message || "Google authentication failed"
+        });
+    }
 });
 
 app.post("/api/login", async (req, res) => {
     try {
         const { usernameOrEmail, password } = req.body;
-        const user = await UserModel.findOne({ $or: [{ username: usernameOrEmail }, { email: usernameOrEmail }] });
+        const loginValue = String(usernameOrEmail || "").trim();
+        const normalizedLoginEmail = normalizeEmail(loginValue);
+        const user = await UserModel.findOne({
+            $or: [
+                { username: loginValue },
+                { email: normalizedLoginEmail }
+            ]
+        });
         if (!user || !bcrypt.compareSync(password, user.password)) return res.status(401).json({ success: false });
 
-        const total = await Lesson.countDocuments();
-        const done = await Completion.countDocuments({ user_id: user._id });
-        const token = jwt.sign(
-            { id: user._id },
-            process.env.JWT_SECRET,
-            { expiresIn: "1d" }
-        );
+        const authResult = await buildAuthResult(user);
 
         res.json({
             success: true,
-            token,
-            user: { ...user.toObject(), percentage: total ? Math.round((done / total) * 100) : 0 }
+            token: authResult.token,
+            user: authResult.user
         });
     } catch { res.status(500).json({ success: false }); }
 });
@@ -1825,21 +2493,35 @@ app.post("/api/complete", async (req, res) => {
 
         let certificate = null;
         let certificateClaimable = false;
+        let certificateEmail = null;
         if (courseId) {
-            const certResult = await ensureCertificateState({ req, userId, courseId, issueIfEligible: false });
+            const certResult = await ensureCertificateState({ req, userId, courseId, issueIfEligible: true });
             certificate = certResult.certificate || null;
             certificateClaimable = Boolean(certResult.claimable);
+            if (certificate) {
+                const userDoc = await UserModel.findById(userId, "username email").lean();
+                certificateEmail = await sendCertificateEmail({
+                    req,
+                    user: userDoc,
+                    certificate,
+                    force: false
+                });
+            }
         }
 
         res.json({
             success: true,
             certificateAvailable: Boolean(certificate),
             certificateClaimable,
+            certificateEmail,
             certificate: certificate
                 ? {
                     certificateId: certificate.certificateId,
                     completionDate: certificate.completionDate,
-                    qrVerificationLink: certificate.qrVerificationLink
+                    qrVerificationLink: certificate.qrVerificationLink,
+                    emailSentAt: certificate.emailSentAt || null,
+                    emailSentTo: certificate.emailSentTo || "",
+                    emailDeliveryStatus: certificate.emailDeliveryStatus || "pending"
                 }
                 : null
         });
@@ -2031,17 +2713,27 @@ app.put("/api/admin/projects/:id/status", requireAdminMiddleware, async (req, re
         let certificateIssued = false;
         let certificateRevoked = false;
         let certificateClaimable = false;
+        let certificateEmail = null;
         if (resolvedProjectCourseId || project.courseId) {
             const certResult = await ensureCertificateState({
                 req,
                 userId: project.userId,
                 courseId: resolvedProjectCourseId || project.courseId,
-                issueIfEligible: false
+                issueIfEligible: true
             });
             certificate = certResult.certificate || null;
             certificateIssued = Boolean(certResult.issued);
             certificateRevoked = Boolean(certResult.revoked);
             certificateClaimable = Boolean(certResult.claimable);
+            if (certificate) {
+                const userDoc = await UserModel.findById(project.userId, "username email").lean();
+                certificateEmail = await sendCertificateEmail({
+                    req,
+                    user: userDoc,
+                    certificate,
+                    force: false
+                });
+            }
         }
 
         res.json({
@@ -2055,15 +2747,93 @@ app.put("/api/admin/projects/:id/status", requireAdminMiddleware, async (req, re
             certificateIssued,
             certificateRevoked,
             certificateClaimable,
+            certificateEmail,
             certificate: certificate
                 ? {
                     certificateId: certificate.certificateId,
                     completionDate: certificate.completionDate,
-                    qrVerificationLink: certificate.qrVerificationLink
+                    qrVerificationLink: certificate.qrVerificationLink,
+                    emailSentAt: certificate.emailSentAt || null,
+                    emailSentTo: certificate.emailSentTo || "",
+                    emailDeliveryStatus: certificate.emailDeliveryStatus || "pending",
+                    emailDeliveryError: certificate.emailDeliveryError || ""
                 }
                 : null
         });
     } catch (err) { res.status(500).json({ success: false }); }
+});
+
+app.post("/api/admin/projects/:id/send-certificate-email", requireAdminMiddleware, async (req, res) => {
+    try {
+        const project = await Project.findById(req.params.id).lean();
+        if (!project) {
+            return res.status(404).json({ success: false, message: "Project not found" });
+        }
+        if (!isFinalMernProjectSubmissionFile(project)) {
+            return res.status(400).json({
+                success: false,
+                message: "Certificate email is allowed only for Final_MERN_Project_Submission."
+            });
+        }
+        if (String(project.status || "").toLowerCase() !== "approved") {
+            return res.status(409).json({
+                success: false,
+                message: "Certificate email can be sent only after project approval."
+            });
+        }
+
+        const lessonForProject = mongoose.Types.ObjectId.isValid(project.lessonId)
+            ? await Lesson.findById(new mongoose.Types.ObjectId(project.lessonId), "course_id").lean()
+            : null;
+        const courseId = String(lessonForProject?.course_id || project.courseId || "").trim();
+        if (!courseId) {
+            return res.status(400).json({ success: false, message: "Course mapping is missing for this project" });
+        }
+
+        const certResult = await ensureCertificateState({
+            req,
+            userId: project.userId,
+            courseId,
+            issueIfEligible: true
+        });
+        if (!certResult.certificate) {
+            return res.status(409).json({
+                success: false,
+                message: "Certificate is locked. User has not completed all lessons/projects.",
+                allLessonsCompleted: Boolean(certResult.allLessonsCompleted),
+                allProjectsApproved: Boolean(certResult.allProjectsApproved)
+            });
+        }
+
+        const userDoc = await UserModel.findById(project.userId, "username email").lean();
+        if (!userDoc) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        const emailResult = await sendCertificateEmail({
+            req,
+            user: userDoc,
+            certificate: certResult.certificate,
+            force: true
+        });
+        if (!emailResult.success) {
+            return res.status(400).json({
+                success: false,
+                message: emailResult.message || "Failed to send certificate email",
+                emailResult
+            });
+        }
+
+        return res.json({
+            success: true,
+            message: emailResult.alreadySent
+                ? "Certificate email was already sent earlier."
+                : "Certificate email sent successfully.",
+            emailResult
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: "Failed to send certificate email" });
+    }
 });
 
 app.post("/api/admin/lesson/:lessonId/pdf", requireAdminMiddleware, uploadPDF.single("pdf"), async (req, res) => {

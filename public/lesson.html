@@ -3,8 +3,8 @@
 
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>MindStep — Quantum IDE</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MindStep - Quantum IDE</title>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link
@@ -87,6 +87,37 @@
             color: var(--primary);
             font-size: 1.4rem;
             filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.5));
+        }
+
+        .nav-center {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            min-width: 0;
+        }
+
+        .nav-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            min-width: 0;
+        }
+
+        .report-btn {
+            padding: 8px 14px;
+        }
+
+        .sync-pill {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            background: #18181b;
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            white-space: nowrap;
         }
 
         /* XP HIDDEN FOR VIVA */
@@ -219,6 +250,24 @@
         .theory-section li {
             margin-bottom: 8px;
             line-height: 1.6;
+        }
+
+        .lesson-video-shell {
+            width: min(100%, 920px);
+            margin: 12px auto 20px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            background: #020205;
+            box-shadow: 0 12px 26px rgba(0, 0, 0, 0.35);
+        }
+
+        .lesson-video-frame {
+            width: 100%;
+            display: block;
+            aspect-ratio: 16 / 9;
+            border: 0;
+            background: #000;
         }
 
         .concept-grid {
@@ -607,6 +656,13 @@
             z-index: 50;
         }
 
+        .footer-label {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            font-family: var(--font-code);
+            text-align: center;
+        }
+
         .btn {
             padding: 10px 24px;
             border-radius: 8px;
@@ -794,62 +850,401 @@
             }
         }
 
-        /* Mobile */
+        /* Mobile App-Style Redesign (Desktop unchanged) */
         @media (max-width: 900px) {
+            body {
+                overflow-x: hidden;
+                overflow-y: auto;
+                background-image:
+                    radial-gradient(circle at 0% 0%, rgba(99, 102, 241, 0.32) 0%, transparent 52%),
+                    radial-gradient(circle at 100% 100%, rgba(56, 189, 248, 0.26) 0%, transparent 54%),
+                    linear-gradient(170deg, #070710 0%, #090b18 54%, #0b1021 100%);
+                background-attachment: scroll;
+            }
+
+            .workspace,
+            .guide-panel,
+            .ide-panel {
+                min-width: 0;
+            }
+
+            .navbar {
+                position: sticky;
+                top: 8px;
+                margin: 8px auto 0;
+                width: calc(100% - 14px);
+                height: auto;
+                min-height: 56px;
+                padding: 10px 12px;
+                border: 1px solid rgba(255, 255, 255, 0.13);
+                border-radius: 16px;
+                background: linear-gradient(145deg, rgba(7, 12, 24, 0.92), rgba(10, 18, 32, 0.84));
+                box-shadow: 0 18px 42px rgba(2, 6, 23, 0.55);
+                backdrop-filter: blur(22px);
+                z-index: 180;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .brand {
+                font-size: 1.02rem;
+                gap: 10px;
+                flex: 1 1 auto;
+                min-width: 0;
+            }
+
+            .brand i {
+                font-size: 1.2rem;
+            }
+
+            .nav-actions {
+                margin-left: auto;
+                gap: 8px;
+            }
+
+            .report-btn {
+                width: 34px;
+                height: 34px;
+                padding: 0;
+                font-size: 0;
+                border-radius: 10px;
+                justify-content: center;
+                gap: 0;
+            }
+
+            .report-btn i {
+                font-size: 0.92rem;
+                margin: 0;
+            }
+
+            .sync-pill {
+                display: none;
+            }
+
+            .nav-center {
+                order: 3;
+                width: 100%;
+                gap: 10px;
+                justify-content: flex-start;
+                overflow-x: auto;
+                scrollbar-width: none;
+                padding: 2px 0 1px;
+            }
+
+            .nav-center::-webkit-scrollbar {
+                display: none;
+            }
+
+            .progress-container {
+                background: rgba(15, 23, 42, 0.68);
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                border-radius: 999px;
+                padding: 6px 8px;
+                flex-shrink: 0;
+            }
+
+            .step-pill {
+                width: 18px;
+                height: 3px;
+            }
+
+            .step-pill.active {
+                width: 30px;
+            }
+
+            .workspace {
+                padding: 10px;
+                gap: 10px;
+                overflow: visible;
+                padding-bottom: calc(92px + env(safe-area-inset-bottom));
+            }
+
+            .workspace.mode-reading {
+                display: block;
+            }
+
+            .workspace.mode-reading .guide-panel {
+                max-height: calc(100dvh - 176px);
+                min-height: calc(100dvh - 176px);
+            }
+
+            .workspace.mode-reading .ide-panel {
+                display: none;
+            }
+
             .workspace.mode-coding {
                 grid-template-columns: 1fr;
-                grid-template-rows: auto 1fr;
+                grid-template-rows: minmax(44vh, auto) minmax(44vh, 1fr);
+            }
+
+            .workspace.mode-coding .ide-panel {
+                display: flex;
             }
 
             .guide-panel {
-                max-height: 35vh;
+                max-height: 48vh;
+                min-height: 300px;
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                border-radius: 22px;
+                background: linear-gradient(155deg, rgba(10, 14, 30, 0.95), rgba(16, 22, 38, 0.86));
+                box-shadow: 0 14px 34px rgba(2, 8, 23, 0.44);
                 border-right: none;
-                border-bottom: 1px solid var(--border);
+                border-bottom: none;
+            }
+
+            .guide-content {
+                padding: 20px 16px;
+                overflow-wrap: anywhere;
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+            }
+
+            .guide-content::-webkit-scrollbar {
+                width: 0;
+                height: 0;
+            }
+
+            .guide-content h1 {
+                font-size: 1.45rem;
+                line-height: 1.25;
+                margin-bottom: 14px;
+            }
+
+            .guide-content p {
+                margin-bottom: 14px;
+                line-height: 1.62;
+                font-size: 0.95rem;
+            }
+
+            .theory-section {
+                margin-bottom: 18px;
+            }
+
+            .theory-section h3 {
+                font-size: 1rem;
+                margin-bottom: 8px;
+            }
+
+            .lesson-video-shell {
+                width: 100%;
+                margin: 10px auto 16px;
+                border-radius: 10px;
+            }
+
+            .concept-card,
+            .analogy-box,
+            .mistake-box,
+            .hint-box,
+            .file-input-group {
+                border-radius: 12px;
+                border-color: rgba(255, 255, 255, 0.14);
+            }
+
+            .code-block {
+                border-radius: 10px;
+                font-size: 0.8rem;
+                padding: 12px;
             }
 
             .ide-panel {
                 height: auto;
-                min-height: 0;
+                min-height: 360px;
+                border-radius: 22px;
+                overflow: hidden;
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                box-shadow: 0 14px 34px rgba(2, 8, 23, 0.45);
+                background: linear-gradient(160deg, rgba(8, 12, 24, 0.92), rgba(13, 20, 36, 0.88));
             }
 
-            .terminal {
-                position: fixed;
-                bottom: 0;
-                left: 0;
-                width: 100%;
-                height: 40px;
-                z-index: 999;
-                transition: height 0.3s ease;
+            .toolbar {
+                height: 46px;
+                padding: 0 12px;
+                background: rgba(23, 28, 42, 0.78);
             }
 
-            .terminal.expanded {
-                height: 60vh !important;
+            .file-tab {
+                border-top: none;
+                border-left: 2px solid var(--primary);
+                height: 34px;
+                border-radius: 10px;
+                padding: 0 12px;
+                background: rgba(9, 12, 22, 0.8);
+                font-size: 0.8rem;
+            }
+
+            .editor-container {
+                min-height: 260px;
             }
 
             #monaco-editor {
                 height: 100% !important;
-                min-height: 300px;
+                min-height: 260px;
+            }
+
+            .project-upload-container {
+                padding: 16px;
+            }
+
+            .upload-box {
+                max-width: none;
+                border-radius: 16px;
+                padding: 24px 16px;
+            }
+
+            .upload-box i {
+                font-size: 2.4rem;
+            }
+
+            .terminal {
+                position: relative;
+                bottom: auto;
+                left: auto;
+                width: 100%;
+                height: 44px;
+                min-height: 44px;
+                z-index: 2;
+                border-top: 1px solid rgba(255, 255, 255, 0.14);
+                border-radius: 14px 14px 0 0;
+                margin-top: auto;
+            }
+
+            .terminal.expanded {
+                height: 58vh !important;
+            }
+
+            .term-header {
+                height: 44px;
+                padding: 0 12px;
+                font-size: 0.7rem;
+            }
+
+            .term-body {
+                padding: 12px;
+                font-size: 0.84rem;
+            }
+
+            .term-input-line {
+                margin-top: 8px;
+                gap: 8px;
+            }
+
+            #termInput {
+                font-size: 0.86rem;
+            }
+
+            .footer {
+                position: fixed;
+                left: 10px;
+                right: 10px;
+                bottom: calc(10px + env(safe-area-inset-bottom));
+                height: auto;
+                min-height: 64px;
+                padding: 10px;
+                border: 1px solid rgba(255, 255, 255, 0.16);
+                border-radius: 16px;
+                background: rgba(8, 12, 24, 0.84);
+                backdrop-filter: blur(20px);
+                box-shadow: 0 18px 40px rgba(2, 8, 23, 0.58);
+                z-index: 190;
+                gap: 8px;
+            }
+
+            .footer .btn {
+                min-height: 44px;
+                padding: 0 14px;
+                border-radius: 12px;
+            }
+
+            .footer-label {
+                flex: 1;
+                font-size: 0.72rem;
+                line-height: 1.3;
+                padding-inline: 4px;
+            }
+
+            .issue-modal {
+                padding: 12px;
+            }
+
+            .issue-modal-card {
+                max-width: 100%;
+                border-radius: 14px;
             }
         }
 
         @media (max-width: 600px) {
             .navbar {
-                padding: 0 12px;
+                top: 6px;
+                width: calc(100% - 10px);
+                margin-top: 6px;
+                padding: 8px 10px;
+                border-radius: 14px;
             }
 
-            .xp-container {
-                display: none;
+            .brand {
+                gap: 8px;
+                font-size: 0.98rem;
             }
 
-            .footer {
-                padding: 10px;
-                gap: 10px;
-                height: auto;
+            .nav-actions .icon-btn,
+            .report-btn {
+                width: 32px;
+                height: 32px;
             }
 
-            .footer .btn {
-                flex: 1;
-                justify-content: center;
+            .workspace {
+                padding: 8px;
+                gap: 8px;
+            }
+
+            .workspace.mode-coding {
+                grid-template-rows: minmax(52vh, auto) minmax(40vh, 1fr);
+            }
+
+            .workspace.mode-reading .guide-panel {
+                max-height: calc(100dvh - 164px);
+                min-height: calc(100dvh - 164px);
+            }
+
+            .guide-panel {
+                max-height: 54vh;
+                min-height: 0;
+                border-radius: 18px;
+            }
+
+            .guide-content {
+                padding: 16px 14px;
+            }
+
+            .guide-content h1 {
+                font-size: 1.24rem;
+            }
+
+            .guide-content p {
+                font-size: 0.9rem;
+            }
+
+            .lesson-video-shell {
+                border-radius: 9px;
+                margin-bottom: 14px;
+            }
+
+            .badge {
+                font-size: 0.68rem;
+                padding: 5px 9px;
+            }
+
+            .ide-panel {
+                border-radius: 18px;
+                min-height: 320px;
+            }
+
+            .editor-container {
+                min-height: 220px;
+            }
+
+            #monaco-editor {
+                min-height: 220px;
             }
 
             .file-input-wrapper {
@@ -861,8 +1256,73 @@
                 width: 100%;
             }
 
-            .issue-modal-card {
-                max-width: 100%;
+            .terminal.expanded {
+                height: 52vh !important;
+            }
+
+            .footer {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+                padding: 9px;
+            }
+
+            .footer .btn {
+                width: 100%;
+                justify-content: center;
+                font-size: 0.84rem;
+            }
+
+            .footer-label {
+                grid-column: 1 / -1;
+                order: 3;
+                font-size: 0.67rem;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .brand {
+                font-size: 0.92rem;
+            }
+
+            .workspace {
+                padding: 7px;
+            }
+
+            .workspace.mode-reading .guide-panel {
+                max-height: calc(100dvh - 154px);
+                min-height: calc(100dvh - 154px);
+            }
+
+            .guide-panel,
+            .ide-panel {
+                border-radius: 16px;
+            }
+
+            .footer {
+                left: 8px;
+                right: 8px;
+                bottom: calc(8px + env(safe-area-inset-bottom));
+                border-radius: 14px;
+            }
+
+            .footer .btn {
+                min-height: 40px;
+                font-size: 0.78rem;
+                padding: 0 10px;
+            }
+
+            .footer-label {
+                font-size: 0.62rem;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.001ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.001ms !important;
+                scroll-behavior: auto !important;
             }
         }
     </style>
@@ -881,7 +1341,7 @@
         <a href="#" class="brand" onclick="window.history.back()">
             <i class="fas fa-cube"></i> <span>MindStep</span>
         </a>
-        <div style="display:flex; gap:20px; align-items:center;">
+        <div class="nav-center">
             <div class="xp-container">
                 <span class="level-badge" id="levelDisplay">LVL 1</span>
                 <div class="xp-bar-wrapper">
@@ -891,15 +1351,14 @@
             </div>
             <div class="progress-container" id="progressBar"></div>
         </div>
-        <div style="display:flex; gap:10px;">
+        <div class="nav-actions">
             <!-- ADDED: Report Issue button -->
-            <button class="btn btn-secondary" style="padding:8px 14px;" onclick="openIssueModal()">
+            <button class="btn btn-secondary report-btn" onclick="openIssueModal()">
                 <i class="fas fa-bug"></i> Report Issue
             </button>
             <button class="icon-btn" onclick="toggleTheme()" title="Switch Theme"><i
                     class="fas fa-palette"></i></button>
-            <div
-                style="font-size:0.85rem; color:var(--text-dim); display:flex; gap:8px; align-items:center; background:#18181b; padding:6px 12px; border-radius:20px; border:1px solid var(--border);">
+            <div class="sync-pill">
                 <div style="width:6px; height:6px; background:var(--success); border-radius:50%;"></div>
                 <span id="saveStatus">Synced</span>
             </div>
@@ -985,7 +1444,7 @@
 
     <div class="footer">
         <button class="btn btn-secondary" id="prevBtn" disabled><i class="fas fa-arrow-left"></i> Previous</button>
-        <div style="font-size:0.8rem; color:var(--text-dim); font-family:var(--font-code);">Write Code & Check Logic
+        <div class="footer-label">Write Code & Check Logic
         </div>
         <button class="btn btn-run" id="runBtn">Check Logic <i class="fas fa-check-circle"></i></button>
     </div>
@@ -1430,6 +1889,34 @@
                     }
                     return "";
                 };
+                const normalizeLessonVideoUrl = (rawUrl) => {
+                    const original = String(rawUrl || "").trim();
+                    if (!original) return "";
+
+                    try {
+                        const parsed = new URL(original, window.location.origin);
+                        const host = parsed.hostname.replace(/^www\./, "").toLowerCase();
+
+                        if (host === "youtu.be") {
+                            const id = parsed.pathname.split("/").filter(Boolean)[0];
+                            if (id) return `https://www.youtube.com/embed/${encodeURIComponent(id)}`;
+                        }
+
+                        if (host.endsWith("youtube.com")) {
+                            const watchId = parsed.searchParams.get("v");
+                            if (watchId) return `https://www.youtube.com/embed/${encodeURIComponent(watchId)}`;
+
+                            const pathMatch = parsed.pathname.match(/^\/(?:embed|shorts)\/([^/?]+)/i);
+                            if (pathMatch && pathMatch[1]) {
+                                return `https://www.youtube.com/embed/${encodeURIComponent(pathMatch[1])}`;
+                            }
+                        }
+                    } catch (err) {
+                        console.warn("Video URL parse fallback:", err && err.message);
+                    }
+
+                    return original;
+                };
                 const knownRichKeys = new Set([
                     "_id",
                     "__v",
@@ -1482,25 +1969,25 @@
 
                 // 1. VIDEO
                 if (mainDoc.video) {
-                    let url = mainDoc.video;
-                    if (url.includes("youtube.com/watch")) {
-                        const videoId = url.split("v=")[1].split("&")[0];
-                        url = `https://www.youtube.com/embed/${videoId}`;
-                    } else if (url.includes("youtu.be/")) {
-                        const videoId = url.split("youtu.be/")[1];
-                        url = `https://www.youtube.com/embed/${videoId}`;
-                    }
+                    const url = normalizeLessonVideoUrl(mainDoc.video);
+                    const safeUrl = escapeHtml(url);
+                    if (safeUrl) {
 
                     mediaHtml += `
             <div class="theory-section">
                 <h3 style="color:var(--accent);">🎥 Lesson Video</h3>
-                <div style="position:relative; padding-top:56.25%; margin-bottom:20px;">
-                    <iframe src="${url}" 
-                        style="position:absolute; top:0; left:0; width:100%; height:100%; border-radius:10px; border:1px solid var(--border);" 
-                        frameborder="0" allowfullscreen>
+                <div class="lesson-video-shell">
+                    <iframe class="lesson-video-frame"
+                        src="${safeUrl}" 
+                        frameborder="0"
+                        loading="lazy"
+                        referrerpolicy="strict-origin-when-cross-origin"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowfullscreen>
                     </iframe>
                 </div>
             </div>`;
+                }
                 }
 
                 // 2. NOTES (With XSS Protection)
@@ -1814,6 +2301,7 @@
               <i class="fas fa-info-circle"></i> <b>Note:</b><br>
               This is a MongoDB document task.<br>
               You only need to create a valid JSON object.<br>
+              JSON comments (// or /* */) are supported for explanation.<br>
               No code execution is required.</div>`;
                     }
 
@@ -1835,6 +2323,7 @@
                     });
 
                     const lang = (step.data.language || "javascript").toLowerCase();
+                    let editorLang = lang;
 
                     switch (lang) {
                         case "react":
@@ -1870,6 +2359,7 @@
                         case "mongodb":
                         case "json":
                             state.fileName = "document.json";
+                            editorLang = "jsonc";
                             break;
 
                         default:
@@ -1879,7 +2369,7 @@
                     els.langName.innerText = state.fileName;
                     document.getElementById("fileNameInput").value = state.fileName;
 
-                    monaco.editor.setModelLanguage(state.editorInstance.getModel(), lang);
+                    monaco.editor.setModelLanguage(state.editorInstance.getModel(), editorLang);
                     state.editorInstance.setValue(state.userCode[step.data._id] || "");
 
                     if (!state.isReviewMode && state.passed.has(step.data._id)) setSuccessBtn();
@@ -2033,7 +2523,7 @@
                     addLog("[INFO] Validating MongoDB document structure...", "log");
 
                     try {
-                        const parsed = JSON.parse(code);
+                        const parsed = parseJsonWithComments(code);
 
                         if (typeof parsed !== "object" || Array.isArray(parsed) || parsed === null) {
                             throw new Error("Document must be a valid JSON object.");
@@ -2148,6 +2638,15 @@
                                 const varMatch = cleanCode.match(/(?:const|let|var)\s+([A-Z][A-Za-z0-9_]*)\s*=\s*(?:\(|async|function|[A-Za-z0-9_])/);
                                 if (varMatch && varMatch[1]) detectedComponentName = varMatch[1];
                             }
+                            const detectedElementNames = Array.from(
+                                new Set(
+                                    Array.from(
+                                        cleanCode.matchAll(/(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:\(\s*)?</g),
+                                        (m) => m && m[1]
+                                    )
+                                    .filter(Boolean)
+                                )
+                            ).slice(0, 12);
 
                             const safeCode = cleanCode
                                 .replace(/<!DOCTYPE[\s\S]*?<body>/i, "")
@@ -2201,6 +2700,7 @@
                 const { useState, useEffect, useReducer, useContext, useCallback, useMemo } = window.React;
                 
                 ${detectedComponentName ? `const __DETECTED__ = "${detectedComponentName}";` : ''}
+                const __DETECTED_ELEMENTS__ = ${JSON.stringify(detectedElementNames)};
 
                 // Execute user code in isolated scope and expose detected outputs to window.
                 (function() {
@@ -2220,6 +2720,18 @@
                         if (typeof Main !== 'undefined') window.__MS_COMPONENT__ = Main;
 
                         // JSX element candidates
+                        if (Array.isArray(__DETECTED_ELEMENTS__)) {
+                            for (const __name of __DETECTED_ELEMENTS__) {
+                                if (!__name || typeof __name !== 'string') continue;
+                                try {
+                                    const __candidate = eval(__name);
+                                    if (typeof __candidate !== 'undefined') {
+                                        window.__MS_ELEMENT__ = __candidate;
+                                        break;
+                                    }
+                                } catch (_) {}
+                            }
+                        }
                         if (typeof element !== 'undefined') window.__MS_ELEMENT__ = element;
                         if (typeof jsx !== 'undefined') window.__MS_ELEMENT__ = jsx;
                         if (typeof result !== 'undefined') window.__MS_ELEMENT__ = result;
@@ -2279,15 +2791,28 @@
 
                 // 5. Try common JSX element variable names
                 if (!Component && !elementToRender) {
-                    if (typeof element !== 'undefined') {
+                    if (Array.isArray(__DETECTED_ELEMENTS__)) {
+                        for (const __name of __DETECTED_ELEMENTS__) {
+                            if (!__name || typeof __name !== 'string') continue;
+                            try {
+                                const __candidate = eval(__name);
+                                if (typeof __candidate !== 'undefined') {
+                                    console.log('[INFO] Found JSX variable:', __name);
+                                    elementToRender = __candidate;
+                                    break;
+                                }
+                            } catch (_) {}
+                        }
+                    }
+                    if (!elementToRender && typeof element !== 'undefined') {
                         console.log('✓ Found element variable');
                         elementToRender = element;
                     }
-                    else if (typeof jsx !== 'undefined') {
+                    else if (!elementToRender && typeof jsx !== 'undefined') {
                         console.log('✓ Found jsx variable');
                         elementToRender = jsx;
                     }
-                    else if (typeof result !== 'undefined') {
+                    else if (!elementToRender && typeof result !== 'undefined') {
                         console.log('✓ Found result variable');
                         elementToRender = result;
                     }
@@ -2321,7 +2846,7 @@
 
                     if (!Component && !elementToRender) {
                         console.warn('Available variables in scope:', Object.keys(window).filter(k => !k.startsWith('_')).slice(0, 20));
-                        throw new Error('Could not find a React component or JSX element. Try defining: element, jsx, result, App, ServerComponent, or Main.');
+                        throw new Error('Could not find a React component or JSX element. Define a JSX variable (example: myElement) or a component (App/Main).');
                     }
                 }
                 
@@ -2485,7 +3010,8 @@ button:hover { background: #4f46e5; }
                         }
                         // ✅ FIX: Removed confusing "data structure detected" logic for JSON tasks
                         else if (task.language === 'java' || task.language === 'python') {
-                            addLog(`[ACTION REQUIRED] Type 'run' or 'python/java filename' and press Enter. Then provide input in the next line.`, "warning");
+                            addLog(`[ACTION REQUIRED] Type 'run' or 'python/java filename' and press Enter.`, "warning");
+                            addLog(`[TIP] For input tasks, provide values in next line. Use '|' for multiple inputs (example: 2|3).`, "log");
                             els.termInput.focus();
                         }
                         else {
@@ -2653,9 +3179,89 @@ button:hover { background: #4f46e5; }
             }
 
             // 🔥 JSON VALIDATOR (MongoDB Documents)
+            // Supports JSONC-like comments (// and /* */) while preserving text inside strings.
+            function stripJsonComments(source) {
+                const input = String(source || "");
+                let out = "";
+                let inString = false;
+                let escapeNext = false;
+                let inLineComment = false;
+                let inBlockComment = false;
+
+                for (let i = 0; i < input.length; i++) {
+                    const ch = input[i];
+                    const next = input[i + 1];
+
+                    if (inLineComment) {
+                        if (ch === "\n") {
+                            inLineComment = false;
+                            out += ch;
+                        }
+                        continue;
+                    }
+
+                    if (inBlockComment) {
+                        if (ch === "*" && next === "/") {
+                            inBlockComment = false;
+                            i++;
+                        }
+                        continue;
+                    }
+
+                    if (inString) {
+                        out += ch;
+                        if (escapeNext) {
+                            escapeNext = false;
+                            continue;
+                        }
+                        if (ch === "\\") {
+                            escapeNext = true;
+                        } else if (ch === "\"") {
+                            inString = false;
+                        }
+                        continue;
+                    }
+
+                    if (ch === "/" && next === "/") {
+                        inLineComment = true;
+                        i++;
+                        continue;
+                    }
+
+                    if (ch === "/" && next === "*") {
+                        inBlockComment = true;
+                        i++;
+                        continue;
+                    }
+
+                    if (ch === "\"") {
+                        inString = true;
+                    }
+
+                    out += ch;
+                }
+
+                return out;
+            }
+
+            function parseJsonWithComments(rawCode) {
+                const source = String(rawCode || "").replace(/^\uFEFF/, "");
+                try {
+                    return JSON.parse(source);
+                } catch (primaryErr) {
+                    const stripped = stripJsonComments(source).trim();
+                    if (!stripped) throw primaryErr;
+                    try {
+                        return JSON.parse(stripped);
+                    } catch (_) {
+                        throw primaryErr;
+                    }
+                }
+            }
+
             function validateJSON(code, rules) {
                 try {
-                    const obj = JSON.parse(code);
+                    const obj = parseJsonWithComments(code);
 
                     if (rules.mustBeObject && typeof obj !== "object") {
                         return { passed: false, message: "Must be a valid JSON object." };
@@ -2862,7 +3468,10 @@ button:hover { background: #4f46e5; }
                 const task = state.steps[state.idx].data;
                 const code = state.editorInstance.getValue();
                 const hasListen = code.includes("app.listen");
-                const stdinText = forcedInput !== null ? String(forcedInput) : parts.slice(1).join(" ");
+                const rawInput = forcedInput !== null ? String(forcedInput) : parts.slice(1).join(" ");
+                let stdinText = rawInput
+                    .replace(/\\n/g, "\n")
+                    .replace(/\s*\|\s*/g, "\n");
 
                 if (state.isReviewMode) {
                     addLog("[INFO] Practice mode is enabled. Runs are allowed; DB updates are skipped.", "warning");
@@ -2897,7 +3506,14 @@ button:hover { background: #4f46e5; }
                 if (looksInteractive && cmdUsesRuntime && !stdinText) {
                     state.pendingInputCommand = cmd;
                     addLog(`[INPUT] Program is waiting for input. Type input now and press Enter.`, "warning");
+                    addLog(`[TIP] Multiple values use '|' separator (example: 2|3 or 1|Yuvaraj|3).`, "log");
                     return;
+                }
+
+                const looksLoopMenu = /(?:while\s+true|while\s*\(\s*true\s*\))/i.test(code) && /(?:\bexit\b|\bquit\b)/i.test(code);
+                if (looksInteractive && cmdUsesRuntime && stdinText && looksLoopMenu && !stdinText.includes("\n")) {
+                    stdinText = `${stdinText}\n3`;
+                    addLog(`[INFO] Auto-added exit input '3' to close the menu loop safely.`, "log");
                 }
 
                 addLog(`[INFO] Executing ${state.fileName}...`, "log");
@@ -2929,6 +3545,10 @@ button:hover { background: #4f46e5; }
                             if (data.passed) {
                                 addLog(data.output, "success");
                                 handleSuccess(task);
+                            } else if (looksInteractive && cmdUsesRuntime && /EOFError:\s*EOF when reading a line/i.test(String(data.output || ""))) {
+                                const compactOutput = String(data.output || "").replace(/Traceback[\s\S]*$/i, "").trim();
+                                if (compactOutput) addLog(compactOutput, "warning");
+                                addLog(`[INPUT] Program needs more input values. Use '|' separator (example: 2|3 or 1|YourName|3).`, "warning");
                             } else {
                                 addLog(data.output, "error");
                                 handleFailure(task);

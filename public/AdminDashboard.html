@@ -548,34 +548,397 @@
       cursor: pointer;
     }
 
+    .mobile-tabbar {
+      display: none;
+    }
+
+    .mobile-tab {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: var(--font-stack);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      border-radius: 12px;
+      min-height: 46px;
+      cursor: pointer;
+      padding: 6px 8px;
+      transition: 0.2s ease;
+    }
+
+    .mobile-tab i {
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    .mobile-tab.active {
+      color: #fff;
+      background: linear-gradient(135deg, rgba(10, 132, 255, 0.75), rgba(128, 90, 213, 0.72));
+      box-shadow: 0 8px 20px rgba(10, 132, 255, 0.25);
+    }
+
     @media (max-width: 900px) {
+      body {
+        display: block;
+        min-height: 100dvh;
+        height: auto;
+        overflow-y: auto;
+        overflow-x: hidden;
+        background-image:
+          radial-gradient(circle at 10% 0%, rgba(90, 132, 255, 0.24) 0, transparent 48%),
+          radial-gradient(circle at 100% 100%, rgba(255, 69, 58, 0.18) 0, transparent 46%),
+          linear-gradient(165deg, #05070e 0%, #0a0f1e 52%, #121025 100%);
+      }
+
       .sidebar {
         display: none;
       }
 
       .content {
-        padding: 15px;
+        padding: 12px;
+        padding-bottom: calc(100px + env(safe-area-inset-bottom));
+        overflow: visible;
+      }
+
+      .header {
+        position: sticky;
+        top: 8px;
+        z-index: 80;
+        margin-bottom: 16px;
+        padding: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 18px;
+        background: linear-gradient(145deg, rgba(12, 16, 30, 0.9), rgba(15, 21, 38, 0.84));
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        box-shadow: 0 14px 28px rgba(2, 6, 23, 0.45);
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .header h1 {
+        font-size: 1.32rem;
+        letter-spacing: -0.3px;
+      }
+
+      .action-bar {
+        gap: 8px;
+      }
+
+      .action-bar .btn {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        padding: 0;
+        justify-content: center;
+        font-size: 0;
+      }
+
+      .action-bar .btn i {
+        font-size: 1rem;
       }
 
       .stats-grid {
         grid-template-columns: 1fr;
+        gap: 12px;
+        margin-bottom: 16px;
       }
 
-      table {
-        font-size: 0.75rem;
+      .widget {
+        border-radius: 18px;
+        padding: 16px;
+        background: linear-gradient(150deg, rgba(21, 26, 42, 0.82), rgba(18, 20, 32, 0.78));
+        border-color: rgba(255, 255, 255, 0.12);
+        animation: slideUp 0.35s ease;
+      }
+
+      .widget-title {
+        font-size: 0.72rem;
+      }
+
+      .widget-val {
+        font-size: 2rem;
       }
 
       .table-wrapper {
-        overflow-x: scroll;
+        border-radius: 18px;
+        margin-bottom: 14px;
+        overflow: hidden;
+        border-color: rgba(255, 255, 255, 0.12);
+        background: linear-gradient(150deg, rgba(18, 24, 40, 0.84), rgba(14, 18, 30, 0.78));
       }
 
-      th,
-      td {
+      .toolbar {
+        padding: 12px;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .toolbar h3 {
+        font-size: 0.95rem !important;
+      }
+
+      #projectsSection .toolbar>div {
+        width: 100%;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px !important;
+      }
+
+      #projectSearch {
+        width: 100% !important;
+      }
+
+      .search-spotlight,
+      .filter-select,
+      .input-glass,
+      textarea {
+        min-height: 44px;
+        border-radius: 12px;
+      }
+
+      #lessonsSection>div {
+        padding: 14px !important;
+      }
+
+      #lessonsSection>div>div {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+      }
+
+      table {
+        display: block;
+        width: 100%;
+      }
+
+      thead {
+        display: none;
+      }
+
+      tbody {
+        display: grid;
+        gap: 10px;
         padding: 10px;
       }
 
+      tr {
+        display: block;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 14px;
+        background: rgba(8, 12, 24, 0.68);
+        overflow: hidden;
+      }
+
+      tr:hover td {
+        background: transparent;
+      }
+
+      td {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 10px 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        font-size: 0.85rem;
+      }
+
+      td::before {
+        content: attr(data-label);
+        font-size: 0.66rem;
+        font-weight: 700;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        min-width: 86px;
+      }
+
+      td:last-child {
+        border-bottom: none;
+      }
+
+      td[colspan] {
+        display: block;
+        text-align: center !important;
+        padding: 18px 12px !important;
+      }
+
+      td[colspan]::before {
+        display: none;
+      }
+
+      td[data-label="Select"] {
+        align-items: center;
+        justify-content: flex-end;
+      }
+
+      td[data-label="Select"]::before {
+        display: none;
+      }
+
+      td[data-label="Actions"],
+      td[data-label="Quick Actions"] {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      td[data-label="Actions"]::before,
+      td[data-label="Quick Actions"]::before {
+        margin-right: auto;
+      }
+
+      td[data-label="Identity"],
+      td[data-label="Student"],
+      td[data-label="User"],
+      td[data-label="File Info"],
+      td[data-label="Error"] {
+        flex-direction: column;
+      }
+
+      td[data-label="Identity"]::before,
+      td[data-label="Student"]::before,
+      td[data-label="User"]::before,
+      td[data-label="File Info"]::before,
+      td[data-label="Error"]::before {
+        min-width: 0;
+      }
+
+      td[data-label="Error"]>div {
+        max-width: none !important;
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: initial !important;
+      }
+
+      td .btn,
+      td .btn-glass,
+      td .btn-primary,
+      td .btn-danger {
+        min-width: 38px;
+        min-height: 38px;
+        border-radius: 11px;
+        padding: 7px 10px !important;
+      }
+
+      #bulkActionBar {
+        left: 12px;
+        right: 12px;
+        width: auto;
+        bottom: calc(82px + env(safe-area-inset-bottom));
+        transform: translateY(130%);
+        border-radius: 14px;
+        padding: 10px 12px;
+        gap: 10px;
+        justify-content: space-between;
+      }
+
+      #bulkActionBar.visible {
+        transform: translateY(0);
+      }
+
+      #toastContainer {
+        top: 84px;
+        right: 10px;
+        left: 10px;
+        align-items: stretch;
+      }
+
+      .toast {
+        min-width: 0;
+        width: 100%;
+        border-radius: 12px;
+        padding: 12px 14px;
+        font-size: 0.85rem;
+      }
+
+      .mobile-tabbar {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 6px;
+        position: fixed;
+        left: 10px;
+        right: 10px;
+        bottom: calc(10px + env(safe-area-inset-bottom));
+        z-index: 120;
+        padding: 8px;
+        border-radius: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(10, 14, 24, 0.88);
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        box-shadow: 0 16px 32px rgba(2, 8, 23, 0.58);
+      }
+
+      .screenshot-content {
+        max-width: 94%;
+        max-height: 78%;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .content {
+        padding: 10px;
+        padding-bottom: calc(100px + env(safe-area-inset-bottom));
+      }
+
+      .header {
+        top: 6px;
+        padding: 10px;
+        border-radius: 15px;
+      }
+
       .header h1 {
-        font-size: 1.5rem;
+        font-size: 1.16rem;
+      }
+
+      .widget {
+        padding: 14px;
+      }
+
+      .widget-val {
+        font-size: 1.78rem;
+      }
+
+      .toolbar {
+        padding: 10px;
+      }
+
+      #projectsSection .toolbar>div {
+        grid-template-columns: 1fr;
+      }
+
+      td {
+        font-size: 0.82rem;
+        padding: 9px 10px;
+      }
+
+      td::before {
+        min-width: 72px;
+        font-size: 0.62rem;
+      }
+
+      .mobile-tabbar {
+        left: 8px;
+        right: 8px;
+        border-radius: 15px;
+      }
+
+      .mobile-tab {
+        min-height: 44px;
+        font-size: 0.62rem;
+      }
+
+      .mobile-tab i {
+        font-size: 0.9rem;
       }
     }
   </style>
@@ -775,6 +1138,29 @@
 
   </div>
 
+  <nav class="mobile-tabbar" aria-label="Admin mobile navigation">
+    <button type="button" class="mobile-tab active" data-tab="users" onclick="switchTab('users')">
+      <i class="fas fa-user-friends"></i>
+      <span>Users</span>
+    </button>
+    <button type="button" class="mobile-tab" data-tab="projects" onclick="switchTab('projects')">
+      <i class="fas fa-layer-group"></i>
+      <span>Projects</span>
+    </button>
+    <button type="button" class="mobile-tab" data-tab="lessons" onclick="switchTab('lessons')">
+      <i class="fas fa-book-open"></i>
+      <span>Lessons</span>
+    </button>
+    <button type="button" class="mobile-tab" data-tab="issues" onclick="switchTab('issues')">
+      <i class="fas fa-bug"></i>
+      <span>Issues</span>
+    </button>
+    <button type="button" class="mobile-tab" onclick="logout()">
+      <i class="fas fa-power-off"></i>
+      <span>Logout</span>
+    </button>
+  </nav>
+
   <div id="bulkActionBar">
     <span style="font-weight:600; font-size:0.9rem; color:#fff;"><span id="selectedCount">0</span> Selected</span>
     <div style="height:20px; width:1px; background:rgba(255,255,255,0.2);"></div>
@@ -845,6 +1231,7 @@
       document.getElementById('menu-projects').classList.remove('active');
       document.getElementById('menu-lessons').classList.remove('active');
       document.getElementById('menu-issues').classList.remove('active'); // ✅ Remove Active
+      document.querySelectorAll('.mobile-tab[data-tab]').forEach((tabBtn) => tabBtn.classList.remove('active'));
 
       if (tab === 'users') {
         document.getElementById('usersSection').style.display = 'block';
@@ -870,6 +1257,9 @@
         document.getElementById('pageTitle').innerText = "Bug Reports";
         loadIssues();
       }
+
+      const mobileActiveTab = document.querySelector(`.mobile-tab[data-tab="${tab}"]`);
+      if (mobileActiveTab) mobileActiveTab.classList.add('active');
     }
 
     async function init() {
@@ -895,14 +1285,14 @@
 
       tbody.innerHTML = data.users.map(u => `
     <tr>
-      <td>
+      <td data-label="Identity">
         <div class="avatar-stack">
           <div class="avatar">${u.username[0].toUpperCase()}</div>
           <b>${u.username}</b>
         </div>
       </td>
-      <td><span style="color:var(--text-muted)">${u.email}</span></td>
-      <td>
+      <td data-label="Email"><span style="color:var(--text-muted)">${u.email}</span></td>
+      <td data-label="Progress">
         <div style="display:flex; align-items:center; gap:10px;">
           <div style="flex:1; height:4px; background:rgba(255,255,255,0.1); border-radius:2px; overflow:hidden; width:80px;">
             <div style="width:${u.percentage}%; height:100%; background:var(--accent-blue);"></div>
@@ -910,8 +1300,8 @@
           <span style="font-size:0.75rem; font-weight:600;">${u.percentage}%</span>
         </div>
       </td>
-      <td style="font-size:0.85rem; color:var(--text-muted);">${new Date(u.created_at).toLocaleDateString()}</td>
-      <td style="text-align:right;">
+      <td data-label="Joined" style="font-size:0.85rem; color:var(--text-muted);">${new Date(u.created_at).toLocaleDateString()}</td>
+      <td data-label="Actions" style="text-align:right;">
         <button class="btn-glass" style="padding:6px 10px; margin-right:5px;" onclick="openUserProjects('${u._id}')" title="View Projects"><i class="fas fa-folder-open"></i></button>
         <button class="btn-glass" style="padding:6px 10px; color:var(--accent-red);" onclick="purgeUser('${u._id}')" title="Delete User"><i class="fas fa-trash"></i></button>
       </td>
@@ -943,21 +1333,21 @@
 
           return `
       <tr>
-        <td style="font-family:monospace; font-size:0.8rem; color:var(--text-muted);">${issue._id.substring(0, 8)}...</td>
-        <td>
+        <td data-label="ID" style="font-family:monospace; font-size:0.8rem; color:var(--text-muted);">${issue._id.substring(0, 8)}...</td>
+        <td data-label="User">
             <div style="font-weight:600;">User: ${issue.userId?.username || issue.userId}</div>
-            <div style="font-size:0.8rem; color:var(--text-muted);">Lesson: ${issue.lessonId?.title || issue.lessonId}</div>
+            <div style="font-size:0.8rem; color:var(--text-muted);">Lesson: ${issue.lessonTitle || issue.lessonId?.title || "Unknown Lesson"}</div>
         </td>
-        <td>
+        <td data-label="Error">
             <div style="max-width:300px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${issue.errorMessage}">
                 <span style="color:var(--accent-red); font-weight:bold;">${issue.errorMessage}</span><br>
                 <span style="font-size:0.85rem; color:var(--text-muted);">${issue.description}</span>
             </div>
             ${issue.screenshot ? `<a href="#" onclick="viewScreenshot('${issue.screenshot}'); return false;" style="font-size:0.8rem; color:var(--accent-blue);">View Screenshot</a>` : ''}
         </td>
-        <td><span class="badge ${badgeClass}">${issue.status}</span></td>
-        <td style="font-size:0.85rem; color:var(--text-muted);">${new Date(issue.createdAt).toLocaleDateString()}</td>
-        <td style="text-align:right;">
+        <td data-label="Status"><span class="badge ${badgeClass}">${issue.status}</span></td>
+        <td data-label="Date" style="font-size:0.85rem; color:var(--text-muted);">${new Date(issue.createdAt).toLocaleDateString()}</td>
+        <td data-label="Actions" style="text-align:right;">
           ${issue.status !== 'Resolved' ?
               `<button class="btn btn-primary" style="padding:6px 12px; font-size:0.8rem;" onclick="resolveIssue('${issue._id}')">Resolve</button>` :
               `<span style="color:var(--accent-green); font-size:0.9rem;"><i class="fas fa-check"></i> Done</span>`
@@ -1129,6 +1519,11 @@
       };
     }
 
+    function isFinalMernProjectSubmission(project) {
+      const fileName = String(project?.originalName || "").trim().toLowerCase().replace(/\s+/g, "_");
+      return /^final_mern_project_submission(?:\.[a-z0-9]+)?$/.test(fileName);
+    }
+
     function getFilteredProjects() {
       return allProjects.filter((project) => {
         if (currentFilter !== "all" && project.status !== currentFilter) return false;
@@ -1209,12 +1604,13 @@
         const badgeClass = getStatusBadgeClass(p.status);
         const canApprove = p.status !== "approved";
         const canReject = p.status !== "rejected";
+        const canSendCertificate = p.status === "approved" && isFinalMernProjectSubmission(p);
         const initials = (p.userName || "?").charAt(0).toUpperCase();
 
         return `
           <tr>
-            <td><input type="checkbox" class="checkbox-ios" ${selectedProjects.has(p._id) ? "checked" : ""} onchange="toggleSelect('${escapeHtml(p._id)}', this.checked)"></td>
-            <td>
+            <td data-label="Select"><input type="checkbox" class="checkbox-ios" ${selectedProjects.has(p._id) ? "checked" : ""} onchange="toggleSelect('${escapeHtml(p._id)}', this.checked)"></td>
+            <td data-label="Student">
               <div class="avatar-stack">
                 <div class="avatar">${escapeHtml(initials)}</div>
                 <div>
@@ -1223,17 +1619,18 @@
                 </div>
               </div>
             </td>
-            <td>
+            <td data-label="File Info">
               <div style="font-weight:600;">${escapeHtml(p.originalName)}</div>
               <div style="font-size:0.8rem; color:var(--text-muted);">${escapeHtml(p.courseName)} / ${escapeHtml(p.lessonTitle)} - ${formatBytes(p.fileSize)}</div>
               ${p.adminFeedback ? `<div style="font-size:0.78rem; color:#fca5a5; margin-top:6px;">Feedback: ${escapeHtml(p.adminFeedback)}</div>` : ""}
             </td>
-            <td><span class="badge ${badgeClass}">${escapeHtml(getStatusLabel(p.status))}</span></td>
-            <td style="font-size:0.85rem; color:var(--text-muted);">${escapeHtml(displayDate)}</td>
-            <td style="text-align:right; white-space:nowrap;">
+            <td data-label="Status"><span class="badge ${badgeClass}">${escapeHtml(getStatusLabel(p.status))}</span></td>
+            <td data-label="Date" style="font-size:0.85rem; color:var(--text-muted);">${escapeHtml(displayDate)}</td>
+            <td data-label="Quick Actions" style="text-align:right; white-space:nowrap;">
               <button class="btn btn-glass" style="padding:6px 10px; margin-right:6px;" onclick="downloadProject('${escapeHtml(p._id)}')" title="Download">
                 <i class="fas fa-download"></i>
               </button>
+              ${canSendCertificate ? `<button class="btn btn-glass" style="padding:6px 10px; margin-right:6px;" onclick="sendCertificateEmail('${escapeHtml(p._id)}')" title="Send Certificate Email"><i class="fas fa-envelope"></i></button>` : ""}
               ${canApprove ? `<button class="btn btn-primary" style="padding:6px 10px; margin-right:6px;" onclick="updateProjectStatus('${escapeHtml(p._id)}','approved')" title="Approve"><i class="fas fa-check"></i></button>` : ""}
               ${canReject ? `<button class="btn btn-danger" style="padding:6px 10px; margin-right:6px;" onclick="updateProjectStatus('${escapeHtml(p._id)}','rejected')" title="Reject"><i class="fas fa-times"></i></button>` : ""}
               ${canReject ? `<button class="btn btn-glass" style="padding:6px 10px;" onclick="updateProjectStatus('${escapeHtml(p._id)}','request_changes')" title="Request Changes"><i class="fas fa-comment-dots"></i></button>` : ""}
@@ -1403,9 +1800,45 @@
         } else if (data.certificateClaimable) {
           showToast("Certificate unlocked. Learner can claim now.", "success");
         }
+        if (data.certificateEmail?.success && !data.certificateEmail?.alreadySent) {
+          showToast(`Certificate email sent to ${data.certificateEmail.emailSentTo}`, "success");
+        } else if (data.certificateEmail?.alreadySent) {
+          showToast(`Certificate email already sent (${data.certificateEmail.emailSentTo})`, "success");
+        } else if (data.certificateEmail && !data.certificateEmail.success && data.certificateEmail.message) {
+          showToast(data.certificateEmail.message, "error");
+        }
       } catch (err) {
         console.error(err);
         showToast(err.message || "Status update failed", "error");
+      }
+    }
+
+    async function sendCertificateEmail(id) {
+      try {
+        const selectedProject = allProjects.find((p) => p._id === String(id));
+        if (!selectedProject || !isFinalMernProjectSubmission(selectedProject)) {
+          showToast("Certificate email option is available only for Final_MERN_Project_Submission.", "error");
+          return;
+        }
+
+        const res = await fetch(`/api/admin/projects/${id}/send-certificate-email`, {
+          method: "POST",
+          headers: {
+            "Authorization": "Bearer " + ADMIN_TOKEN,
+            "Content-Type": "application/json"
+          }
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          throw new Error(data.message || "Failed to send certificate email");
+        }
+
+        const target = data?.emailResult?.emailSentTo ? ` to ${data.emailResult.emailSentTo}` : "";
+        showToast(`Certificate email sent${target}`, "success");
+        if (projectsLoaded) loadProjectSubmissions();
+      } catch (err) {
+        console.error(err);
+        showToast(err.message || "Failed to send certificate email", "error");
       }
     }
 

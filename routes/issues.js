@@ -4,6 +4,7 @@ const path = require("path");
 const multer = require("multer");
 const mongoose = require("mongoose");
 const Issue = require("../models/Issue");
+const Lesson = require("../models/Lesson");
 const auth = require("../middleware/auth");
 
 const router = express.Router();
@@ -134,9 +135,33 @@ router.get("/", requireAdmin, async (req, res) => {
       Issue.countDocuments(query),
     ]);
 
+    const lessonIds = Array.from(
+      new Set(
+        issues
+          .map((issue) => String(issue.lessonId || "").trim())
+          .filter((id) => mongoose.Types.ObjectId.isValid(id))
+      )
+    );
+
+    const lessonRows = lessonIds.length > 0
+      ? await Lesson.find({ _id: { $in: lessonIds } }, "title").lean()
+      : [];
+    const lessonMap = Object.fromEntries(
+      lessonRows.map((lesson) => [String(lesson._id), String(lesson.title || "").trim()])
+    );
+
+    const enrichedIssues = issues.map((issue) => {
+      const row = issue.toObject ? issue.toObject() : issue;
+      const lessonIdText = String(row.lessonId || "").trim();
+      return {
+        ...row,
+        lessonTitle: lessonMap[lessonIdText] || "Unknown Lesson"
+      };
+    });
+
     return res.json({
       success: true,
-      data: issues,
+      data: enrichedIssues,
       pagination: {
         page: safePage,
         limit: safeLimit,
