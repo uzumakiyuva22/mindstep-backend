@@ -32,6 +32,7 @@
 
     body {
         min-height: 100vh;
+        min-height: 100svh;
         font-family: 'Inter', sans-serif;
         background:
             radial-gradient(130% 100% at 10% 0%, rgba(21, 74, 132, 0.22), transparent 60%),
@@ -40,6 +41,8 @@
         color: var(--text-main);
         display: flex; justify-content: center; align-items: center;
         overflow: hidden;
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
     }
 
     /* --- Cinematic Background --- */
@@ -104,6 +107,7 @@
         background: linear-gradient(125deg, rgba(113, 203, 255, 0.95), rgba(192, 120, 255, 0.85), rgba(246, 211, 122, 0.6));
         -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
         -webkit-mask-composite: xor;
+        mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
         mask-composite: exclude;
         opacity: 0.75;
         animation: borderShift 9s linear infinite;
@@ -456,7 +460,7 @@
         body {
             align-items: flex-start;
             overflow-y: auto;
-            padding: 14px;
+            padding: calc(14px + env(safe-area-inset-top)) 14px calc(14px + env(safe-area-inset-bottom));
         }
         body.auth-login-active {
             align-items: center;
@@ -566,7 +570,7 @@
 
     @media (max-width: 420px) {
         body {
-            padding: 10px;
+            padding: calc(10px + env(safe-area-inset-top)) 10px calc(10px + env(safe-area-inset-bottom));
         }
 
         .container {
