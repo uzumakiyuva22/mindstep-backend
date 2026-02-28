@@ -886,7 +886,9 @@
                 client_id: config.clientId,
                 callback: handleGoogleCredential,
                 auto_select: false,
-                cancel_on_tap_outside: true
+                cancel_on_tap_outside: true,
+                ux_mode: "popup",
+                itp_support: true
             });
 
             const renderFor = (container) => {
