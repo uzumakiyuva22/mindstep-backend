@@ -1005,29 +1005,34 @@
         border-radius: 14px;
         flex-wrap: wrap;
         justify-content: space-between;
-        gap: 8px;
-        padding: 8px 10px;
+        gap: 6px;
+        padding: 6px 8px;
       }
       .brand {
         order: 1;
         min-width: 0;
         flex: 1 1 auto;
       }
+      .brand i { font-size: 1.2rem; }
+      .brand span { font-size: 1rem; }
       .nav-right {
         order: 2;
         margin-left: auto;
         min-width: 0;
+        gap: 6px;
       }
       .user-chip {
         gap: 8px;
         padding: 4px 8px 4px 4px;
       }
-      .user-chip span { max-width: 96px; }
+      .user-chip img { width: 28px; height: 28px; }
+      .user-chip span { max-width: 80px; font-size: 0.82rem; }
+      .btn-logout { width: 30px; height: 30px; }
       .nav-items {
         order: 3;
         width: 100%;
         padding: 3px;
-        justify-content: flex-start;
+        justify-content: center;
         overflow-x: auto;
         scrollbar-width: none;
         gap: 4px;
@@ -1038,11 +1043,11 @@
         margin-right: 1px;
       }
       .nav-link {
-        font-size: 0.76rem;
-        padding: 7px 10px;
+        font-size: 0.72rem;
+        padding: 6px 8px;
         flex: 0 0 auto;
         text-align: center;
-        min-width: 76px;
+        min-width: 64px;
       }
 
       .hero {
