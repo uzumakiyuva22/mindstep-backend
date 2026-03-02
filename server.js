@@ -65,6 +65,7 @@ const PDF_DIR = path.join(UPLOADS_DIR, "lesson-pdfs");
 if (!process.env.MONGO_URI) { console.error("❌ MONGO_URI missing"); process.exit(1); }
 if (!process.env.ADMIN_SECRET) { console.error("❌ ADMIN_SECRET missing"); process.exit(1); }
 const ADMIN_SECRET = process.env.ADMIN_SECRET;
+const ADMIN_USERNAME = String(process.env.ADMIN_USERNAME || "Uzumaki_Yuva").trim();
 const SMTP_HOST = String(process.env.SMTP_HOST || "").trim();
 const SMTP_PORT = Number.parseInt(String(process.env.SMTP_PORT || "").trim(), 10);
 const SMTP_SECURE_ENV = String(process.env.SMTP_SECURE || "").trim().toLowerCase();
@@ -2532,12 +2533,17 @@ app.post("/api/complete", async (req, res) => {
 app.post("/api/admin/login", async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ success: false });
+    const normalizedUsername = String(username || "").trim();
     if (password === ADMIN_SECRET) {
-        await AdminModel.updateOne({ username }, { $setOnInsert: { username, password: bcrypt.hashSync(password, 12) } }, { upsert: true });
-        return res.json({ success: true, token: ADMIN_SECRET, admin: { username } });
+        if (normalizedUsername !== ADMIN_USERNAME) {
+            return res.status(401).json({ success: false });
+        }
+        await AdminModel.updateOne({ username: normalizedUsername }, { $setOnInsert: { username: normalizedUsername, password: bcrypt.hashSync(password, 12) } }, { upsert: true });
+        return res.json({ success: true, token: ADMIN_SECRET, admin: { username: normalizedUsername } });
     }
-    const admin = await AdminModel.findOne({ username });
-    if (admin && bcrypt.compareSync(password, admin.password)) return res.json({ success: true, token: ADMIN_SECRET, admin: { username } });
+    if (normalizedUsername !== ADMIN_USERNAME) return res.status(401).json({ success: false });
+    const admin = await AdminModel.findOne({ username: normalizedUsername });
+    if (admin && bcrypt.compareSync(password, admin.password)) return res.json({ success: true, token: ADMIN_SECRET, admin: { username: normalizedUsername } });
     res.status(401).json({ success: false });
 });
 

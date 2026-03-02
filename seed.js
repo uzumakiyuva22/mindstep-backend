@@ -56,8 +56,9 @@ async function seed() {
   const adminCount = await Admin.countDocuments();
   if (adminCount === 0) {
     const adminPass = process.env.ADMIN_SECRET || "yuva22";
-    await Admin.create({ username: "Uzumaki_Yuva", password: bcrypt.hashSync(adminPass, 10) });
-    console.log("✔ Seeded admin: Uzumaki_Yuva");
+    const adminUser = String(process.env.ADMIN_USERNAME || "Uzumaki_Yuva").trim();
+    await Admin.create({ username: adminUser, password: bcrypt.hashSync(adminPass, 10) });
+    console.log("✔ Seeded admin:", adminUser);
   }
 
   const exists = await Course.countDocuments();
@@ -129,3 +130,4 @@ if (require.main === module) {
       process.exit(1);
     });
 }
+
