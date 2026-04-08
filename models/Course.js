@@ -49,7 +49,7 @@ const courseSchema = new Schema(
     }
   },
   {
-    timestamps: true // ✅ createdAt + updatedAt auto
+    timestamps: true 
   }
 );
 

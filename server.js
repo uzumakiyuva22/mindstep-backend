@@ -1,12 +1,5 @@
 /**
- * server.js — MindStep FINAL PLATINUM EDITION (Logic Fixed + Optimized + Polished)
- * 🚀 CHANGES IN THIS VERSION:
- * 1. FIXED: Auto-Completion now saves 'course_id' (Solves 0% Progress).
- * 2. FIXED: MongoDB Practice Routes now use Mongoose with Elite Validation.
- * 3. NEW: Added /api/course-progress route for Course Page UI.
- * 4. RESTORED: Backward-compatible /api/course/:slug/progress/:userId route.
- * 5. HYBRID COMPLETION: Progress updates immediately, completion flag sets at 100%.
- * 6. RETAINED: All performance tweaks (Gzip, Pooling).
+ * server.js — MindStep
  */
 
 require("dotenv").config();
